@@ -1,0 +1,17 @@
+name = "voigt-garten"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "voigt-garten-db"
+database_id = "PLACEHOLDER_DATABASE_ID"
+
+# Environment Variables (set via dashboard)
+# STRIPE_SECRET_KEY
+# RESEND_API_KEY
+# ANTHROPIC_API_KEY
+
+[vars]
+ENVIRONMENT = "production"

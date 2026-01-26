@@ -1,0 +1,129 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Willkommen">
+  <!-- Hero Section -->
+  <section class="relative bg-gradient-to-b from-garden-100 to-garden-50 py-20 overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+      <div class="absolute top-10 left-10 text-9xl">🌳</div>
+      <div class="absolute bottom-10 right-10 text-9xl">🌻</div>
+      <div class="absolute top-1/2 left-1/3 text-7xl">🌿</div>
+    </div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="font-display text-5xl md:text-6xl font-bold text-garden-900 mb-6">
+        Willkommen im Voigt-Garten
+      </h1>
+      <p class="text-xl md:text-2xl text-garden-700 max-w-3xl mx-auto mb-8">
+        Ein Ort der Ruhe, Erholung und Familientradition.<br />
+        Buche deinen Urlaub im Grünen.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/buchen" class="bg-garden-600 hover:bg-garden-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition shadow-lg hover:shadow-xl">
+          Jetzt Buchen
+        </a>
+        <a href="/galerie" class="bg-white hover:bg-garden-50 text-garden-700 px-8 py-4 rounded-lg font-semibold text-lg transition border-2 border-garden-200">
+          Galerie ansehen
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="font-display text-3xl font-bold text-center text-garden-900 mb-12">
+        Was dich erwartet
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Feature 1 -->
+        <div class="bg-garden-50 rounded-xl p-8 text-center hover:shadow-lg transition">
+          <div class="text-5xl mb-4">🏡</div>
+          <h3 class="font-display text-xl font-semibold text-garden-800 mb-3">Gemütliches Gartenhaus</h3>
+          <p class="text-gray-600">
+            Ein charmantes Gartenhaus mit allem, was du für einen erholsamen Aufenthalt brauchst.
+          </p>
+        </div>
+        <!-- Feature 2 -->
+        <div class="bg-garden-50 rounded-xl p-8 text-center hover:shadow-lg transition">
+          <div class="text-5xl mb-4">🌳</div>
+          <h3 class="font-display text-xl font-semibold text-garden-800 mb-3">Großes Grundstück</h3>
+          <p class="text-gray-600">
+            Weitläufiger Garten mit alten Bäumen, Beeten und viel Platz zum Entspannen.
+          </p>
+        </div>
+        <!-- Feature 3 -->
+        <div class="bg-garden-50 rounded-xl p-8 text-center hover:shadow-lg transition">
+          <div class="text-5xl mb-4">🔥</div>
+          <h3 class="font-display text-xl font-semibold text-garden-800 mb-3">Feuerstelle & Grill</h3>
+          <p class="text-gray-600">
+            Lagerfeuer-Abende und Grillpartys unter freiem Himmel - pure Natur genießen.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Family Discount Section -->
+  <section class="py-16 bg-earth-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="bg-white rounded-2xl p-8 md:p-12 shadow-lg border-2 border-earth-200">
+        <div class="text-6xl mb-4">👨‍👩‍👧‍👦</div>
+        <h2 class="font-display text-3xl font-bold text-earth-800 mb-4">
+          Familien-Rabatt
+        </h2>
+        <p class="text-lg text-gray-600 mb-6">
+          Du gehörst zur Familie Voigt? Dann bekommst du <strong>50% Rabatt</strong> auf alle Buchungen!
+        </p>
+        <div class="bg-earth-100 rounded-lg p-4 inline-block">
+          <span class="text-gray-600">Gutscheincode:</span>
+          <span class="font-mono text-2xl font-bold text-earth-700 ml-2">VOIGT-GARTEN</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Help Section -->
+  <section class="py-16 bg-garden-600 text-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="font-display text-3xl font-bold mb-4">
+        Hilf mit, den Garten zu pflegen!
+      </h2>
+      <p class="text-lg text-garden-100 mb-8">
+        Opas Garten braucht regelmäßige Pflege. Wer bei der Wartung hilft, bekommt Guthaben für zukünftige Buchungen.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/wartung" class="bg-white text-garden-700 hover:bg-garden-50 px-8 py-4 rounded-lg font-semibold text-lg transition">
+          Wartungsaufgaben ansehen
+        </a>
+        <a href="/wartung#credits" class="bg-garden-700 hover:bg-garden-800 text-white px-8 py-4 rounded-lg font-semibold text-lg transition border-2 border-garden-500">
+          Guthaben-System
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Stats -->
+  <section class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div>
+          <div class="text-4xl font-bold text-garden-600">50+</div>
+          <div class="text-gray-600 mt-1">Jahre Familientradition</div>
+        </div>
+        <div>
+          <div class="text-4xl font-bold text-garden-600">2000m²</div>
+          <div class="text-gray-600 mt-1">Grundstück</div>
+        </div>
+        <div>
+          <div class="text-4xl font-bold text-garden-600">∞</div>
+          <div class="text-gray-600 mt-1">Erholungswert</div>
+        </div>
+        <div>
+          <div class="text-4xl font-bold text-garden-600">1</div>
+          <div class="text-gray-600 mt-1">Familie</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>

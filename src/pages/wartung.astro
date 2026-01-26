@@ -1,0 +1,192 @@
+---
+import Layout from '../layouts/Layout.astro';
+import MaintenanceList from '../components/MaintenanceList';
+import CreditSystem from '../components/CreditSystem';
+
+// PLACEHOLDER: Initial tasks - diese sollten aus der DB kommen
+const maintenanceCategories = [
+  {
+    id: 'rasen',
+    name: 'Rasenpflege',
+    emoji: '🌿',
+    tasks: [
+      { id: 1, title: 'Rasenmähen', cycleDays: 14, creditValue: 15, description: 'Gesamter Rasen mähen und Schnittgut entsorgen' },
+      { id: 2, title: 'Rasenkanten schneiden', cycleDays: 30, creditValue: 10, description: 'Kanten entlang der Beete und Wege' },
+      { id: 3, title: 'Vertikutieren', cycleDays: 180, creditValue: 30, description: 'Rasen vertikutieren (Frühjahr/Herbst)' },
+    ]
+  },
+  {
+    id: 'beete',
+    name: 'Beetarbeiten',
+    emoji: '🌻',
+    tasks: [
+      { id: 4, title: 'Unkraut jäten', cycleDays: 14, creditValue: 20, description: 'Alle Beete von Unkraut befreien' },
+      { id: 5, title: 'Beete mulchen', cycleDays: 365, creditValue: 40, description: 'Rindenmulch aufbringen' },
+      { id: 6, title: 'Blumen gießen', cycleDays: 3, creditValue: 5, description: 'Bei Trockenheit gießen' },
+    ]
+  },
+  {
+    id: 'baeume',
+    name: 'Bäume & Hecken',
+    emoji: '🌳',
+    tasks: [
+      { id: 7, title: 'Hecke schneiden', cycleDays: 90, creditValue: 35, description: 'Hecken in Form schneiden' },
+      { id: 8, title: 'Obstbaumschnitt', cycleDays: 365, creditValue: 50, description: 'Winterschnitt der Obstbäume' },
+      { id: 9, title: 'Laub harken', cycleDays: 7, creditValue: 15, description: 'Laub zusammenharken (Herbst)' },
+    ]
+  },
+  {
+    id: 'brennholz',
+    name: 'Brennholz',
+    emoji: '🪵',
+    tasks: [
+      { id: 10, title: 'Holz hacken', cycleDays: 180, creditValue: 40, description: 'Holz für Feuerstelle hacken' },
+      { id: 11, title: 'Holz stapeln', cycleDays: 180, creditValue: 25, description: 'Gehacktes Holz ordentlich stapeln' },
+      { id: 12, title: 'Holzvorrat prüfen', cycleDays: 30, creditValue: 5, description: 'Bestand kontrollieren' },
+    ]
+  },
+  {
+    id: 'elektrik',
+    name: 'Elektrik',
+    emoji: '⚡',
+    tasks: [
+      { id: 13, title: 'Außenbeleuchtung prüfen', cycleDays: 90, creditValue: 10, description: 'Alle Lampen testen, defekte austauschen' },
+      { id: 14, title: 'Steckdosen prüfen', cycleDays: 180, creditValue: 15, description: 'Außensteckdosen auf Funktion prüfen' },
+      { id: 15, title: 'E-Check (Elektriker)', cycleDays: 730, creditValue: 0, description: 'Professionelle Prüfung - Dienstleister beauftragen' },
+    ]
+  },
+  {
+    id: 'putzen',
+    name: 'Reinigung',
+    emoji: '🧹',
+    tasks: [
+      { id: 16, title: 'Gartenhaus putzen', cycleDays: 30, creditValue: 25, description: 'Innenreinigung des Gartenhauses' },
+      { id: 17, title: 'Terrasse reinigen', cycleDays: 60, creditValue: 20, description: 'Terrassenplatten abkehren/schrubben' },
+      { id: 18, title: 'Regenrinnen reinigen', cycleDays: 180, creditValue: 20, description: 'Laub aus Regenrinnen entfernen' },
+      { id: 19, title: 'Fenster putzen', cycleDays: 90, creditValue: 15, description: 'Fenster des Gartenhauses reinigen' },
+    ]
+  },
+  {
+    id: 'sonstiges',
+    name: 'Sonstiges',
+    emoji: '🔧',
+    tasks: [
+      { id: 20, title: 'Werkzeug pflegen', cycleDays: 180, creditValue: 15, description: 'Werkzeuge reinigen und ölen' },
+      { id: 21, title: 'Zaun kontrollieren', cycleDays: 90, creditValue: 10, description: 'Zaunpfähle und Latten prüfen' },
+      { id: 22, title: 'Winterfest machen', cycleDays: 365, creditValue: 50, description: 'Wasserhahn abstellen, Möbel einräumen (Herbst)' },
+      { id: 23, title: 'Frühjahrs-Check', cycleDays: 365, creditValue: 50, description: 'Alles nach dem Winter überprüfen (Frühjahr)' },
+    ]
+  }
+];
+---
+
+<Layout title="Wartung" description="Wartungsaufgaben und Guthaben-System für den Voigt-Garten">
+  <!-- Header -->
+  <section class="bg-gradient-to-b from-garden-100 to-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="font-display text-4xl md:text-5xl font-bold text-garden-900 mb-4">
+        Wartung & Pflege
+      </h1>
+      <p class="text-xl text-garden-700 max-w-2xl mx-auto">
+        Alle Arbeiten im Überblick. Wer hilft, bekommt Guthaben!
+      </p>
+    </div>
+  </section>
+
+  <!-- Stats Bar -->
+  <section class="py-6 bg-white border-b border-gray-200">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div class="bg-red-50 rounded-lg p-4">
+          <div class="text-2xl font-bold text-red-600" id="stat-overdue">-</div>
+          <div class="text-sm text-red-700">Überfällig</div>
+        </div>
+        <div class="bg-amber-50 rounded-lg p-4">
+          <div class="text-2xl font-bold text-amber-600" id="stat-due-soon">-</div>
+          <div class="text-sm text-amber-700">Bald fällig</div>
+        </div>
+        <div class="bg-green-50 rounded-lg p-4">
+          <div class="text-2xl font-bold text-green-600" id="stat-ok">-</div>
+          <div class="text-sm text-green-700">In Ordnung</div>
+        </div>
+        <div class="bg-garden-50 rounded-lg p-4">
+          <div class="text-2xl font-bold text-garden-600">{maintenanceCategories.reduce((sum, cat) => sum + cat.tasks.length, 0)}</div>
+          <div class="text-sm text-garden-700">Gesamt Tasks</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <section class="py-12">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Task List -->
+        <div class="lg:col-span-2">
+          <MaintenanceList client:load categories={maintenanceCategories} />
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+          <!-- Credit System -->
+          <div id="credits" class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="font-display text-xl font-bold text-garden-900 mb-4">
+              💰 Guthaben-System
+            </h3>
+            <CreditSystem client:load />
+          </div>
+
+          <!-- How it works -->
+          <div class="bg-garden-50 rounded-xl p-6">
+            <h3 class="font-semibold text-garden-800 mb-4">So funktioniert's:</h3>
+            <ol class="space-y-3 text-sm text-gray-700">
+              <li class="flex gap-2">
+                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                <span>Wähle eine Aufgabe aus</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                <span>Erledige die Arbeit im Garten</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                <span>Markiere als erledigt (mit Foto)</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                <span>Guthaben wird gutgeschrieben!</span>
+              </li>
+            </ol>
+          </div>
+
+          <!-- Contact for help -->
+          <div class="bg-amber-50 rounded-xl p-6 border-2 border-amber-200">
+            <h3 class="font-semibold text-amber-800 mb-2">❗ Zu viel Arbeit?</h3>
+            <p class="text-sm text-amber-700 mb-4">
+              Bei überfälligen Aufgaben kann automatisch ein Dienstleister angefragt werden.
+            </p>
+            <a href="/dienstleister" class="text-amber-800 hover:text-amber-900 font-medium text-sm underline">
+              Dienstleister ansehen →
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Claude Integration Info -->
+  <section class="py-12 bg-purple-50 border-t border-purple-100">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <div class="inline-flex items-center gap-2 bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-medium mb-4">
+        <span>🤖</span> KI-unterstützt
+      </div>
+      <h2 class="font-display text-2xl font-bold text-purple-900 mb-4">
+        Automatische Hilfe bei überfälligen Aufgaben
+      </h2>
+      <p class="text-purple-700 max-w-2xl mx-auto">
+        Wenn eine Aufgabe länger als 2 Wochen überfällig ist, kann Claude automatisch
+        einen passenden Dienstleister kontaktieren. Natürlich nur nach deiner Freigabe!
+      </p>
+    </div>
+  </section>
+</Layout>

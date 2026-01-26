@@ -1,0 +1,137 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BookingCalendar from '../components/BookingCalendar';
+import BookingForm from '../components/BookingForm';
+
+// PLACEHOLDER: Preise konfigurieren
+const pricing = {
+  perNight: 45, // Euro pro Nacht - PLACEHOLDER: Anpassen!
+  weeklyDiscount: 15, // % Rabatt bei Wochenbuchung
+  familyDiscount: 50, // % mit VOIGT-GARTEN Code
+};
+---
+
+<Layout title="Buchen" description="Buche deinen Aufenthalt im Voigt-Garten">
+  <!-- Header -->
+  <section class="bg-gradient-to-b from-garden-100 to-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="font-display text-4xl md:text-5xl font-bold text-garden-900 mb-4">
+        Jetzt Buchen
+      </h1>
+      <p class="text-xl text-garden-700 max-w-2xl mx-auto">
+        Wähle deinen Wunschzeitraum und erlebe Urlaub im Grünen.
+      </p>
+    </div>
+  </section>
+
+  <!-- Pricing Info -->
+  <section class="py-8 bg-white border-b border-gray-200">
+    <div class="max-w-4xl mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+        <div class="bg-garden-50 rounded-lg p-6">
+          <div class="text-3xl font-bold text-garden-700">{pricing.perNight}€</div>
+          <div class="text-gray-600">pro Nacht</div>
+        </div>
+        <div class="bg-garden-50 rounded-lg p-6">
+          <div class="text-3xl font-bold text-garden-700">-{pricing.weeklyDiscount}%</div>
+          <div class="text-gray-600">bei 7+ Nächten</div>
+        </div>
+        <div class="bg-amber-50 rounded-lg p-6 border-2 border-amber-200">
+          <div class="text-3xl font-bold text-amber-700">-{pricing.familyDiscount}%</div>
+          <div class="text-amber-800 font-medium">Familie Voigt</div>
+          <div class="text-xs text-amber-600 mt-1">Code: VOIGT-GARTEN</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Booking Section -->
+  <section class="py-16 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Calendar -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <h2 class="font-display text-2xl font-bold text-garden-900 mb-6">
+            Verfügbarkeit
+          </h2>
+          <BookingCalendar client:load />
+          <div class="mt-4 flex gap-4 text-sm">
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-green-200 rounded"></div>
+              <span>Verfügbar</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-red-200 rounded"></div>
+              <span>Belegt</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-blue-200 rounded"></div>
+              <span>Ausgewählt</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Booking Form -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <h2 class="font-display text-2xl font-bold text-garden-900 mb-6">
+            Buchung
+          </h2>
+          <BookingForm client:load pricing={pricing} />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Info Section -->
+  <section class="py-16 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="font-display text-3xl font-bold text-center text-garden-900 mb-8">
+        Gut zu wissen
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-garden-50 rounded-lg p-6">
+          <h3 class="font-semibold text-garden-800 mb-2">🕐 Check-in / Check-out</h3>
+          <p class="text-gray-600">
+            Check-in ab 15:00 Uhr<br />
+            Check-out bis 11:00 Uhr
+          </p>
+        </div>
+        <div class="bg-garden-50 rounded-lg p-6">
+          <h3 class="font-semibold text-garden-800 mb-2">🔑 Schlüsselübergabe</h3>
+          <p class="text-gray-600">
+            Schlüsselbox am Eingang<br />
+            Code wird nach Buchung mitgeteilt
+          </p>
+        </div>
+        <div class="bg-garden-50 rounded-lg p-6">
+          <h3 class="font-semibold text-garden-800 mb-2">🐕 Haustiere</h3>
+          <p class="text-gray-600">
+            Hunde willkommen!<br />
+            Bitte bei Buchung angeben
+          </p>
+        </div>
+        <div class="bg-garden-50 rounded-lg p-6">
+          <h3 class="font-semibold text-garden-800 mb-2">💳 Zahlung</h3>
+          <p class="text-gray-600">
+            Kreditkarte (sofort) oder<br />
+            Überweisung (innerhalb 3 Tage)
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="py-12 bg-garden-600 text-white">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h2 class="font-display text-2xl font-bold mb-4">Fragen zur Buchung?</h2>
+      <p class="text-garden-100 mb-6">
+        Bei Fragen oder Sonderwünschen erreichst du uns jederzeit.
+      </p>
+      <a href="mailto:garten@voigt-familie.de"
+         class="bg-white text-garden-700 hover:bg-garden-50 px-6 py-3 rounded-lg font-semibold transition inline-block">
+        Kontakt aufnehmen
+      </a>
+    </div>
+  </section>
+</Layout>

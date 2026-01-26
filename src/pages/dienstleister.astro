@@ -1,0 +1,170 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ServiceProviderList from '../components/ServiceProviderList';
+import EmailDraftModal from '../components/EmailDraftModal';
+
+// PLACEHOLDER: Initial providers - sollten aus DB kommen
+// Diese Liste mit echten, verifizierten Dienstleistern befüllen!
+const serviceCategories = [
+  {
+    id: 'gaertner',
+    name: 'Gärtner',
+    emoji: '🌳',
+    providers: [
+      // PLACEHOLDER: Echte Gärtner eintragen
+      // { id: 1, name: 'Gartenbau Müller', email: 'info@gartenbau-mueller.de', phone: '01234-56789', rating: 5, notes: 'Sehr zuverlässig, fairer Preis' },
+    ]
+  },
+  {
+    id: 'elektriker',
+    name: 'Elektriker',
+    emoji: '⚡',
+    providers: [
+      // PLACEHOLDER: Echte Elektriker eintragen
+    ]
+  },
+  {
+    id: 'hausmeister',
+    name: 'Hausmeister-Service',
+    emoji: '🔧',
+    providers: []
+  },
+  {
+    id: 'reinigung',
+    name: 'Reinigung',
+    emoji: '🧹',
+    providers: []
+  },
+  {
+    id: 'holz',
+    name: 'Brennholz / Baumfällung',
+    emoji: '🪵',
+    providers: []
+  },
+  {
+    id: 'sonstiges',
+    name: 'Sonstige',
+    emoji: '📋',
+    providers: []
+  }
+];
+---
+
+<Layout title="Dienstleister" description="Verifizierte Dienstleister für den Voigt-Garten">
+  <!-- Header -->
+  <section class="bg-gradient-to-b from-garden-100 to-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="font-display text-4xl md:text-5xl font-bold text-garden-900 mb-4">
+        Dienstleister
+      </h1>
+      <p class="text-xl text-garden-700 max-w-2xl mx-auto">
+        Verifizierte Partner für alle Arbeiten rund um den Garten.
+      </p>
+    </div>
+  </section>
+
+  <!-- Info Banner -->
+  <section class="py-6 bg-purple-50 border-y border-purple-200">
+    <div class="max-w-4xl mx-auto px-4">
+      <div class="flex items-start gap-4">
+        <span class="text-3xl">🤖</span>
+        <div>
+          <h3 class="font-semibold text-purple-800 mb-1">Human-in-the-Loop System</h3>
+          <p class="text-sm text-purple-700">
+            Bei stark überfälligen Wartungsaufgaben kann Claude automatisch einen Email-Entwurf an den passenden
+            Dienstleister erstellen. <strong>Die Email wird erst nach deiner Freigabe versendet!</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Placeholder Notice -->
+  <section class="py-6 bg-amber-50 border-b border-amber-200">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <div class="flex items-center justify-center gap-3">
+        <span class="text-3xl">📝</span>
+        <p class="text-amber-800">
+          <strong>Dienstleister werden noch hinzugefügt!</strong>
+          Bitte bekannte Handwerker/Gärtner an Moritz melden.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <section class="py-12">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Provider List -->
+        <div class="lg:col-span-2">
+          <ServiceProviderList client:load categories={serviceCategories} />
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+          <!-- Add Provider CTA -->
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="font-semibold text-garden-800 mb-4">➕ Dienstleister hinzufügen</h3>
+            <p class="text-sm text-gray-600 mb-4">
+              Du kennst einen guten Handwerker oder Gärtner? Teile die Kontaktdaten!
+            </p>
+            <a
+              href="mailto:moritz.infinityspace42@gmail.com?subject=Neuer Dienstleister für Voigt-Garten&body=Name:%0AKategorie:%0ATelefon:%0AEmail:%0ANotizen:"
+              class="block w-full bg-garden-600 hover:bg-garden-700 text-white text-center py-3 rounded-lg font-medium transition"
+            >
+              Per Email melden
+            </a>
+          </div>
+
+          <!-- How it works -->
+          <div class="bg-garden-50 rounded-xl p-6">
+            <h3 class="font-semibold text-garden-800 mb-4">Wie funktioniert's?</h3>
+            <div class="space-y-3 text-sm text-gray-700">
+              <div class="flex gap-2">
+                <span class="text-garden-600">1.</span>
+                <span>Wartungsaufgabe wird überfällig</span>
+              </div>
+              <div class="flex gap-2">
+                <span class="text-garden-600">2.</span>
+                <span>System erkennt passenden Dienstleister</span>
+              </div>
+              <div class="flex gap-2">
+                <span class="text-garden-600">3.</span>
+                <span>Claude erstellt Email-Entwurf</span>
+              </div>
+              <div class="flex gap-2">
+                <span class="text-garden-600">4.</span>
+                <span><strong>Du prüfst und genehmigst</strong></span>
+              </div>
+              <div class="flex gap-2">
+                <span class="text-garden-600">5.</span>
+                <span>Email wird versendet</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Emails -->
+          <div class="bg-amber-50 rounded-xl p-6 border-2 border-amber-200">
+            <h3 class="font-semibold text-amber-800 mb-2">📧 Ausstehende Anfragen</h3>
+            <div id="pending-emails" class="text-sm text-amber-700">
+              <p class="text-gray-500 italic">Keine ausstehenden Anfragen</p>
+            </div>
+          </div>
+
+          <!-- Rating Info -->
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-semibold text-gray-800 mb-2">⭐ Bewertungen</h3>
+            <p class="text-sm text-gray-600">
+              Nach jedem Auftrag kannst du den Dienstleister bewerten.
+              So wissen alle, wer zuverlässig ist!
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Email Draft Modal (rendered client-side) -->
+  <EmailDraftModal client:load />
+</Layout>
