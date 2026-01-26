@@ -1,33 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
-
-// Placeholder für Galerie-Daten
-const galleries = [
-  {
-    title: "Frühling",
-    emoji: "🌸",
-    images: [], // PLACEHOLDER: Bilder hier einfügen
-    description: "Wenn der Garten erwacht"
-  },
-  {
-    title: "Sommer",
-    emoji: "☀️",
-    images: [],
-    description: "Volle Pracht und lange Abende"
-  },
-  {
-    title: "Herbst",
-    emoji: "🍂",
-    images: [],
-    description: "Goldene Farben und Ernte"
-  },
-  {
-    title: "Winter",
-    emoji: "❄️",
-    images: [],
-    description: "Stille und Ruhe"
-  }
-];
+import GalleryUpload from '../components/GalleryUpload';
+import GalleryGrid from '../components/GalleryGrid';
 ---
 
 <Layout title="Galerie" description="Fotos und Videos vom Voigt-Garten">
@@ -38,89 +12,106 @@ const galleries = [
         Galerie
       </h1>
       <p class="text-xl text-garden-700 max-w-2xl mx-auto">
-        Impressionen aus dem Voigt-Garten durch alle Jahreszeiten.
+        Fotos und Videos vom Voigt-Garten. Teile deine Eindrücke mit der Familie!
       </p>
     </div>
   </section>
 
-  <!-- Placeholder Notice -->
-  <section class="py-8 bg-amber-50 border-y border-amber-200">
-    <div class="max-w-4xl mx-auto px-4 text-center">
-      <div class="flex items-center justify-center gap-3">
-        <span class="text-3xl">📸</span>
-        <p class="text-amber-800">
-          <strong>Fotos werden noch hinzugefügt!</strong>
-          Bitte sende Garten-Fotos an Moritz.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Season Galleries -->
-  <section class="py-16">
+  <!-- Main Content -->
+  <section class="py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {galleries.map((gallery) => (
-          <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div class="bg-garden-100 p-6">
-              <div class="flex items-center gap-3">
-                <span class="text-4xl">{gallery.emoji}</span>
-                <div>
-                  <h2 class="font-display text-2xl font-bold text-garden-800">{gallery.title}</h2>
-                  <p class="text-garden-600">{gallery.description}</p>
-                </div>
-              </div>
-            </div>
-            <div class="p-6">
-              {gallery.images.length > 0 ? (
-                <div class="grid grid-cols-3 gap-2">
-                  {gallery.images.map((img: string) => (
-                    <img src={img} alt={gallery.title} class="rounded-lg object-cover aspect-square" />
-                  ))}
-                </div>
-              ) : (
-                <div class="bg-gray-100 rounded-lg p-8 text-center text-gray-500">
-                  <div class="text-4xl mb-2">🖼️</div>
-                  <p>Noch keine Fotos vorhanden</p>
-                  <p class="text-sm mt-1">Fotos werden bald hinzugefügt</p>
-                </div>
-              )}
-            </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Gallery Grid (2/3) -->
+        <div class="lg:col-span-2">
+          <GalleryGrid client:load />
+        </div>
+
+        <!-- Upload & Info Sidebar (1/3) -->
+        <div class="space-y-6">
+          <!-- Upload Component -->
+          <GalleryUpload client:load />
+
+          <!-- Categories Info -->
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="font-semibold text-garden-800 mb-4">📂 Kategorien</h3>
+            <ul class="space-y-2 text-sm">
+              <li class="flex items-center gap-2">
+                <span>🏡</span> Gartenhaus
+              </li>
+              <li class="flex items-center gap-2">
+                <span>🪴</span> Terrasse
+              </li>
+              <li class="flex items-center gap-2">
+                <span>🚁</span> Luftaufnahmen
+              </li>
+              <li class="flex items-center gap-2">
+                <span>🌻</span> Beete
+              </li>
+              <li class="flex items-center gap-2">
+                <span>🌿</span> Wiese/Rasen
+              </li>
+              <li class="flex items-center gap-2">
+                <span>🌳</span> Bäume/Hecken
+              </li>
+              <li class="flex items-center gap-2">
+                <span>📷</span> Sonstiges
+              </li>
+            </ul>
           </div>
-        ))}
+
+          <!-- Tips -->
+          <div class="bg-garden-50 rounded-xl p-6">
+            <h3 class="font-semibold text-garden-800 mb-3">💡 Tipps fürs Hochladen</h3>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li>• Mehrere Dateien auf einmal möglich</li>
+              <li>• Drag & Drop funktioniert!</li>
+              <li>• Videos: MP4, MOV, WebM</li>
+              <li>• Bilder: JPG, PNG, GIF, HEIC</li>
+              <li>• Name & Beschreibung optional</li>
+            </ul>
+          </div>
+
+          <!-- Storage Info -->
+          <div class="bg-amber-50 rounded-xl p-6 border border-amber-200">
+            <h3 class="font-semibold text-amber-800 mb-2">⚠️ Speicher-Setup</h3>
+            <p class="text-sm text-amber-700">
+              Die Bilderspeicherung benötigt Cloudflare R2.
+              Bis dahin werden Uploads nur geloggt.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Video Section Placeholder -->
-  <section class="py-16 bg-garden-50">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <h2 class="font-display text-3xl font-bold text-garden-900 mb-4">
-        Videos
+  <!-- Featured Seasons -->
+  <section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="font-display text-2xl font-bold text-garden-900 mb-8 text-center">
+        Der Garten im Wandel der Jahreszeiten
       </h2>
-      <div class="bg-white rounded-xl shadow-lg p-12">
-        <div class="text-6xl mb-4">🎬</div>
-        <p class="text-gray-600 mb-4">Video-Bereich kommt bald!</p>
-        <p class="text-sm text-gray-500">
-          Drohnenaufnahmen, Garten-Rundgänge und mehr...
-        </p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl p-6 text-center shadow hover:shadow-lg transition">
+          <div class="text-4xl mb-2">🌸</div>
+          <h3 class="font-semibold text-garden-800">Frühling</h3>
+          <p class="text-sm text-gray-600">Wenn der Garten erwacht</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 text-center shadow hover:shadow-lg transition">
+          <div class="text-4xl mb-2">☀️</div>
+          <h3 class="font-semibold text-garden-800">Sommer</h3>
+          <p class="text-sm text-gray-600">Volle Pracht</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 text-center shadow hover:shadow-lg transition">
+          <div class="text-4xl mb-2">🍂</div>
+          <h3 class="font-semibold text-garden-800">Herbst</h3>
+          <p class="text-sm text-gray-600">Goldene Farben</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 text-center shadow hover:shadow-lg transition">
+          <div class="text-4xl mb-2">❄️</div>
+          <h3 class="font-semibold text-garden-800">Winter</h3>
+          <p class="text-sm text-gray-600">Stille & Ruhe</p>
+        </div>
       </div>
-    </div>
-  </section>
-
-  <!-- Upload CTA -->
-  <section class="py-16 bg-earth-600 text-white">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <h2 class="font-display text-3xl font-bold mb-4">
-        Eigene Fotos teilen?
-      </h2>
-      <p class="text-lg text-earth-100 mb-8">
-        Du warst im Garten und hast schöne Fotos gemacht? Teile sie mit der Familie!
-      </p>
-      <a href="mailto:garten@voigt-familie.de?subject=Garten-Fotos"
-         class="bg-white text-earth-700 hover:bg-earth-50 px-8 py-4 rounded-lg font-semibold text-lg transition inline-block">
-        Fotos per Email senden
-      </a>
     </div>
   </section>
 </Layout>

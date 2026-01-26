@@ -8,6 +8,11 @@ pages_build_output_dir = "dist"
 # database_name = "voigt-garten-db"
 # database_id = "YOUR_DATABASE_ID_HERE"
 
+# R2 Bucket for Gallery Storage (add after creating via Cloudflare Dashboard)
+# [[r2_buckets]]
+# binding = "GALLERY_BUCKET"
+# bucket_name = "voigt-garten-gallery"
+
 # Environment Variables (set via dashboard)
 # STRIPE_SECRET_KEY
 # RESEND_API_KEY

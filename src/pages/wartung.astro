@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import MaintenanceList from '../components/MaintenanceList';
 import CreditSystem from '../components/CreditSystem';
+import GardenMap from '../components/GardenMap';
 
 // PLACEHOLDER: Initial tasks - diese sollten aus der DB kommen
 const maintenanceCategories = [
@@ -114,6 +115,13 @@ const maintenanceCategories = [
           <div class="text-sm text-garden-700">Gesamt Tasks</div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- Garden Map -->
+  <section class="py-8 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <GardenMap client:load droneImageUrl="/images/drone-view.jpg" />
     </div>
   </section>
 
