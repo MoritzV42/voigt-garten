@@ -1,0 +1,15 @@
+[Unit]
+Description=Voigt-Garten Upload Service
+After=network.target
+
+[Service]
+Type=simple
+User=moritz
+WorkingDirectory=/home/moritz/voigt-garten/pi-backend
+Environment=PATH=/home/moritz/voigt-garten/pi-backend/venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/moritz/voigt-garten/pi-backend/venv/bin/gunicorn --bind 0.0.0.0:5050 --workers 2 app:app
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
