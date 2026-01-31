@@ -1,4 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+
+const TOKEN_KEY = 'voigt-garten-token';
+const USER_KEY = 'voigt-garten-user';
 
 interface UploadFile {
   id: string;
@@ -29,7 +32,32 @@ export default function GalleryUpload({ onUploadComplete }: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check auth status
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const userStr = localStorage.getItem(USER_KEY);
+      if (token && userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          setIsLoggedIn(true);
+          setUserName(user.name || user.email || '');
+        } catch (e) {
+          setIsLoggedIn(false);
+        }
+      } else {
+        setIsLoggedIn(false);
+      }
+    };
+
+    checkAuth();
+    window.addEventListener('auth-change', checkAuth);
+    return () => window.removeEventListener('auth-change', checkAuth);
+  }, []);
 
   const processFiles = (fileList: FileList | File[]) => {
     const newFiles: UploadFile[] = [];
@@ -104,7 +132,12 @@ export default function GalleryUpload({ onUploadComplete }: Props) {
 
   const handleUpload = async () => {
     if (files.length === 0) return;
+    if (!isLoggedIn) {
+      alert('Bitte melde dich an, um Bilder hochzuladen.');
+      return;
+    }
 
+    const token = localStorage.getItem(TOKEN_KEY);
     setIsUploading(true);
     setUploadProgress(0);
 
@@ -121,6 +154,9 @@ export default function GalleryUpload({ onUploadComplete }: Props) {
 
         const response = await fetch('/api/gallery/upload', {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
           body: formData,
         });
 
@@ -146,6 +182,29 @@ export default function GalleryUpload({ onUploadComplete }: Props) {
     }
   };
 
+  // Show login prompt if not logged in
+  if (!isLoggedIn) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-gray-400 text-white p-4">
+          <h3 className="font-display text-xl font-bold flex items-center gap-2">
+            <span>🔒</span> Fotos & Videos hochladen
+          </h3>
+        </div>
+        <div className="p-8 text-center">
+          <div className="text-5xl mb-4">🔐</div>
+          <h4 className="text-lg font-semibold text-gray-800 mb-2">Anmeldung erforderlich</h4>
+          <p className="text-gray-600 mb-4">
+            Um Fotos und Videos hochzuladen, musst du angemeldet sein.
+          </p>
+          <p className="text-sm text-gray-500">
+            Klicke oben rechts auf das 👤 Symbol um dich anzumelden oder zu registrieren.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
       {/* Header */}
@@ -154,7 +213,7 @@ export default function GalleryUpload({ onUploadComplete }: Props) {
           <span>📤</span> Fotos & Videos hochladen
         </h3>
         <p className="text-garden-100 text-sm mt-1">
-          Drag & Drop oder klicken zum Auswählen. Alle gängigen Formate werden unterstützt.
+          Drag & Drop oder klicken zum Auswählen. Angemeldet als <strong>{userName}</strong>.
         </p>
       </div>
 

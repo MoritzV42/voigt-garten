@@ -116,6 +116,57 @@ def send_booking_notification_to_admin(booking_data: dict) -> bool:
         return False
 
 
+def send_activity_notification(activity_type: str, details: dict) -> bool:
+    """Send notification to admin about user activity on the site."""
+    if not resend.api_key:
+        print("RESEND_API_KEY not configured")
+        return False
+
+    try:
+        titles = {
+            'gallery_upload': '📷 Neues Galerie-Bild',
+            'issue_report': '🚨 Neue Mängelmeldung',
+            'task_completed': '✅ Aufgabe erledigt',
+            'user_registered': '👤 Neue Registrierung',
+        }
+        title = titles.get(activity_type, f'📋 {activity_type}')
+
+        # Build details HTML
+        details_html = ""
+        for key, value in details.items():
+            if value:
+                details_html += f"<tr><td style='padding: 5px;'><strong>{key}:</strong></td><td>{value}</td></tr>"
+
+        params = {
+            "from": FROM_EMAIL,
+            "to": [ADMIN_EMAIL],
+            "subject": f"{title} - Voigt-Garten",
+            "html": f"""
+                <div style="font-family: sans-serif;">
+                    <h2>{title}</h2>
+                    <p>Neue Aktivität auf <a href="https://garten.infinityspace42.de">garten.infinityspace42.de</a>:</p>
+
+                    <table style="border-collapse: collapse; margin: 20px 0;">
+                        {details_html}
+                    </table>
+
+                    <p style="margin-top: 20px;">
+                        <a href="https://garten.infinityspace42.de/admin" style="background: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                            Zum Dashboard
+                        </a>
+                    </p>
+                </div>
+            """
+        }
+
+        resend.Emails.send(params)
+        print(f"Activity notification sent: {activity_type}")
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
+
 def send_maintenance_reminder(task_title: str, days_overdue: int) -> bool:
     """Send maintenance reminder to admin."""
     if not resend.api_key:

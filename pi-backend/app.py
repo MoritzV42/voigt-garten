@@ -15,7 +15,7 @@ import subprocess
 import re
 import jwt
 import functools
-from email_service import send_booking_confirmation, send_booking_notification_to_admin
+from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification
 
 # JWT Secret Key (use env var in production)
 JWT_SECRET = os.environ.get('JWT_SECRET', 'voigt-garten-secret-key-change-in-production-2026')
@@ -615,7 +615,8 @@ def get_gallery():
 
 
 @app.route('/api/gallery/upload', methods=['POST'])
-def upload_file():
+@require_auth
+def upload_file(user):
     """Handle file upload with automatic WebP conversion and thumbnail generation."""
     if 'file' not in request.files:
         return jsonify({'error': 'Keine Datei'}), 400
@@ -631,7 +632,8 @@ def upload_file():
     category = request.form.get('category', 'sonstiges')
     name = request.form.get('name', '')
     description = request.form.get('description', '')
-    uploaded_by = request.form.get('uploaded_by', 'anonymous')
+    # Get uploader from authenticated user
+    uploaded_by = user.get('name') or user.get('email', 'anonymous')
 
     # Generate unique filename (use custom name if provided)
     original_name = secure_filename(file.filename)
@@ -717,6 +719,14 @@ def upload_file():
     conn.close()
 
     print(f"Uploaded: {display_filename} ({file_size} bytes)")
+
+    # Send notification to admin
+    send_activity_notification('gallery_upload', {
+        'Von': uploaded_by,
+        'Datei': original_name,
+        'Kategorie': category,
+        'Größe': f"{file_size / 1024 / 1024:.2f} MB"
+    })
 
     return jsonify({
         'success': True,
@@ -970,6 +980,13 @@ def register_user():
         token = create_token(user_id, email, 'user')
         conn.close()
 
+        # Send notification to admin
+        send_activity_notification('user_registered', {
+            'Name': name or username,
+            'Email': email,
+            'Username': username
+        })
+
         return jsonify({
             'success': True,
             'token': token,
@@ -1202,6 +1219,14 @@ def complete_project(project_id, user):
     ))
     conn.commit()
     conn.close()
+
+    # Send notification to admin
+    send_activity_notification('task_completed', {
+        'Projekt': project['title'],
+        'Erledigt von': user.get('name') or user['email'],
+        'Notizen': notes or '-',
+        'Foto': 'Ja' if photo_path else 'Nein'
+    })
 
     return jsonify({
         'success': True,
@@ -1660,6 +1685,15 @@ def complete_recurring_task(task_id, user):
     conn.commit()
     conn.close()
 
+    # Send notification to admin
+    send_activity_notification('task_completed', {
+        'Aufgabe': task['title'],
+        'Kategorie': task['category'],
+        'Erledigt von': user.get('name') or user['email'],
+        'Credits': f"{task['credit_value']} Punkte" if task['credit_value'] else '-',
+        'Nächste Fälligkeit': next_due
+    })
+
     return jsonify({
         'success': True,
         'message': 'Aufgabe als erledigt markiert',
@@ -1745,6 +1779,15 @@ def create_issue(user):
     issue_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
     conn.commit()
     conn.close()
+
+    # Send notification to admin
+    send_activity_notification('issue_report', {
+        'Titel': title,
+        'Kategorie': category or 'Nicht angegeben',
+        'Beschreibung': description or '-',
+        'Gemeldet von': user.get('name') or user['email'],
+        'Foto': 'Ja' if photo_path else 'Nein'
+    })
 
     return jsonify({
         'success': True,

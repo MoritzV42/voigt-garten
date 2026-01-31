@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { differenceInDays, format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
+const TOKEN_KEY = 'voigt-garten-token';
+const USER_KEY = 'voigt-garten-user';
+
 interface Pricing {
   perNight: number;
   weeklyDiscount: number;
@@ -24,6 +27,44 @@ export default function BookingForm({ pricing }: Props) {
     discountCode: '',
     notes: '',
   });
+
+  // Prefill form data if user is logged in
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const userStr = localStorage.getItem(USER_KEY);
+
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setFormData(prev => ({
+          ...prev,
+          name: user.name || prev.name,
+          email: user.email || prev.email,
+        }));
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+
+    // Listen for auth changes
+    const handleAuthChange = () => {
+      const newToken = localStorage.getItem(TOKEN_KEY);
+      const newUserStr = localStorage.getItem(USER_KEY);
+      if (newToken && newUserStr) {
+        try {
+          const user = JSON.parse(newUserStr);
+          setFormData(prev => ({
+            ...prev,
+            name: user.name || prev.name,
+            email: user.email || prev.email,
+          }));
+        } catch (e) {}
+      }
+    };
+
+    window.addEventListener('auth-change', handleAuthChange);
+    return () => window.removeEventListener('auth-change', handleAuthChange);
+  }, []);
 
   const [priceBreakdown, setPriceBreakdown] = useState<{
     nights: number;
@@ -110,10 +151,19 @@ export default function BookingForm({ pricing }: Props) {
           success: true,
           message: 'Buchungsanfrage erfolgreich gesendet! Du erhältst in Kürze eine Bestätigung per Email.',
         });
-        // Reset form
+        // Reset form but keep user data if logged in
+        const userStr = localStorage.getItem(USER_KEY);
+        let userName = '', userEmail = '';
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            userName = user.name || '';
+            userEmail = user.email || '';
+          } catch (e) {}
+        }
         setFormData({
-          name: '',
-          email: '',
+          name: userName,
+          email: userEmail,
           phone: '',
           checkIn: '',
           checkOut: '',

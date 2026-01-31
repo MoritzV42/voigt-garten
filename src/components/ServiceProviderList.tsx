@@ -81,7 +81,7 @@ export default function ServiceProviderList({ categories }: Props) {
                     <div className="text-4xl mb-2">🔍</div>
                     <p className="text-gray-500 mb-2">Noch keine Dienstleister in dieser Kategorie</p>
                     <a
-                      href={`mailto:moritz.infinityspace42@gmail.com?subject=Neuer ${category.name} für Voigt-Garten`}
+                      href={`mailto:garten@infinityspace42.de?subject=Neuer ${category.name} für Voigt-Garten`}
                       className="text-garden-600 hover:text-garden-700 underline text-sm"
                     >
                       Kennst du jemanden? Jetzt melden →
