@@ -39,6 +39,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend code
 COPY pi-backend/app.py .
 COPY pi-backend/email_service.py .
+COPY pi-backend/seed_projects.py .
+COPY pi-backend/start.sh .
+RUN chmod +x start.sh
 
 # Copy built frontend from Stage 1
 COPY --from=frontend-builder /build/dist /app/static
@@ -57,5 +60,5 @@ EXPOSE 5055
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:5055/api/health || exit 1
 
-# Run with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5055", "--workers", "2", "--timeout", "120", "app:app"]
+# Run with startup script (seeds DB + starts Gunicorn)
+CMD ["./start.sh"]

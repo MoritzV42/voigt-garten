@@ -2,7 +2,7 @@
 
 **URL:** https://garten.infinityspace42.de
 
-Ein privates Buchungs- und Wartungssystem für den Familiengarten.
+Ein privates Buchungs- und Wartungssystem für den Familiengarten in Etzdorf im Rosental.
 
 ---
 
@@ -10,44 +10,134 @@ Ein privates Buchungs- und Wartungssystem für den Familiengarten.
 
 ### Buchungssystem
 - Kalenderübersicht mit freien/belegten Zeiten
-- Online-Buchung mit Zahlungsintegration (Stripe)
+- Online-Buchungsformular
 - Gutscheincode `VOIGT-GARTEN` für 50% Rabatt (Familienmitglieder)
-- Buchungsbestätigung per Email
+- Buchungsbestätigung per Email (Resend API)
 
 ### Galerie
 - Fotos und Videos vom Garten
-- Saisonale Eindrücke
-- Upload-Bereich für Gäste
+- Automatische WebP-Konvertierung
+- Thumbnail-Generierung
+- Video-Optimierung via ffmpeg
+- Kategorisierung (Gartenhaus, Terrasse, Luftaufnahmen, etc.)
 
-### Wartungs-Tab
-- Alle Arbeiten kategorisiert (Rasenmähen, Beetarbeiten, Bäume, Brennholz, Elektrik, Putzen, etc.)
-- Wartungszyklen mit automatischen Erinnerungen
-- Status-Tracking (Fällig, Überfällig, Erledigt)
-- Guthaben-System: Erledigte Arbeiten werden Mietern gutgeschrieben
+### Dynamisches Aufgaben-System (NEU)
+- **Kanban-Board** für Infrastruktur-Projekte
+- 4 Spalten: Offen → Next → In Arbeit → Erledigt
+- Drag & Drop (nur eingeloggt)
+- Foto-Upload bei Erledigung
+- **Admin-Bestätigung** vor Gutschrift
+- Kategorien: Wasser, Elektrik, Haus, Garten
 
-### Dienstleister-Management
-- Verifizierte Dienstleister-Datenbank (Gärtner, Elektriker, etc.)
-- Automatische Email-Anfragen bei überfälligen Arbeiten
-- Human-in-the-Loop: Emails werden vor Versand zur Genehmigung vorgelegt
-- Preisvergleich und Bewertungen
+### Wartungs-Tracking
+- Wiederkehrende Aufgaben mit Zyklen
+- Status-Anzeige (Überfällig, Bald fällig, OK)
+- Guthaben-System: Erledigte Arbeiten werden gutgeschrieben
 
-### Claude-Integration
-- Automatische Erkennung überfälliger Arbeiten
-- Email-Entwürfe an Dienstleister
-- Intelligente Priorisierung
+### Admin-Bereich (`/admin`)
+- Dashboard mit Statistiken
+- Buchungsverwaltung (Bestätigen/Stornieren)
+- Projekt-Bestätigungen (mit Credit-Vergabe)
+- User-Verwaltung (Rollen: user/admin)
+
+### Authentication
+- JWT-basierte Authentifizierung
+- Passwort-Login
+- Rollen: Gast (nur lesen), User (bearbeiten), Admin (bestätigen)
+- **Main-Admin:** moritzvoigt42@gmail.com
+
+### Neue Seiten
+- **`/ueber-den-garten`** - Animierte Präsentation (5.300m², Autarkie, Bebauung)
+- **`/umgebung`** - Interaktive Leaflet-Karte mit POIs
+- **`/admin`** - Admin-Dashboard
 
 ---
 
 ## Tech Stack
 
-- **Framework:** Astro 4.x mit React-Inseln
-- **Styling:** Tailwind CSS
-- **Datenbank:** Cloudflare D1 (SQLite)
-- **Auth:** Cloudflare Access (Familie)
-- **Payments:** Stripe
-- **Email:** Resend
-- **Hosting:** Cloudflare Pages
-- **Functions:** Cloudflare Workers
+### Frontend
+- **Framework:** Astro 4.x (Static Output)
+- **Interaktivität:** React 18.x (Islands)
+- **Styling:** Tailwind CSS 3.4
+- **Icons:** Emoji-basiert
+- **Maps:** Leaflet.js (OpenStreetMap)
+
+### Backend
+- **Server:** Flask (Python 3.11)
+- **WSGI:** Gunicorn (2 Workers)
+- **Auth:** PyJWT + Werkzeug Password Hashing
+- **Datenbank:** SQLite3
+- **Email:** Resend API
+- **Image Processing:** Pillow (WebP), ffmpeg (Video)
+
+### Deployment
+- **Container:** Docker (Multi-Stage Build)
+- **Hosting:** Raspberry Pi 5 (via Cloudflare Tunnel)
+- **URL:** garten.infinityspace42.de → localhost:5055
+
+---
+
+## Datenbank-Schema
+
+### users
+```sql
+id, email, username, password_hash, name, role, last_login, created_at
+```
+
+### projects (Kanban)
+```sql
+id, title, description, category, status, priority, estimated_cost,
+effort, timeframe, assigned_to, completed_at, completed_by,
+completion_photo, completion_notes, confirmed_at, confirmed_by,
+credit_awarded, created_at, updated_at, created_by
+```
+
+### bookings
+```sql
+id, guest_name, guest_email, guest_phone, check_in, check_out,
+guests, has_pets, total_price, discount_code, notes, status, created_at
+```
+
+### credits
+```sql
+id, guest_email, amount, reason, type, created_at
+```
+
+### gallery_images
+```sql
+id, filename, original_name, name, description, category, type,
+size, uploaded_at, uploaded_by, thumbnail_path, webp_path, original_path
+```
+
+---
+
+## API Endpoints
+
+### Auth
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/auth/login` | POST | - | Login mit Email/Password |
+| `/api/auth/logout` | POST | User | Logout |
+| `/api/auth/verify` | GET | - | Token validieren |
+| `/api/auth/register` | POST | Admin | Neuen User anlegen |
+
+### Projects
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/projects` | GET | - | Liste aller Projekte |
+| `/api/projects` | POST | User | Neues Projekt erstellen |
+| `/api/projects/{id}` | PATCH | User | Projekt bearbeiten |
+| `/api/projects/{id}/complete` | POST | User | Als erledigt markieren |
+| `/api/projects/{id}/confirm` | POST | Admin | Bestätigen + Credit vergeben |
+| `/api/projects/{id}` | DELETE | Admin | Projekt löschen |
+
+### Admin
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/admin/stats` | GET | Admin | Dashboard-Statistiken |
+| `/api/admin/pending-confirmations` | GET | Admin | Unbestätigte Erledigungen |
+| `/api/admin/users` | GET | Admin | User-Liste |
+| `/api/admin/bookings` | GET | Admin | Alle Buchungen |
 
 ---
 
@@ -57,25 +147,29 @@ Ein privates Buchungs- und Wartungssystem für den Familiengarten.
 # Dependencies installieren
 npm install
 
-# Dev Server starten
+# Dev Server starten (Frontend)
 npm run dev
 
-# Build für Production
-npm run build
-
-# Preview Build
-npm run preview
+# Backend starten
+cd pi-backend
+pip install -r requirements.txt
+python app.py
 ```
 
 ---
 
-## Deployment
-
-Automatisches Deployment via GitHub → Cloudflare Pages.
+## Docker Deployment
 
 ```bash
-# Manuelles Deployment
-npx wrangler pages deploy dist
+# Build & Start
+cd /home/moritz/stacks/voigt-garten
+docker compose up -d --build
+
+# Logs prüfen
+docker logs voigt-garten-app -f
+
+# Container neustarten
+docker restart voigt-garten-app
 ```
 
 ---
@@ -83,48 +177,29 @@ npx wrangler pages deploy dist
 ## Umgebungsvariablen
 
 ```env
-# Stripe
-STRIPE_PUBLIC_KEY=pk_live_xxx
-STRIPE_SECRET_KEY=sk_live_xxx
-
 # Resend (Email)
 RESEND_API_KEY=re_xxx
 
-# Cloudflare D1
-DATABASE_ID=xxx
-
-# Claude (optional für Auto-Emails)
-ANTHROPIC_API_KEY=sk-ant-xxx
+# JWT Secret (optional, hat Default)
+JWT_SECRET=your-secret-key
 ```
 
 ---
 
-## Datenbank-Schema
+## Garten-Daten
 
-### bookings
-- id, guest_name, guest_email, check_in, check_out, amount, discount_code, status, created_at
-
-### maintenance_tasks
-- id, category, title, description, cycle_days, last_done, next_due, status, assigned_to
-
-### service_providers
-- id, category, name, email, phone, rating, notes, verified
-
-### credits
-- id, guest_email, amount, reason, created_at
-
----
-
-## Offene Fragen (Placeholder)
-
-1. **Preise:** Was kostet eine Nacht/Woche im Garten?
-2. **Fotos:** Wo liegen die aktuellen Garten-Fotos?
-3. **Familie:** Welche Email-Adressen sollen Zugang haben?
-4. **Dienstleister:** Gibt es bereits bekannte Gärtner/Elektriker?
-5. **Zahlungsmethoden:** Nur Karte oder auch Überweisung?
+- **Fläche:** 5.300 m²
+- **Lage:** Etzdorf im Rosental (Südhang)
+- **Plus Code:** XXJ2+4JX Heideland
+- **Autarkie:**
+  - Solar: ~700W
+  - Batterie: 1,4 kWh (Lithium-Ionen, 12V)
+  - Wechselrichter: 2 kW
+  - Brunnen: 50m tief
+- **Gegründet:** ca. 1975
 
 ---
 
 ## Kontakt
 
-Moritz Voigt - moritz.infinityspace42@gmail.com
+Moritz Voigt - moritzvoigt42@gmail.com

@@ -31,10 +31,11 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
           </div>
           <div class="hidden sm:flex sm:items-center sm:gap-6">
             <a href="/" class="text-gray-600 hover:text-garden-700 transition">Start</a>
+            <a href="/ueber-den-garten" class="text-gray-600 hover:text-garden-700 transition">Der Garten</a>
             <a href="/galerie" class="text-gray-600 hover:text-garden-700 transition">Galerie</a>
             <a href="/buchen" class="text-gray-600 hover:text-garden-700 transition">Buchen</a>
             <a href="/wartung" class="text-gray-600 hover:text-garden-700 transition">Wartung</a>
-            <a href="/dienstleister" class="text-gray-600 hover:text-garden-700 transition">Dienstleister</a>
+            <a href="/umgebung" class="text-gray-600 hover:text-garden-700 transition">Umgebung</a>
           </div>
           <!-- Mobile menu button -->
           <div class="sm:hidden flex items-center">
@@ -50,10 +51,11 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
       <div id="mobile-menu" class="hidden sm:hidden bg-white border-t border-garden-100">
         <div class="px-4 py-3 space-y-2">
           <a href="/" class="block py-2 text-gray-600 hover:text-garden-700">Start</a>
+          <a href="/ueber-den-garten" class="block py-2 text-gray-600 hover:text-garden-700">Der Garten</a>
           <a href="/galerie" class="block py-2 text-gray-600 hover:text-garden-700">Galerie</a>
           <a href="/buchen" class="block py-2 text-gray-600 hover:text-garden-700">Buchen</a>
           <a href="/wartung" class="block py-2 text-gray-600 hover:text-garden-700">Wartung</a>
-          <a href="/dienstleister" class="block py-2 text-gray-600 hover:text-garden-700">Dienstleister</a>
+          <a href="/umgebung" class="block py-2 text-gray-600 hover:text-garden-700">Umgebung</a>
         </div>
       </div>
     </nav>
@@ -92,6 +94,8 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
         </div>
         <div class="border-t border-garden-800 mt-8 pt-8 text-center text-garden-300 text-sm">
           &copy; {new Date().getFullYear()} Familie Voigt. Mit Liebe gepflegt.
+          <span class="mx-2">|</span>
+          <a href="/admin" class="hover:text-white transition">Admin</a>
         </div>
       </div>
     </footer>
