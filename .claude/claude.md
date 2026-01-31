@@ -36,8 +36,18 @@ Volume Mounts -> Pi Filesystem
 |-- astro.config.mjs        # Static output (nicht SSR)
 |-- package.json            # Astro + React + Tailwind
 |-- src/                    # Astro Frontend
+|   |-- pages/
+|       |-- index.astro     # Startseite
+|       |-- buchen.astro    # Buchungssystem
+|       |-- galerie.astro   # Fotogalerie
+|       |-- wartung.astro   # Wartungsaufgaben + Guthaben
+|       |-- dienstleister.astro  # Dienstleister-Management
 |-- public/                 # Static Assets
 |   |-- images/gallery/     # Hochgeladene Bilder (Volume)
+|-- docs/                   # Dokumentation zum Garten
+|   |-- infrastruktur-arbeiten.md  # Wasser, Elektrik, Heizung
+|   |-- gartenbeschreibung.md      # Lage, Bebauung, Baumbestand
+|   |-- kooperationsmodell.md      # Nutzungskonzept für Mitnutzer
 |-- pi-backend/
 |   |-- app.py              # Flask API + Static Serving
 |   |-- email_service.py    # Resend Email
@@ -247,6 +257,36 @@ Folgende Dateien/Ordner werden nicht mehr benotigt:
 
 ---
 
-**Version:** 1.0
+## Garten-Dokumentation (docs/)
+
+### Eigentümer
+- **Name:** Konny Voigt
+- **Telefon:** 01652593763
+- **Doku-App Kunden-ID:** 80
+
+### Dokumente
+
+| Datei | Inhalt |
+|-------|--------|
+| `docs/infrastruktur-arbeiten.md` | Wasser, Elektrik, Heizung - technische Details und offene Arbeiten |
+| `docs/gartenbeschreibung.md` | Lage (Etzdorf/Rosental), Bebauung, Baumbestand, 5.300m² Grundfläche |
+| `docs/kooperationsmodell.md` | Mietfreie Nutzung gegen Erhaltungsleistungen, 2 Jahre Probezeit |
+
+### Garten-Eckdaten
+- **Lage:** Etzdorf im Rosental, Südhang
+- **Fläche:** 5.300 m²
+- **Autarkie:** Solar 700W + 1,4kWh Akku, Brunnen 50m tief
+- **Bebauung:** Gartenhaus (Holz), Wintergarten, 4 Schuppen, Carport
+- **Baumbestand:** Süßkirschen (50J), 2 Eichen (d>1m), 2 Eschen
+
+### Verknüpfung mit Doku-App
+- **Task #479:** Project Garten (Hauptprojekt)
+- **Subtask #464:** Galerie-Fotos/Videos sammeln
+- **Subtask #480:** Garten-Dokumentation vervollständigen
+
+---
+
+**Version:** 1.1
 **Erstellt:** 2026-01-26
+**Aktualisiert:** 2026-01-31
 **Hosting:** Raspberry Pi 5 (via Cloudflare Tunnel)

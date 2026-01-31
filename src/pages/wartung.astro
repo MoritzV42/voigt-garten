@@ -79,6 +79,51 @@ const maintenanceCategories = [
     ]
   }
 ];
+
+// EINMALIGE AUFGABEN - Infrastruktur-Projekte (nicht wiederkehrend)
+const einmaligeAufgaben = [
+  {
+    id: 'wasser',
+    name: 'Wasser-Infrastruktur',
+    emoji: '💧',
+    tasks: [
+      { id: 100, title: 'Hydrophoranlage erneuern (250l)', description: 'Hydrophoranlage im Duschraum erneuern für frostsicheren Betrieb von Küche und Dusche. Klempnerarbeit erforderlich.', priority: 'hoch', estimatedCost: '500-800€' },
+      { id: 101, title: 'Wasserverteilung im Keller überarbeiten', description: 'Erneuerungsbedürftige Verteilung im Duschraum (Keller) neu machen.', priority: 'mittel', estimatedCost: '300-500€' },
+      { id: 102, title: 'Automatische Bewässerung fertigstellen', description: 'Vorinstallierte Bewässerung für Beete, Weinberg etc. funktioniert nur unzureichend. Behälter: 1000l Vroni-Schuppen, 1000l Carport, 1000l oberer Schuppen, 600l Konnys Schuppen.', priority: 'niedrig', estimatedCost: '200-400€' },
+    ]
+  },
+  {
+    id: 'elektrik-einmalig',
+    name: 'Elektrik-Projekte',
+    emoji: '⚡',
+    tasks: [
+      { id: 103, title: 'Erdung installieren', description: 'WICHTIG: Anlage hat keine Erdung! Erdstab kann im Keller in die Grundplatte gebohrt werden.', priority: 'kritisch', estimatedCost: '100-200€' },
+      { id: 104, title: 'Hausverkabelung auf 220V erneuern', description: 'Aktuelle Kabel nicht 220V tauglich. Alle Kabel im Zwischenboden - mit alten kann man neue durchziehen. Eigenleistung: Moritz, Matti', priority: 'hoch', estimatedCost: '300-500€' },
+      { id: 105, title: 'Steckdosen installieren', description: 'Zusätzliche Steckdosen im Haus installieren.', priority: 'mittel', estimatedCost: '100-200€' },
+      { id: 106, title: 'Balkonanlage mit Batterie kaufen', description: 'Zwei 220V~ Anlagen betreiben: eine für Haus, eine für Gartengeräte.', priority: 'mittel', estimatedCost: '800-1500€' },
+      { id: 107, title: 'Elektriker für Planung & Abnahme', description: 'Professionelle Planung und Abnahme der Elektroanlage.', priority: 'hoch', estimatedCost: '200-400€' },
+    ]
+  },
+  {
+    id: 'haus-einmalig',
+    name: 'Haus-Projekte',
+    emoji: '🏠',
+    tasks: [
+      { id: 108, title: 'Kühlschrank in Küche unterbringen', description: 'Kühlschrank sollte in der Küche untergebracht werden.', priority: 'niedrig', estimatedCost: '0€' },
+      { id: 109, title: 'Auszieh-Couch besorgen', description: 'Für mehrere Übernachtungsgäste (max. 4 Personen).', priority: 'niedrig', estimatedCost: '300-600€' },
+      { id: 110, title: 'Gasbetriebene Dusche reparieren', description: 'Dusche im Kellerraum ist defekt, aber alle Teile sind vorhanden zur Neuinstallation.', priority: 'mittel', estimatedCost: '100-300€' },
+    ]
+  },
+  {
+    id: 'garten-einmalig',
+    name: 'Garten-Projekte',
+    emoji: '🌿',
+    tasks: [
+      { id: 111, title: 'Teich fertigstellen', description: 'Teich 10m², 80cm tief ist ausgehoben und bewässert, aber noch nicht fertiggestellt.', priority: 'niedrig', estimatedCost: '200-500€' },
+      { id: 112, title: 'Keller unter Schuppen abdichten', description: 'Keller 8x3mx1,8m als Wasser-Reservoir geplant, muss noch abgedichtet werden. Potenzial für Sauna mit Schwimmbecken!', priority: 'niedrig', estimatedCost: '1000-2000€' },
+    ]
+  }
+];
 ---
 
 <Layout title="Wartung" description="Wartungsaufgaben und Guthaben-System für den Voigt-Garten">
@@ -178,6 +223,62 @@ const maintenanceCategories = [
             </a>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Einmalige Aufgaben (Projekte) -->
+  <section class="py-12 bg-amber-50 border-t border-amber-100">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-sm font-medium mb-4">
+          <span>🔨</span> Infrastruktur-Projekte
+        </div>
+        <h2 class="font-display text-3xl font-bold text-amber-900 mb-4">
+          Einmalige Aufgaben
+        </h2>
+        <p class="text-amber-700 max-w-2xl mx-auto">
+          Diese Projekte sind keine wiederkehrenden Wartungsaufgaben, sondern einmalige Infrastruktur-Verbesserungen.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {einmaligeAufgaben.map((category) => (
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="font-display text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span>{category.emoji}</span> {category.name}
+            </h3>
+            <ul class="space-y-3">
+              {category.tasks.map((task) => (
+                <li class="border-l-4 pl-4 py-2" style={`border-color: ${task.priority === 'kritisch' ? '#ef4444' : task.priority === 'hoch' ? '#f59e0b' : task.priority === 'mittel' ? '#3b82f6' : '#22c55e'}`}>
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h4 class="font-medium text-gray-900">{task.title}</h4>
+                      <p class="text-sm text-gray-600 mt-1">{task.description}</p>
+                    </div>
+                    <span class={`text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2 ${
+                      task.priority === 'kritisch' ? 'bg-red-100 text-red-800' :
+                      task.priority === 'hoch' ? 'bg-amber-100 text-amber-800' :
+                      task.priority === 'mittel' ? 'bg-blue-100 text-blue-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {task.priority}
+                    </span>
+                  </div>
+                  <div class="text-xs text-gray-500 mt-2">
+                    Geschätzte Kosten: {task.estimatedCost}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div class="mt-8 text-center">
+        <p class="text-sm text-amber-600">
+          📋 Details zu allen Projekten: <a href="https://github.com/MoritzV42/voigt-garten/tree/main/docs" class="underline hover:text-amber-800">docs/infrastruktur-arbeiten.md</a>
+        </p>
       </div>
     </div>
   </section>
