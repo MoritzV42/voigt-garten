@@ -1,4 +1,6 @@
 ---
+import GlobalNavbar from '../components/GlobalNavbar';
+
 interface Props {
   title: string;
   description?: string;
@@ -36,10 +38,13 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
             <a href="/buchen" class="text-gray-600 hover:text-garden-700 transition">Buchen</a>
             <a href="/wartung" class="text-gray-600 hover:text-garden-700 transition">Wartung</a>
             <a href="/umgebung" class="text-gray-600 hover:text-garden-700 transition">Umgebung</a>
+            <div class="border-l border-gray-200 h-6 mx-2"></div>
+            <GlobalNavbar client:load />
           </div>
           <!-- Mobile menu button -->
-          <div class="sm:hidden flex items-center">
-            <button id="mobile-menu-btn" class="text-gray-600 hover:text-garden-700">
+          <div class="sm:hidden flex items-center gap-2">
+            <GlobalNavbar client:load />
+            <button id="mobile-menu-btn" class="text-gray-600 hover:text-garden-700 p-2">
               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>

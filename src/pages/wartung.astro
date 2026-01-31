@@ -1,108 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import MaintenanceList from '../components/MaintenanceList';
+import UnifiedWartungPage from '../components/UnifiedWartungPage';
 import CreditSystem from '../components/CreditSystem';
 import GardenMap from '../components/GardenMap';
-import WartungPage from '../components/WartungPage';
-
-// Wiederkehrende Wartungsaufgaben (bleiben statisch)
-const maintenanceCategories = [
-  {
-    id: 'rasen',
-    name: 'Rasenpflege',
-    emoji: '🌿',
-    tasks: [
-      { id: 1, title: 'Rasenmähen', cycleDays: 14, creditValue: 15, description: 'Gesamter Rasen mähen und Schnittgut entsorgen' },
-      { id: 2, title: 'Rasenkanten schneiden', cycleDays: 30, creditValue: 10, description: 'Kanten entlang der Beete und Wege' },
-      { id: 3, title: 'Vertikutieren', cycleDays: 180, creditValue: 30, description: 'Rasen vertikutieren (Frühjahr/Herbst)' },
-    ]
-  },
-  {
-    id: 'beete',
-    name: 'Beetarbeiten',
-    emoji: '🌻',
-    tasks: [
-      { id: 4, title: 'Unkraut jäten', cycleDays: 14, creditValue: 20, description: 'Alle Beete von Unkraut befreien' },
-      { id: 5, title: 'Beete mulchen', cycleDays: 365, creditValue: 40, description: 'Rindenmulch aufbringen' },
-      { id: 6, title: 'Blumen gießen', cycleDays: 3, creditValue: 5, description: 'Bei Trockenheit gießen' },
-    ]
-  },
-  {
-    id: 'baeume',
-    name: 'Bäume & Hecken',
-    emoji: '🌳',
-    tasks: [
-      { id: 7, title: 'Hecke schneiden', cycleDays: 90, creditValue: 35, description: 'Hecken in Form schneiden' },
-      { id: 8, title: 'Obstbaumschnitt', cycleDays: 365, creditValue: 50, description: 'Winterschnitt der Obstbäume' },
-      { id: 9, title: 'Laub harken', cycleDays: 7, creditValue: 15, description: 'Laub zusammenharken (Herbst)' },
-    ]
-  },
-  {
-    id: 'brennholz',
-    name: 'Brennholz',
-    emoji: '🪵',
-    tasks: [
-      { id: 10, title: 'Holz hacken', cycleDays: 180, creditValue: 40, description: 'Holz für Feuerstelle hacken' },
-      { id: 11, title: 'Holz stapeln', cycleDays: 180, creditValue: 25, description: 'Gehacktes Holz ordentlich stapeln' },
-      { id: 12, title: 'Holzvorrat prüfen', cycleDays: 30, creditValue: 5, description: 'Bestand kontrollieren' },
-    ]
-  },
-  {
-    id: 'elektrik',
-    name: 'Elektrik',
-    emoji: '⚡',
-    tasks: [
-      { id: 13, title: 'Außenbeleuchtung prüfen', cycleDays: 90, creditValue: 10, description: 'Alle Lampen testen, defekte austauschen' },
-      { id: 14, title: 'Steckdosen prüfen', cycleDays: 180, creditValue: 15, description: 'Außensteckdosen auf Funktion prüfen' },
-      { id: 15, title: 'E-Check (Elektriker)', cycleDays: 730, creditValue: 0, description: 'Professionelle Prüfung - Dienstleister beauftragen' },
-    ]
-  },
-  {
-    id: 'putzen',
-    name: 'Reinigung',
-    emoji: '🧹',
-    tasks: [
-      { id: 16, title: 'Gartenhaus putzen', cycleDays: 30, creditValue: 25, description: 'Innenreinigung des Gartenhauses' },
-      { id: 17, title: 'Terrasse reinigen', cycleDays: 60, creditValue: 20, description: 'Terrassenplatten abkehren/schrubben' },
-      { id: 18, title: 'Regenrinnen reinigen', cycleDays: 180, creditValue: 20, description: 'Laub aus Regenrinnen entfernen' },
-      { id: 19, title: 'Fenster putzen', cycleDays: 90, creditValue: 15, description: 'Fenster des Gartenhauses reinigen' },
-    ]
-  },
-  {
-    id: 'sonstiges',
-    name: 'Sonstiges',
-    emoji: '🔧',
-    tasks: [
-      { id: 20, title: 'Werkzeug pflegen', cycleDays: 180, creditValue: 15, description: 'Werkzeuge reinigen und ölen' },
-      { id: 21, title: 'Zaun kontrollieren', cycleDays: 90, creditValue: 10, description: 'Zaunpfähle und Latten prüfen' },
-      { id: 22, title: 'Winterfest machen', cycleDays: 365, creditValue: 50, description: 'Wasserhahn abstellen, Möbel einräumen (Herbst)' },
-      { id: 23, title: 'Frühjahrs-Check', cycleDays: 365, creditValue: 50, description: 'Alles nach dem Winter überprüfen (Frühjahr)' },
-    ]
-  }
-];
-
-// HINWEIS: Einmalige Aufgaben werden jetzt aus der Datenbank geladen
-// Das alte einmaligeAufgaben-Array wurde durch das dynamische Kanban-System ersetzt
-// Siehe: /api/projects für die API-Endpoints
-
-// Initial-Daten für die Datenbank (einmalig migrieren):
-// Diese Projekte sollten einmalig in die DB eingefügt werden via:
-// POST /api/projects mit jedem Projekt
-const INITIAL_PROJECTS_FOR_MIGRATION = [
-  { title: 'Hydrophoranlage erneuern (250l)', description: 'Hydrophoranlage im Duschraum erneuern für frostsicheren Betrieb von Küche und Dusche. Klempnerarbeit erforderlich.', category: 'wasser', priority: 'hoch', estimated_cost: '500-800€' },
-  { title: 'Wasserverteilung im Keller überarbeiten', description: 'Erneuerungsbedürftige Verteilung im Duschraum (Keller) neu machen.', category: 'wasser', priority: 'mittel', estimated_cost: '300-500€' },
-  { title: 'Automatische Bewässerung fertigstellen', description: 'Vorinstallierte Bewässerung für Beete, Weinberg etc. funktioniert nur unzureichend. Behälter: 1000l Vroni-Schuppen, 1000l Carport, 1000l oberer Schuppen, 600l Konnys Schuppen.', category: 'wasser', priority: 'niedrig', estimated_cost: '200-400€' },
-  { title: 'Erdung installieren', description: 'WICHTIG: Anlage hat keine Erdung! Erdstab kann im Keller in die Grundplatte gebohrt werden.', category: 'elektrik', priority: 'kritisch', estimated_cost: '100-200€' },
-  { title: 'Hausverkabelung auf 220V erneuern', description: 'Aktuelle Kabel nicht 220V tauglich. Alle Kabel im Zwischenboden - mit alten kann man neue durchziehen. Eigenleistung: Moritz, Matti', category: 'elektrik', priority: 'hoch', estimated_cost: '300-500€' },
-  { title: 'Steckdosen installieren', description: 'Zusätzliche Steckdosen im Haus installieren.', category: 'elektrik', priority: 'mittel', estimated_cost: '100-200€' },
-  { title: 'Balkonanlage mit Batterie kaufen', description: 'Zwei 220V~ Anlagen betreiben: eine für Haus, eine für Gartengeräte.', category: 'elektrik', priority: 'mittel', estimated_cost: '800-1500€' },
-  { title: 'Elektriker für Planung & Abnahme', description: 'Professionelle Planung und Abnahme der Elektroanlage.', category: 'elektrik', priority: 'hoch', estimated_cost: '200-400€' },
-  { title: 'Kühlschrank in Küche unterbringen', description: 'Kühlschrank sollte in der Küche untergebracht werden.', category: 'haus', priority: 'niedrig', estimated_cost: '0€' },
-  { title: 'Auszieh-Couch besorgen', description: 'Für mehrere Übernachtungsgäste (max. 4 Personen).', category: 'haus', priority: 'niedrig', estimated_cost: '300-600€' },
-  { title: 'Gasbetriebene Dusche reparieren', description: 'Dusche im Kellerraum ist defekt, aber alle Teile sind vorhanden zur Neuinstallation.', category: 'haus', priority: 'mittel', estimated_cost: '100-300€' },
-  { title: 'Teich fertigstellen', description: 'Teich 10m², 80cm tief ist ausgehoben und bewässert, aber noch nicht fertiggestellt.', category: 'garten', priority: 'niedrig', estimated_cost: '200-500€' },
-  { title: 'Keller unter Schuppen abdichten', description: 'Keller 8x3mx1,8m als Wasser-Reservoir geplant, muss noch abgedichtet werden. Potenzial für Sauna mit Schwimmbecken!', category: 'garten', priority: 'niedrig', estimated_cost: '1000-2000€' },
-];
 ---
 
 <Layout title="Wartung" description="Wartungsaufgaben und Guthaben-System für den Voigt-Garten">
@@ -118,30 +18,6 @@ const INITIAL_PROJECTS_FOR_MIGRATION = [
     </div>
   </section>
 
-  <!-- Stats Bar -->
-  <section class="py-6 bg-white border-b border-gray-200">
-    <div class="max-w-6xl mx-auto px-4">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-        <div class="bg-red-50 rounded-lg p-4">
-          <div class="text-2xl font-bold text-red-600" id="stat-overdue">-</div>
-          <div class="text-sm text-red-700">Überfällig</div>
-        </div>
-        <div class="bg-amber-50 rounded-lg p-4">
-          <div class="text-2xl font-bold text-amber-600" id="stat-due-soon">-</div>
-          <div class="text-sm text-amber-700">Bald fällig</div>
-        </div>
-        <div class="bg-green-50 rounded-lg p-4">
-          <div class="text-2xl font-bold text-green-600" id="stat-ok">-</div>
-          <div class="text-sm text-green-700">In Ordnung</div>
-        </div>
-        <div class="bg-garden-50 rounded-lg p-4">
-          <div class="text-2xl font-bold text-garden-600">{maintenanceCategories.reduce((sum, cat) => sum + cat.tasks.length, 0)}</div>
-          <div class="text-sm text-garden-700">Gesamt Tasks</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- Garden Map -->
   <section class="py-8 bg-gray-50">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -151,11 +27,11 @@ const INITIAL_PROJECTS_FOR_MIGRATION = [
 
   <!-- Main Content -->
   <section class="py-12">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Task List -->
-        <div class="lg:col-span-2">
-          <MaintenanceList client:load categories={maintenanceCategories} />
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <!-- Unified Kanban Board -->
+        <div class="lg:col-span-3">
+          <UnifiedWartungPage client:load />
         </div>
 
         <!-- Sidebar -->
@@ -163,7 +39,7 @@ const INITIAL_PROJECTS_FOR_MIGRATION = [
           <!-- Credit System -->
           <div id="credits" class="bg-white rounded-xl shadow-lg p-6">
             <h3 class="font-display text-xl font-bold text-garden-900 mb-4">
-              💰 Guthaben-System
+              Guthaben-System
             </h3>
             <CreditSystem client:load />
           </div>
@@ -173,62 +49,77 @@ const INITIAL_PROJECTS_FOR_MIGRATION = [
             <h3 class="font-semibold text-garden-800 mb-4">So funktioniert's:</h3>
             <ol class="space-y-3 text-sm text-gray-700">
               <li class="flex gap-2">
-                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                <span>Registriere dich oder melde dich an</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">2</span>
                 <span>Wähle eine Aufgabe aus</span>
               </li>
               <li class="flex gap-2">
-                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">3</span>
                 <span>Erledige die Arbeit im Garten</span>
               </li>
               <li class="flex gap-2">
-                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                <span>Markiere als erledigt (mit Foto)</span>
+                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">4</span>
+                <span>Markiere als erledigt (optional mit Foto)</span>
               </li>
               <li class="flex gap-2">
-                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">4</span>
-                <span>Guthaben wird gutgeschrieben!</span>
+                <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">5</span>
+                <span>Guthaben wird nach Admin-Bestätigung gutgeschrieben!</span>
               </li>
             </ol>
           </div>
 
+          <!-- Task Types Legend -->
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">Aufgaben-Typen:</h3>
+            <div class="space-y-3 text-sm">
+              <div class="flex items-center gap-3">
+                <span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">🔄 14d</span>
+                <span class="text-gray-600">Wiederkehrende Aufgaben</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">📋</span>
+                <span class="text-gray-600">Einmalige Projekte</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Legend -->
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">Status-Farben:</h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+                <span class="text-gray-600">Überfällig / Kritisch</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-amber-500 rounded-full"></span>
+                <span class="text-gray-600">Bald fällig / Hoch</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-blue-500 rounded-full"></span>
+                <span class="text-gray-600">Mittel</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                <span class="text-gray-600">OK / Niedrig</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Contact for help -->
           <div class="bg-amber-50 rounded-xl p-6 border-2 border-amber-200">
-            <h3 class="font-semibold text-amber-800 mb-2">❗ Zu viel Arbeit?</h3>
+            <h3 class="font-semibold text-amber-800 mb-2">Problem entdeckt?</h3>
             <p class="text-sm text-amber-700 mb-4">
-              Bei überfälligen Aufgaben kann automatisch ein Dienstleister angefragt werden.
+              Melde Mängel direkt über den "Mangel melden" Button. Ein Admin wird sich darum kümmern.
             </p>
             <a href="/dienstleister" class="text-amber-800 hover:text-amber-900 font-medium text-sm underline">
               Dienstleister ansehen →
             </a>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Einmalige Aufgaben (Projekte) - Dynamisches Kanban-System -->
-  <section class="py-12 bg-amber-50 border-t border-amber-100">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-8">
-        <div class="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-sm font-medium mb-4">
-          <span>🔨</span> Infrastruktur-Projekte
-        </div>
-        <h2 class="font-display text-3xl font-bold text-amber-900 mb-4">
-          Einmalige Aufgaben
-        </h2>
-        <p class="text-amber-700 max-w-2xl mx-auto">
-          Diese Projekte sind keine wiederkehrenden Wartungsaufgaben, sondern einmalige Infrastruktur-Verbesserungen.
-          <strong class="block mt-2">Anmelden um Projekte zu bearbeiten oder als erledigt zu markieren!</strong>
-        </p>
-      </div>
-
-      <!-- Dynamisches Kanban-Board -->
-      <WartungPage client:load />
-
-      <div class="mt-8 text-center">
-        <p class="text-sm text-amber-600">
-          📋 Details zu allen Projekten: <a href="https://github.com/MoritzV42/voigt-garten/tree/main/docs" class="underline hover:text-amber-800">docs/infrastruktur-arbeiten.md</a>
-        </p>
       </div>
     </div>
   </section>

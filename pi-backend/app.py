@@ -169,6 +169,36 @@ def init_db():
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             created_by TEXT
         );
+
+        -- Wiederkehrende Aufgaben (aus wartung.astro migriert)
+        CREATE TABLE IF NOT EXISTS recurring_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            category TEXT NOT NULL,
+            cycle_days INTEGER NOT NULL,
+            credit_value REAL DEFAULT 0,
+            effort TEXT,
+            next_due DATE,
+            last_completed_at DATETIME,
+            last_completed_by TEXT,
+            is_active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Mängelmeldungen von Gästen
+        CREATE TABLE IF NOT EXISTS issue_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            category TEXT,
+            photo_filename TEXT,
+            reported_by TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            admin_notes TEXT,
+            converted_to_project_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
     ''')
     conn.commit()
 
@@ -183,8 +213,60 @@ def init_db():
         conn.commit()
         print("Main admin user created: moritzvoigt42@gmail.com")
 
+    # Seed recurring tasks if empty
+    cursor = conn.execute("SELECT COUNT(*) as count FROM recurring_tasks")
+    if cursor.fetchone()['count'] == 0:
+        seed_recurring_tasks(conn)
+
     conn.close()
     print("Database initialized")
+
+
+def seed_recurring_tasks(conn):
+    """Seed initial recurring maintenance tasks."""
+    tasks = [
+        # Rasenpflege
+        ('Rasenmähen', 'Gesamter Rasen mähen und Schnittgut entsorgen', 'rasen', 14, 15, 'mittel'),
+        ('Rasenkanten schneiden', 'Kanten entlang der Beete und Wege', 'rasen', 30, 10, 'leicht'),
+        ('Vertikutieren', 'Rasen vertikutieren (Frühjahr/Herbst)', 'rasen', 180, 30, 'schwer'),
+        # Beetarbeiten
+        ('Unkraut jäten', 'Alle Beete von Unkraut befreien', 'beete', 14, 20, 'mittel'),
+        ('Beete mulchen', 'Rindenmulch aufbringen', 'beete', 365, 40, 'schwer'),
+        ('Blumen gießen', 'Bei Trockenheit gießen', 'beete', 3, 5, 'leicht'),
+        # Bäume & Hecken
+        ('Hecke schneiden', 'Hecken in Form schneiden', 'baeume', 90, 35, 'schwer'),
+        ('Obstbaumschnitt', 'Winterschnitt der Obstbäume', 'baeume', 365, 50, 'schwer'),
+        ('Laub harken', 'Laub zusammenharken (Herbst)', 'baeume', 7, 15, 'mittel'),
+        # Brennholz
+        ('Holz hacken', 'Holz für Feuerstelle hacken', 'brennholz', 180, 40, 'schwer'),
+        ('Holz stapeln', 'Gehacktes Holz ordentlich stapeln', 'brennholz', 180, 25, 'mittel'),
+        ('Holzvorrat prüfen', 'Bestand kontrollieren', 'brennholz', 30, 5, 'leicht'),
+        # Elektrik
+        ('Außenbeleuchtung prüfen', 'Alle Lampen testen, defekte austauschen', 'elektrik', 90, 10, 'leicht'),
+        ('Steckdosen prüfen', 'Außensteckdosen auf Funktion prüfen', 'elektrik', 180, 15, 'leicht'),
+        ('E-Check (Elektriker)', 'Professionelle Prüfung - Dienstleister beauftragen', 'elektrik', 730, 0, 'schwer'),
+        # Reinigung
+        ('Gartenhaus putzen', 'Innenreinigung des Gartenhauses', 'putzen', 30, 25, 'mittel'),
+        ('Terrasse reinigen', 'Terrassenplatten abkehren/schrubben', 'putzen', 60, 20, 'mittel'),
+        ('Regenrinnen reinigen', 'Laub aus Regenrinnen entfernen', 'putzen', 180, 20, 'mittel'),
+        ('Fenster putzen', 'Fenster des Gartenhauses reinigen', 'putzen', 90, 15, 'leicht'),
+        # Sonstiges
+        ('Werkzeug pflegen', 'Werkzeuge reinigen und ölen', 'sonstiges', 180, 15, 'leicht'),
+        ('Zaun kontrollieren', 'Zaunpfähle und Latten prüfen', 'sonstiges', 90, 10, 'leicht'),
+        ('Winterfest machen', 'Wasserhahn abstellen, Möbel einräumen (Herbst)', 'sonstiges', 365, 50, 'schwer'),
+        ('Frühjahrs-Check', 'Alles nach dem Winter überprüfen (Frühjahr)', 'sonstiges', 365, 50, 'mittel'),
+    ]
+
+    for title, description, category, cycle_days, credit_value, effort in tasks:
+        # Calculate next_due based on cycle_days from today
+        next_due = (datetime.now() + timedelta(days=cycle_days // 4)).strftime('%Y-%m-%d')
+        conn.execute('''
+            INSERT INTO recurring_tasks (title, description, category, cycle_days, credit_value, effort, next_due)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (title, description, category, cycle_days, credit_value, effort, next_due))
+
+    conn.commit()
+    print(f"Seeded {len(tasks)} recurring tasks")
 
 
 def allowed_file(filename):
@@ -850,9 +932,64 @@ def verify_auth():
 
 
 @app.route('/api/auth/register', methods=['POST'])
+def register_user():
+    """Self-registration for guests (creates user role)."""
+    data = request.json
+
+    email = data.get('email')
+    username = data.get('username')
+    password = data.get('password')
+    name = data.get('name')
+
+    if not email or not username or not password:
+        return jsonify({'error': 'Email, Username und Passwort erforderlich'}), 400
+
+    # Validate email format
+    if '@' not in email or '.' not in email:
+        return jsonify({'error': 'Ungültiges Email-Format'}), 400
+
+    # Validate password length
+    if len(password) < 6:
+        return jsonify({'error': 'Passwort muss mindestens 6 Zeichen haben'}), 400
+
+    # Validate username length
+    if len(username) < 3:
+        return jsonify({'error': 'Username muss mindestens 3 Zeichen haben'}), 400
+
+    conn = get_db()
+    try:
+        password_hash = generate_password_hash(password)
+        conn.execute('''
+            INSERT INTO users (email, username, password_hash, name, role)
+            VALUES (?, ?, ?, ?, 'user')
+        ''', (email, username, password_hash, name))
+        user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        conn.commit()
+
+        # Auto-login: create token
+        token = create_token(user_id, email, 'user')
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'token': token,
+            'user': {
+                'id': user_id,
+                'email': email,
+                'username': username,
+                'name': name,
+                'role': 'user'
+            }
+        })
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'Email oder Username bereits vergeben'}), 409
+
+
+@app.route('/api/admin/users', methods=['POST'])
 @require_admin
-def register_user(user):
-    """Register new user (admin only)."""
+def admin_create_user(user):
+    """Admin: Create new user with custom role."""
     data = request.json
 
     email = data.get('email')
@@ -1320,6 +1457,531 @@ def update_booking(booking_id, user):
     conn.close()
 
     return jsonify({'success': True, 'message': 'Buchung aktualisiert'})
+
+
+# ============ Recurring Tasks Routes ============
+
+@app.route('/api/recurring-tasks', methods=['GET'])
+def get_recurring_tasks():
+    """Get all recurring maintenance tasks."""
+    category = request.args.get('category')
+    active_only = request.args.get('active', 'true').lower() == 'true'
+
+    conn = get_db()
+    query = 'SELECT * FROM recurring_tasks WHERE 1=1'
+    params = []
+
+    if active_only:
+        query += ' AND is_active = 1'
+    if category:
+        query += ' AND category = ?'
+        params.append(category)
+
+    query += ' ORDER BY category, title'
+
+    tasks = conn.execute(query, params).fetchall()
+    conn.close()
+
+    # Calculate status for each task
+    today = datetime.now().date()
+    result = []
+    for task in tasks:
+        t = dict(task)
+        if t['next_due']:
+            due_date = datetime.strptime(t['next_due'], '%Y-%m-%d').date()
+            days_until = (due_date - today).days
+            if days_until < 0:
+                t['status'] = 'overdue'
+                t['days_overdue'] = abs(days_until)
+            elif days_until <= 7:
+                t['status'] = 'due-soon'
+                t['days_until'] = days_until
+            else:
+                t['status'] = 'ok'
+                t['days_until'] = days_until
+        else:
+            t['status'] = 'ok'
+        result.append(t)
+
+    return jsonify({
+        'tasks': result,
+        'total': len(result)
+    })
+
+
+@app.route('/api/recurring-tasks', methods=['POST'])
+@require_admin
+def create_recurring_task(user):
+    """Create new recurring task (admin only)."""
+    data = request.json
+
+    if not data.get('title') or not data.get('category') or not data.get('cycle_days'):
+        return jsonify({'error': 'Titel, Kategorie und Intervall erforderlich'}), 400
+
+    next_due = data.get('next_due') or (datetime.now() + timedelta(days=data['cycle_days'])).strftime('%Y-%m-%d')
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO recurring_tasks (title, description, category, cycle_days, credit_value, effort, next_due)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data['title'],
+        data.get('description'),
+        data['category'],
+        data['cycle_days'],
+        data.get('credit_value', 0),
+        data.get('effort', 'mittel'),
+        next_due
+    ))
+    task_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'taskId': task_id,
+        'message': 'Wiederkehrende Aufgabe erstellt'
+    })
+
+
+@app.route('/api/recurring-tasks/<int:task_id>', methods=['PATCH'])
+@require_admin
+def update_recurring_task(task_id, user):
+    """Update recurring task (admin only)."""
+    data = request.json
+
+    conn = get_db()
+    task = conn.execute('SELECT * FROM recurring_tasks WHERE id = ?', (task_id,)).fetchone()
+
+    if not task:
+        conn.close()
+        return jsonify({'error': 'Aufgabe nicht gefunden'}), 404
+
+    updates = []
+    params = []
+    allowed_fields = ['title', 'description', 'category', 'cycle_days', 'credit_value', 'effort', 'next_due', 'is_active']
+
+    for field in allowed_fields:
+        if field in data:
+            updates.append(f'{field} = ?')
+            params.append(data[field])
+
+    if updates:
+        params.append(task_id)
+        conn.execute(f'''
+            UPDATE recurring_tasks SET {', '.join(updates)} WHERE id = ?
+        ''', params)
+        conn.commit()
+
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Aufgabe aktualisiert'})
+
+
+@app.route('/api/recurring-tasks/<int:task_id>', methods=['DELETE'])
+@require_admin
+def delete_recurring_task(task_id, user):
+    """Delete recurring task (admin only)."""
+    conn = get_db()
+    task = conn.execute('SELECT * FROM recurring_tasks WHERE id = ?', (task_id,)).fetchone()
+
+    if not task:
+        conn.close()
+        return jsonify({'error': 'Aufgabe nicht gefunden'}), 404
+
+    conn.execute('DELETE FROM recurring_tasks WHERE id = ?', (task_id,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Aufgabe gelöscht'})
+
+
+@app.route('/api/recurring-tasks/<int:task_id>/complete', methods=['POST'])
+@require_auth
+def complete_recurring_task(task_id, user):
+    """Mark recurring task as completed."""
+    conn = get_db()
+    task = conn.execute('SELECT * FROM recurring_tasks WHERE id = ?', (task_id,)).fetchone()
+
+    if not task:
+        conn.close()
+        return jsonify({'error': 'Aufgabe nicht gefunden'}), 404
+
+    notes = None
+    photo_path = None
+
+    # Handle multipart form data for photo upload
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        notes = request.form.get('notes')
+
+        if 'photo' in request.files:
+            photo = request.files['photo']
+            if photo and allowed_file(photo.filename):
+                ext = photo.filename.rsplit('.', 1)[1].lower()
+                photo_filename = f"recurring_{task_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
+                photo_dir = os.path.join(GALLERY_DIR, 'completions')
+                os.makedirs(photo_dir, exist_ok=True)
+                photo_path = os.path.join('completions', photo_filename)
+                photo.save(os.path.join(GALLERY_DIR, photo_path))
+    else:
+        data = request.json or {}
+        notes = data.get('notes')
+
+    # Calculate next due date
+    next_due = (datetime.now() + timedelta(days=task['cycle_days'])).strftime('%Y-%m-%d')
+
+    # Update task
+    conn.execute('''
+        UPDATE recurring_tasks SET
+            last_completed_at = ?,
+            last_completed_by = ?,
+            next_due = ?
+        WHERE id = ?
+    ''', (
+        datetime.now().isoformat(),
+        user['email'],
+        next_due,
+        task_id
+    ))
+
+    # Log completion in maintenance_log
+    conn.execute('''
+        INSERT INTO maintenance_log (task_id, completed_by, notes, photo_filename)
+        VALUES (?, ?, ?, ?)
+    ''', (task_id, user['email'], notes, photo_path))
+
+    # Award credit if applicable
+    if task['credit_value'] and task['credit_value'] > 0:
+        conn.execute('''
+            INSERT INTO credits (guest_email, amount, reason, type)
+            VALUES (?, ?, ?, 'earned')
+        ''', (user['email'], task['credit_value'], f"Wartung: {task['title']}"))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Aufgabe als erledigt markiert',
+        'nextDue': next_due,
+        'creditAwarded': task['credit_value']
+    })
+
+
+# ============ Issue Reports Routes ============
+
+@app.route('/api/issues', methods=['GET'])
+def get_issues():
+    """Get all issue reports (public: only own, admin: all)."""
+    user = get_current_user()
+    status = request.args.get('status')
+
+    conn = get_db()
+    query = 'SELECT * FROM issue_reports WHERE 1=1'
+    params = []
+
+    # Non-admin users can only see their own reports
+    if not user or user.get('role') != 'admin':
+        if user:
+            query += ' AND reported_by = ?'
+            params.append(user['email'])
+        else:
+            conn.close()
+            return jsonify({'issues': [], 'total': 0})
+
+    if status:
+        query += ' AND status = ?'
+        params.append(status)
+
+    query += ' ORDER BY created_at DESC'
+
+    issues = conn.execute(query, params).fetchall()
+    conn.close()
+
+    return jsonify({
+        'issues': [dict(i) for i in issues],
+        'total': len(issues)
+    })
+
+
+@app.route('/api/issues', methods=['POST'])
+@require_auth
+def create_issue(user):
+    """Report a new issue/defect."""
+    photo_path = None
+    title = None
+    description = None
+    category = None
+
+    # Handle multipart form data for photo upload
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        title = request.form.get('title')
+        description = request.form.get('description')
+        category = request.form.get('category')
+
+        if 'photo' in request.files:
+            photo = request.files['photo']
+            if photo and allowed_file(photo.filename):
+                ext = photo.filename.rsplit('.', 1)[1].lower()
+                photo_filename = f"issue_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
+                photo_dir = os.path.join(GALLERY_DIR, 'issues')
+                os.makedirs(photo_dir, exist_ok=True)
+                photo_path = os.path.join('issues', photo_filename)
+                photo.save(os.path.join(GALLERY_DIR, photo_path))
+    else:
+        data = request.json or {}
+        title = data.get('title')
+        description = data.get('description')
+        category = data.get('category')
+
+    if not title:
+        return jsonify({'error': 'Titel erforderlich'}), 400
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO issue_reports (title, description, category, photo_filename, reported_by)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (title, description, category, photo_path, user['email']))
+    issue_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'issueId': issue_id,
+        'message': 'Mängelmeldung eingereicht. Ein Admin wird sich das ansehen.'
+    })
+
+
+@app.route('/api/admin/issues', methods=['GET'])
+@require_admin
+def admin_get_issues(user):
+    """Admin: Get all issue reports."""
+    status = request.args.get('status')
+
+    conn = get_db()
+    query = 'SELECT * FROM issue_reports'
+    params = []
+
+    if status:
+        query += ' WHERE status = ?'
+        params.append(status)
+
+    query += ' ORDER BY created_at DESC'
+
+    issues = conn.execute(query, params).fetchall()
+    conn.close()
+
+    return jsonify({
+        'issues': [dict(i) for i in issues],
+        'total': len(issues)
+    })
+
+
+@app.route('/api/admin/issues/<int:issue_id>/approve', methods=['POST'])
+@require_admin
+def approve_issue(issue_id, user):
+    """Admin: Approve issue and convert to project."""
+    data = request.json or {}
+
+    conn = get_db()
+    issue = conn.execute('SELECT * FROM issue_reports WHERE id = ?', (issue_id,)).fetchone()
+
+    if not issue:
+        conn.close()
+        return jsonify({'error': 'Meldung nicht gefunden'}), 404
+
+    if issue['status'] != 'pending':
+        conn.close()
+        return jsonify({'error': 'Meldung wurde bereits bearbeitet'}), 400
+
+    # Create project from issue
+    conn.execute('''
+        INSERT INTO projects (title, description, category, status, priority, created_by)
+        VALUES (?, ?, ?, 'offen', ?, ?)
+    ''', (
+        data.get('title') or issue['title'],
+        data.get('description') or issue['description'],
+        data.get('category') or issue['category'] or 'sonstiges',
+        data.get('priority', 'mittel'),
+        issue['reported_by']
+    ))
+    project_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+    # Update issue status
+    conn.execute('''
+        UPDATE issue_reports SET
+            status = 'approved',
+            admin_notes = ?,
+            converted_to_project_id = ?
+        WHERE id = ?
+    ''', (data.get('notes'), project_id, issue_id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'projectId': project_id,
+        'message': 'Meldung genehmigt und Projekt erstellt'
+    })
+
+
+@app.route('/api/admin/issues/<int:issue_id>/reject', methods=['POST'])
+@require_admin
+def reject_issue(issue_id, user):
+    """Admin: Reject issue report."""
+    data = request.json or {}
+
+    conn = get_db()
+    issue = conn.execute('SELECT * FROM issue_reports WHERE id = ?', (issue_id,)).fetchone()
+
+    if not issue:
+        conn.close()
+        return jsonify({'error': 'Meldung nicht gefunden'}), 404
+
+    if issue['status'] != 'pending':
+        conn.close()
+        return jsonify({'error': 'Meldung wurde bereits bearbeitet'}), 400
+
+    conn.execute('''
+        UPDATE issue_reports SET
+            status = 'rejected',
+            admin_notes = ?
+        WHERE id = ?
+    ''', (data.get('notes', 'Abgelehnt'), issue_id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Meldung abgelehnt'
+    })
+
+
+# ============ Unified Tasks API ============
+
+@app.route('/api/tasks/unified', methods=['GET'])
+def get_unified_tasks():
+    """Get combined view of recurring tasks and projects."""
+    task_type = request.args.get('type', 'all')  # 'recurring', 'project', 'all'
+    category = request.args.get('category')
+    status = request.args.get('status')
+    effort = request.args.get('effort')
+    assignee = request.args.get('assignee')
+
+    conn = get_db()
+    tasks = []
+    today = datetime.now().date()
+
+    # Get recurring tasks
+    if task_type in ['recurring', 'all']:
+        query = 'SELECT * FROM recurring_tasks WHERE is_active = 1'
+        params = []
+
+        if category:
+            query += ' AND category = ?'
+            params.append(category)
+        if effort:
+            query += ' AND effort = ?'
+            params.append(effort)
+
+        recurring = conn.execute(query, params).fetchall()
+
+        for task in recurring:
+            t = dict(task)
+            t['task_type'] = 'recurring'
+
+            # Calculate status
+            if t['next_due']:
+                due_date = datetime.strptime(t['next_due'], '%Y-%m-%d').date()
+                days_until = (due_date - today).days
+                if days_until < 0:
+                    t['due_status'] = 'overdue'
+                elif days_until <= 7:
+                    t['due_status'] = 'due-soon'
+                else:
+                    t['due_status'] = 'ok'
+            else:
+                t['due_status'] = 'ok'
+
+            # Filter by status if specified
+            if status and t['due_status'] != status:
+                continue
+
+            tasks.append(t)
+
+    # Get projects
+    if task_type in ['project', 'all']:
+        query = 'SELECT * FROM projects WHERE 1=1'
+        params = []
+
+        if category:
+            query += ' AND category = ?'
+            params.append(category)
+        if effort:
+            query += ' AND effort = ?'
+            params.append(effort)
+        if assignee:
+            query += ' AND assigned_to = ?'
+            params.append(assignee)
+
+        projects = conn.execute(query, params).fetchall()
+
+        for project in projects:
+            p = dict(project)
+            p['task_type'] = 'project'
+            p['due_status'] = 'ok'  # Projects don't have due dates like recurring tasks
+            tasks.append(p)
+
+    conn.close()
+
+    # Get unique values for filters
+    categories = list(set(t.get('category') for t in tasks if t.get('category')))
+    efforts = list(set(t.get('effort') for t in tasks if t.get('effort')))
+    assignees = list(set(t.get('assigned_to') for t in tasks if t.get('assigned_to')))
+
+    return jsonify({
+        'tasks': tasks,
+        'total': len(tasks),
+        'filters': {
+            'categories': sorted(categories),
+            'efforts': ['leicht', 'mittel', 'schwer'],
+            'assignees': sorted(assignees)
+        }
+    })
+
+
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@require_admin
+def delete_user(user_id, user):
+    """Admin: Delete a user."""
+    conn = get_db()
+    target_user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+
+    if not target_user:
+        conn.close()
+        return jsonify({'error': 'User nicht gefunden'}), 404
+
+    # Prevent deleting the main admin
+    if target_user['email'] == 'moritzvoigt42@gmail.com':
+        conn.close()
+        return jsonify({'error': 'Haupt-Admin kann nicht gelöscht werden'}), 403
+
+    # Prevent self-deletion
+    if target_user['id'] == user['user_id']:
+        conn.close()
+        return jsonify({'error': 'Eigener Account kann nicht gelöscht werden'}), 403
+
+    # Delete user's tokens
+    conn.execute('DELETE FROM auth_tokens WHERE user_id = ?', (user_id,))
+    # Delete user
+    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'User gelöscht'})
 
 
 # Initialize database on startup
