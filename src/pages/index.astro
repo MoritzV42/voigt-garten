@@ -1,5 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+// Der Garten wurde ca. 1975 gegründet
+const gartenGruendung = 1975;
+const aktuellesJahr = new Date().getFullYear();
+const jahreGartenTradition = aktuellesJahr - gartenGruendung;
 ---
 
 <Layout title="Willkommen">
@@ -35,30 +40,26 @@ import Layout from '../layouts/Layout.astro';
       <h2 class="font-display text-3xl font-bold text-center text-garden-900 mb-12">
         Was dich erwartet
       </h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Tradition -->
+        <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
+          <div class="text-4xl font-bold text-garden-600 mb-2">{jahreGartenTradition}</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Jahre Familientradition</h3>
+        </div>
         <!-- Feature 1 -->
-        <div class="bg-garden-50 rounded-xl p-8 text-center hover:shadow-lg transition">
-          <div class="text-5xl mb-4">🏡</div>
-          <h3 class="font-display text-xl font-semibold text-garden-800 mb-3">Gemütliches Gartenhaus</h3>
-          <p class="text-gray-600">
-            Ein charmantes Gartenhaus mit allem, was du für einen erholsamen Aufenthalt brauchst.
-          </p>
+        <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
+          <div class="text-4xl mb-2">🏡</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Gemütliches Gartenhaus</h3>
         </div>
         <!-- Feature 2 -->
-        <div class="bg-garden-50 rounded-xl p-8 text-center hover:shadow-lg transition">
-          <div class="text-5xl mb-4">🌳</div>
-          <h3 class="font-display text-xl font-semibold text-garden-800 mb-3">Großes Grundstück</h3>
-          <p class="text-gray-600">
-            Weitläufiger Garten mit alten Bäumen, Beeten und viel Platz zum Entspannen.
-          </p>
+        <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
+          <div class="text-4xl mb-2">🌳</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">5.300m² Grundstück</h3>
         </div>
         <!-- Feature 3 -->
-        <div class="bg-garden-50 rounded-xl p-8 text-center hover:shadow-lg transition">
-          <div class="text-5xl mb-4">🔥</div>
-          <h3 class="font-display text-xl font-semibold text-garden-800 mb-3">Feuerstelle & Grill</h3>
-          <p class="text-gray-600">
-            Lagerfeuer-Abende und Grillpartys unter freiem Himmel - pure Natur genießen.
-          </p>
+        <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
+          <div class="text-4xl mb-2">🔥</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Feuerstelle & Grill</h3>
         </div>
       </div>
     </div>
@@ -103,27 +104,48 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <!-- Quick Stats -->
+  <!-- Der Garten -->
   <section class="py-16 bg-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-        <div>
-          <div class="text-4xl font-bold text-garden-600">50+</div>
-          <div class="text-gray-600 mt-1">Jahre Familientradition</div>
-        </div>
-        <div>
-          <div class="text-4xl font-bold text-garden-600">2000m²</div>
-          <div class="text-gray-600 mt-1">Grundstück</div>
-        </div>
-        <div>
-          <div class="text-4xl font-bold text-garden-600">∞</div>
-          <div class="text-gray-600 mt-1">Erholungswert</div>
-        </div>
-        <div>
-          <div class="text-4xl font-bold text-garden-600">1</div>
-          <div class="text-gray-600 mt-1">Familie</div>
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-gradient-to-br from-garden-50 to-green-50 rounded-2xl p-8 md:p-12">
+        <div class="grid md:grid-cols-2 gap-8 items-center">
+          <div>
+            <span class="inline-block bg-garden-100 text-garden-800 text-sm font-medium px-3 py-1 rounded-full mb-4">
+              🌳 Der Garten
+            </span>
+            <h2 class="font-display text-3xl font-bold text-garden-900 mb-4">
+              5.300 m² Natur pur
+            </h2>
+            <p class="text-gray-600 mb-6">
+              Auf einem sonnigen Südhang im Rosental gelegen, vollständig autark mit eigener
+              Solaranlage und Brunnen. Alte Obstbäume, mächtige Eichen und ein kleiner Weinberg
+              warten auf dich.
+            </p>
+            <a href="/ueber-den-garten" class="inline-flex items-center gap-2 text-garden-700 hover:text-garden-800 font-medium">
+              Mehr erfahren <span>→</span>
+            </a>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white rounded-xl p-4 text-center shadow-sm">
+              <div class="text-2xl font-bold text-garden-600">☀️ 700W</div>
+              <div class="text-xs text-gray-500 mt-1">Solaranlage</div>
+            </div>
+            <div class="bg-white rounded-xl p-4 text-center shadow-sm">
+              <div class="text-2xl font-bold text-garden-600">💧 50m</div>
+              <div class="text-xs text-gray-500 mt-1">Brunnen</div>
+            </div>
+            <div class="bg-white rounded-xl p-4 text-center shadow-sm">
+              <div class="text-2xl font-bold text-garden-600">🔋 1,4kWh</div>
+              <div class="text-xs text-gray-500 mt-1">Batterie</div>
+            </div>
+            <div class="bg-white rounded-xl p-4 text-center shadow-sm">
+              <div class="text-2xl font-bold text-garden-600">100%</div>
+              <div class="text-xs text-gray-500 mt-1">Autark</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </section>
+
 </Layout>

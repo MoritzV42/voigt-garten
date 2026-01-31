@@ -1,0 +1,454 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Über den Garten" description="Garten Etzdorf im Rosental - 5.300 m² Natur pur, vollständig autark mit Solar und eigenem Brunnen">
+  <!-- Hero Section -->
+  <section class="relative h-[70vh] min-h-[500px] bg-gradient-to-b from-garden-700 to-garden-900 flex items-center justify-center overflow-hidden">
+    <!-- Placeholder for future hero image -->
+    <div class="absolute inset-0 bg-[url('/images/garden-hero-placeholder.jpg')] bg-cover bg-center opacity-30"></div>
+
+    <div class="relative z-10 text-center px-4">
+      <h1 class="font-display text-5xl md:text-7xl font-bold text-white mb-4 animate-fade-in">
+        Garten Etzdorf
+      </h1>
+      <p class="text-2xl md:text-3xl text-garden-200 mb-2">im Rosental</p>
+      <div class="flex justify-center gap-8 mt-8 text-white">
+        <div class="text-center animate-fade-in-delay-1">
+          <div class="text-4xl md:text-5xl font-bold counter" data-target="5300">0</div>
+          <div class="text-garden-200 text-sm">m² Fläche</div>
+        </div>
+        <div class="text-center animate-fade-in-delay-2">
+          <div class="text-4xl md:text-5xl font-bold">100%</div>
+          <div class="text-garden-200 text-sm">Autark</div>
+        </div>
+        <div class="text-center animate-fade-in-delay-3">
+          <div class="text-4xl md:text-5xl font-bold counter" data-target="50">0</div>
+          <div class="text-garden-200 text-sm">m Brunnen</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Lage & Anfahrt -->
+  <section class="py-20 bg-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="animate-on-scroll slide-in-left">
+          <span class="inline-block bg-garden-100 text-garden-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+            📍 Lage
+          </span>
+          <h2 class="font-display text-3xl md:text-4xl font-bold text-garden-900 mb-6">
+            Etzdorf im Rosental
+          </h2>
+          <p class="text-gray-600 mb-4 text-lg leading-relaxed">
+            Auf einem sonnigen Südhang gelegen, vollständig von Wiesen umgeben und ohne direkte Nachbarn -
+            ein Ort der Ruhe und Entspannung mitten in der Natur.
+          </p>
+          <ul class="space-y-3 text-gray-600">
+            <li class="flex items-start gap-3">
+              <span class="text-garden-600 mt-1">✓</span>
+              <span><strong>Südhang-Lage</strong> - Optimal für Sonneneinstrahlung, sogar zum Weinbau geeignet</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="text-garden-600 mt-1">✓</span>
+              <span><strong>PKW-Zufahrt</strong> - Bei trockenem Wetter direkt befahrbar</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="text-garden-600 mt-1">✓</span>
+              <span><strong>100m Fußweg</strong> - Von der Straße bei jedem Wetter erreichbar</span>
+            </li>
+          </ul>
+
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=XXJ2%2B4JX+Heideland"
+            target="_blank"
+            class="inline-flex items-center gap-2 mt-6 bg-garden-600 hover:bg-garden-700 text-white px-6 py-3 rounded-lg font-medium transition"
+          >
+            🗺️ Anfahrt berechnen
+          </a>
+        </div>
+
+        <div class="animate-on-scroll slide-in-right">
+          <!-- Mini Map Placeholder -->
+          <div class="bg-garden-50 rounded-2xl p-8 aspect-square flex items-center justify-center border-2 border-dashed border-garden-200">
+            <div class="text-center">
+              <div class="text-6xl mb-4">🗺️</div>
+              <p class="text-garden-600 font-medium">Interaktive Karte</p>
+              <p class="text-sm text-gray-500 mt-2">Siehe /umgebung für POIs</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Autarkie -->
+  <section class="py-20 bg-gradient-to-b from-garden-50 to-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 animate-on-scroll fade-in">
+        <span class="inline-block bg-amber-100 text-amber-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+          🔋 Energie & Wasser
+        </span>
+        <h2 class="font-display text-3xl md:text-4xl font-bold text-garden-900 mb-4">
+          Vollständige Autarkie
+        </h2>
+        <p class="text-gray-600 max-w-2xl mx-auto">
+          Unabhängig von öffentlichen Versorgungsnetzen - eigene Stromproduktion und frisches Brunnenwasser
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Solar -->
+        <div class="bg-white rounded-2xl p-8 shadow-lg animate-on-scroll slide-in-up delay-1">
+          <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center text-3xl mb-6">
+            ☀️
+          </div>
+          <h3 class="font-display text-xl font-bold text-gray-900 mb-3">Solaranlage</h3>
+          <div class="space-y-2 text-gray-600">
+            <div class="flex justify-between">
+              <span>Leistung</span>
+              <span class="font-bold text-garden-700">~700W</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Wechselrichter</span>
+              <span class="font-bold text-garden-700">2 kW</span>
+            </div>
+          </div>
+          <p class="mt-4 text-sm text-gray-500">
+            Betreibt Kühlschrank, Mikrowelle, Brunnenpumpe und Elektrowerkzeuge
+          </p>
+        </div>
+
+        <!-- Batterie -->
+        <div class="bg-white rounded-2xl p-8 shadow-lg animate-on-scroll slide-in-up delay-2">
+          <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center text-3xl mb-6">
+            🔋
+          </div>
+          <h3 class="font-display text-xl font-bold text-gray-900 mb-3">Energiespeicher</h3>
+          <div class="space-y-2 text-gray-600">
+            <div class="flex justify-between">
+              <span>Kapazität</span>
+              <span class="font-bold text-garden-700">1,4 kWh</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Typ</span>
+              <span class="font-bold text-garden-700">Lithium-Ionen</span>
+            </div>
+          </div>
+          <p class="mt-4 text-sm text-gray-500">
+            Frostsichere 12V Batterie für Abend- und Nachtstrom
+          </p>
+        </div>
+
+        <!-- Brunnen -->
+        <div class="bg-white rounded-2xl p-8 shadow-lg animate-on-scroll slide-in-up delay-3">
+          <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-3xl mb-6">
+            💧
+          </div>
+          <h3 class="font-display text-xl font-bold text-gray-900 mb-3">Eigener Brunnen</h3>
+          <div class="space-y-2 text-gray-600">
+            <div class="flex justify-between">
+              <span>Tiefe</span>
+              <span class="font-bold text-garden-700">50m</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Förderung</span>
+              <span class="font-bold text-garden-700">~1m³/h</span>
+            </div>
+          </div>
+          <p class="mt-4 text-sm text-gray-500">
+            Grundwasser der Elster - chlorfrei, frisch, mit Wassergutachten
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bebauung -->
+  <section class="py-20 bg-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 animate-on-scroll fade-in">
+        <span class="inline-block bg-garden-100 text-garden-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+          🏠 Gebäude
+        </span>
+        <h2 class="font-display text-3xl md:text-4xl font-bold text-garden-900 mb-4">
+          Bebauung & Ausstattung
+        </h2>
+        <p class="text-gray-600 max-w-2xl mx-auto">
+          Rustikales Holzhaus mit Wintergarten, Terrasse und mehreren Nebengebäuden
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Gartenhaus -->
+        <div class="group animate-on-scroll fade-in">
+          <div class="aspect-[4/3] bg-garden-100 rounded-xl mb-4 overflow-hidden relative">
+            <div class="absolute inset-0 flex items-center justify-center text-6xl bg-gradient-to-br from-garden-200 to-garden-100">
+              🏡
+            </div>
+            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <span class="text-white text-sm">Foto benötigt</span>
+            </div>
+          </div>
+          <h3 class="font-bold text-gray-900">Gartenhaus</h3>
+          <p class="text-sm text-gray-600">Holz-Zweiständerbau, gedämmt, mit Kaminofen</p>
+        </div>
+
+        <!-- Wintergarten -->
+        <div class="group animate-on-scroll fade-in delay-1">
+          <div class="aspect-[4/3] bg-amber-100 rounded-xl mb-4 overflow-hidden relative">
+            <div class="absolute inset-0 flex items-center justify-center text-6xl bg-gradient-to-br from-amber-200 to-amber-100">
+              🌿
+            </div>
+            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <span class="text-white text-sm">Foto benötigt</span>
+            </div>
+          </div>
+          <h3 class="font-bold text-gray-900">Wintergarten</h3>
+          <p class="text-sm text-gray-600">Südseite, ganzjährig frostfrei haltbar</p>
+        </div>
+
+        <!-- Schuppen -->
+        <div class="group animate-on-scroll fade-in delay-2">
+          <div class="aspect-[4/3] bg-stone-100 rounded-xl mb-4 overflow-hidden relative">
+            <div class="absolute inset-0 flex items-center justify-center text-6xl bg-gradient-to-br from-stone-200 to-stone-100">
+              🛠️
+            </div>
+            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <span class="text-white text-sm">Foto benötigt</span>
+            </div>
+          </div>
+          <h3 class="font-bold text-gray-900">Schuppen</h3>
+          <p class="text-sm text-gray-600">Mehrere, teils unterkellert (Sauna-Potenzial!)</p>
+        </div>
+
+        <!-- Carport -->
+        <div class="group animate-on-scroll fade-in delay-3">
+          <div class="aspect-[4/3] bg-blue-100 rounded-xl mb-4 overflow-hidden relative">
+            <div class="absolute inset-0 flex items-center justify-center text-6xl bg-gradient-to-br from-blue-200 to-blue-100">
+              🚗
+            </div>
+            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <span class="text-white text-sm">Foto benötigt</span>
+            </div>
+          </div>
+          <h3 class="font-bold text-gray-900">Carport</h3>
+          <p class="text-sm text-gray-600">3m x 8m überdacht + offener Schuppen</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Baumbestand -->
+  <section class="py-20 bg-gradient-to-b from-green-50 to-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 animate-on-scroll fade-in">
+        <span class="inline-block bg-green-100 text-green-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+          🌳 Natur
+        </span>
+        <h2 class="font-display text-3xl md:text-4xl font-bold text-garden-900 mb-4">
+          Baumbestand & Garten
+        </h2>
+        <p class="text-gray-600 max-w-2xl mx-auto">
+          Alte Obstbäume, mächtige Eichen und ein kleiner Weinberg
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white rounded-2xl p-6 shadow-md animate-on-scroll slide-in-up">
+          <div class="text-4xl mb-3">🍒</div>
+          <h3 class="font-bold text-gray-900 mb-1">Süßkirschen</h3>
+          <p class="text-sm text-gray-600">~50 Jahre alt, mehrere Bäume mit unterschiedlichen Früchten</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-md animate-on-scroll slide-in-up delay-1">
+          <div class="text-4xl mb-3">🌳</div>
+          <h3 class="font-bold text-gray-900 mb-1">Eichen</h3>
+          <p class="text-sm text-gray-600">2 mächtige Exemplare mit über 1m Durchmesser</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-md animate-on-scroll slide-in-up delay-2">
+          <div class="text-4xl mb-3">🌲</div>
+          <h3 class="font-bold text-gray-900 mb-1">Nadelbaum-Reihe</h3>
+          <p class="text-sm text-gray-600">Westseite, ~50 Jahre alt, dient als Windschutz</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-md animate-on-scroll slide-in-up delay-3">
+          <div class="text-4xl mb-3">🍇</div>
+          <h3 class="font-bold text-gray-900 mb-1">Weinberg</h3>
+          <p class="text-sm text-gray-600">~150m² auf dem Südhang</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA: Kooperationsmodell -->
+  <section class="py-20 bg-garden-900 text-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="animate-on-scroll fade-in">
+        <h2 class="font-display text-3xl md:text-4xl font-bold mb-6">
+          Interesse an einer Kooperation?
+        </h2>
+        <p class="text-garden-200 text-lg mb-8 max-w-2xl mx-auto">
+          Der Garten lebt von seinen Nutzern! Ob als Urlaubsgast, regelmäßiger Besucher oder aktiver Mithelfer -
+          es gibt viele Möglichkeiten, Teil dieser grünen Oase zu werden.
+        </p>
+        <div class="flex flex-wrap justify-center gap-4">
+          <a
+            href="/buchen"
+            class="bg-white text-garden-900 hover:bg-garden-100 px-8 py-3 rounded-lg font-medium transition"
+          >
+            📅 Aufenthalt buchen
+          </a>
+          <a
+            href="/wartung"
+            class="bg-garden-700 hover:bg-garden-600 text-white px-8 py-3 rounded-lg font-medium transition"
+          >
+            🔧 Mithelfen & Guthaben verdienen
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  /* Animation classes */
+  .animate-fade-in {
+    animation: fadeIn 1s ease-out;
+  }
+
+  .animate-fade-in-delay-1 {
+    animation: fadeIn 1s ease-out 0.2s both;
+  }
+
+  .animate-fade-in-delay-2 {
+    animation: fadeIn 1s ease-out 0.4s both;
+  }
+
+  .animate-fade-in-delay-3 {
+    animation: fadeIn 1s ease-out 0.6s both;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Scroll-triggered animations */
+  .animate-on-scroll {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .animate-on-scroll.slide-in-left {
+    transform: translateX(-50px);
+  }
+
+  .animate-on-scroll.slide-in-left.visible {
+    transform: translateX(0);
+  }
+
+  .animate-on-scroll.slide-in-right {
+    transform: translateX(50px);
+  }
+
+  .animate-on-scroll.slide-in-right.visible {
+    transform: translateX(0);
+  }
+
+  .animate-on-scroll.slide-in-up {
+    transform: translateY(50px);
+  }
+
+  .animate-on-scroll.slide-in-up.visible {
+    transform: translateY(0);
+  }
+
+  .animate-on-scroll.delay-1 {
+    transition-delay: 0.1s;
+  }
+
+  .animate-on-scroll.delay-2 {
+    transition-delay: 0.2s;
+  }
+
+  .animate-on-scroll.delay-3 {
+    transition-delay: 0.3s;
+  }
+</style>
+
+<script>
+  // Intersection Observer for scroll animations
+  document.addEventListener('DOMContentLoaded', () => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px',
+      }
+    );
+
+    document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+      observer.observe(el);
+    });
+
+    // Counter animation
+    const counters = document.querySelectorAll('.counter');
+    counters.forEach((counter) => {
+      const target = parseInt(counter.getAttribute('data-target') || '0', 10);
+      const duration = 2000;
+      const step = target / (duration / 16);
+      let current = 0;
+
+      const updateCounter = () => {
+        current += step;
+        if (current < target) {
+          counter.textContent = Math.floor(current).toString();
+          requestAnimationFrame(updateCounter);
+        } else {
+          counter.textContent = target.toString();
+        }
+      };
+
+      // Start counter when visible
+      const counterObserver = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            updateCounter();
+            counterObserver.disconnect();
+          }
+        },
+        { threshold: 0.5 }
+      );
+
+      counterObserver.observe(counter);
+    });
+  });
+</script>

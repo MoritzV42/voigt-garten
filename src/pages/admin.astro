@@ -1,0 +1,25 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AdminPage from '../components/AdminPage';
+---
+
+<Layout title="Admin" description="Admin-Bereich für den Voigt-Garten">
+  <!-- Header -->
+  <section class="bg-gradient-to-b from-purple-100 to-white py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="font-display text-3xl md:text-4xl font-bold text-purple-900 mb-2">
+        Admin-Bereich
+      </h1>
+      <p class="text-purple-700">
+        Buchungen verwalten, Projekte bestätigen, Credits vergeben
+      </p>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <section class="py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <AdminPage client:load />
+    </div>
+  </section>
+</Layout>

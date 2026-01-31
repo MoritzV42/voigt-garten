@@ -1,0 +1,96 @@
+---
+import Layout from '../layouts/Layout.astro';
+import EnvironmentMap from '../components/EnvironmentMap';
+---
+
+<Layout title="Umgebung" description="Restaurants, Einkaufsmöglichkeiten und Sehenswürdigkeiten rund um den Garten Etzdorf">
+  <!-- Header -->
+  <section class="bg-gradient-to-b from-garden-100 to-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="font-display text-4xl md:text-5xl font-bold text-garden-900 mb-4">
+        Umgebung & Anfahrt
+      </h1>
+      <p class="text-xl text-garden-700 max-w-2xl mx-auto">
+        Restaurants, Einkaufsmöglichkeiten und Ausflugsziele in der Nähe des Gartens
+      </p>
+    </div>
+  </section>
+
+  <!-- Anfahrt Info -->
+  <section class="py-8 bg-white border-b border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-garden-50 rounded-xl p-6 text-center">
+          <div class="text-3xl mb-2">📍</div>
+          <h3 class="font-bold text-garden-800">Adresse</h3>
+          <p class="text-garden-600 text-sm mt-2">
+            Etzdorf im Rosental<br>
+            Plus Code: <strong>XXJ2+4JX Heideland</strong>
+          </p>
+        </div>
+        <div class="bg-blue-50 rounded-xl p-6 text-center">
+          <div class="text-3xl mb-2">🚗</div>
+          <h3 class="font-bold text-blue-800">Mit dem Auto</h3>
+          <p class="text-blue-600 text-sm mt-2">
+            ~30 Min von Leipzig<br>
+            Bei trockenem Wetter direkt befahrbar
+          </p>
+        </div>
+        <div class="bg-amber-50 rounded-xl p-6 text-center">
+          <div class="text-3xl mb-2">🚶</div>
+          <h3 class="font-bold text-amber-800">Zu Fuß</h3>
+          <p class="text-amber-600 text-sm mt-2">
+            100m Fußweg von der Straße<br>
+            Bei jedem Wetter erreichbar
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Map Section -->
+  <section class="py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <EnvironmentMap client:load />
+    </div>
+  </section>
+
+  <!-- Tips -->
+  <section class="py-12 bg-garden-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="font-display text-2xl font-bold text-garden-900 mb-6 text-center">
+        💡 Tipps für deinen Besuch
+      </h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl p-6 shadow-md">
+          <h3 class="font-bold text-garden-800 mb-3">🛒 Einkauf vorher erledigen</h3>
+          <p class="text-gray-600 text-sm">
+            Der nächste Supermarkt ist ~10km entfernt. Empfehlung: Auf dem Weg in Pegau oder Borna einkaufen.
+            Für regionale Produkte den Bauernhofladen im Rosental besuchen!
+          </p>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-md">
+          <h3 class="font-bold text-amber-800 mb-3">🍽️ Essen gehen</h3>
+          <p class="text-gray-600 text-sm">
+            In der direkten Umgebung gibt es mehrere gemütliche Landgasthöfe mit traditioneller
+            sächsischer Küche. Reservierung am Wochenende empfohlen!
+          </p>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-md">
+          <h3 class="font-bold text-green-800 mb-3">🚶 Wandern & Natur</h3>
+          <p class="text-gray-600 text-sm">
+            Die Elsteraue bietet wunderschöne Wanderwege direkt ab dem Garten.
+            Auch der Weinberg-Wanderweg mit Panoramablick startet quasi vor der Tür.
+          </p>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-md">
+          <h3 class="font-bold text-purple-800 mb-3">🏛️ Ausflüge</h3>
+          <p class="text-gray-600 text-sm">
+            Leipzig (30km) und Altenburg (25km) bieten kulturelle Highlights.
+            Für einen Tagesausflug ideal: Schloss Altenburg mit Spielkartenmuseum.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
