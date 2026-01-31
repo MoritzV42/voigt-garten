@@ -7,12 +7,19 @@ from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 import hashlib
 import subprocess
 import re
+import jwt
+import functools
 from email_service import send_booking_confirmation, send_booking_notification_to_admin
+
+# JWT Secret Key (use env var in production)
+JWT_SECRET = os.environ.get('JWT_SECRET', 'voigt-garten-secret-key-change-in-production-2026')
+JWT_EXPIRY_HOURS = 24
 
 # Image processing
 try:
@@ -116,8 +123,66 @@ def init_db():
             notes TEXT,
             verified BOOLEAN DEFAULT 0
         );
+
+        -- User management
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            name TEXT,
+            role TEXT DEFAULT 'user',
+            last_login DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Auth tokens for JWT validation
+        CREATE TABLE IF NOT EXISTS auth_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token_hash TEXT NOT NULL,
+            expires_at DATETIME NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+
+        -- Projects (dynamische Aufgaben / Kanban)
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            category TEXT NOT NULL,
+            status TEXT DEFAULT 'offen',
+            priority TEXT DEFAULT 'mittel',
+            estimated_cost TEXT,
+            effort TEXT,
+            timeframe TEXT,
+            assigned_to TEXT,
+            completed_at DATETIME,
+            completed_by TEXT,
+            completion_photo TEXT,
+            completion_notes TEXT,
+            confirmed_at DATETIME,
+            confirmed_by TEXT,
+            credit_awarded REAL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            created_by TEXT
+        );
     ''')
     conn.commit()
+
+    # Create main admin if not exists
+    cursor = conn.execute("SELECT id FROM users WHERE email = 'moritzvoigt42@gmail.com'")
+    if not cursor.fetchone():
+        admin_password_hash = generate_password_hash('Garten42PasswortFürMoritz')
+        conn.execute('''
+            INSERT INTO users (email, username, password_hash, name, role)
+            VALUES (?, ?, ?, ?, ?)
+        ''', ('moritzvoigt42@gmail.com', 'MoritzVoigt42', admin_password_hash, 'Moritz Voigt', 'admin'))
+        conn.commit()
+        print("Main admin user created: moritzvoigt42@gmail.com")
+
     conn.close()
     print("Database initialized")
 
@@ -125,6 +190,89 @@ def init_db():
 def allowed_file(filename):
     """Check if file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+# ============ Auth Helpers ============
+
+def create_token(user_id, email, role):
+    """Create JWT token for user."""
+    expiry = datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS)
+    payload = {
+        'user_id': user_id,
+        'email': email,
+        'role': role,
+        'exp': expiry
+    }
+    token = jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+    # Store token hash in database
+    conn = get_db()
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    conn.execute('''
+        INSERT INTO auth_tokens (user_id, token_hash, expires_at)
+        VALUES (?, ?, ?)
+    ''', (user_id, token_hash, expiry.isoformat()))
+    conn.commit()
+    conn.close()
+
+    return token
+
+
+def verify_token(token):
+    """Verify JWT token and return user data."""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+
+        # Check if token exists in database and is not expired
+        conn = get_db()
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        row = conn.execute('''
+            SELECT * FROM auth_tokens WHERE token_hash = ? AND expires_at > ?
+        ''', (token_hash, datetime.utcnow().isoformat())).fetchone()
+        conn.close()
+
+        if not row:
+            return None
+
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+
+def get_current_user():
+    """Get current user from Authorization header."""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return None
+
+    token = auth_header.split(' ')[1]
+    return verify_token(token)
+
+
+def require_auth(f):
+    """Decorator to require authentication."""
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentifizierung erforderlich'}), 401
+        return f(*args, user=user, **kwargs)
+    return decorated
+
+
+def require_admin(f):
+    """Decorator to require admin role."""
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentifizierung erforderlich'}), 401
+        if user.get('role') != 'admin':
+            return jsonify({'error': 'Admin-Berechtigung erforderlich'}), 403
+        return f(*args, user=user, **kwargs)
+    return decorated
 
 
 def get_file_type(filename):
@@ -147,6 +295,27 @@ def slugify(text):
     # Remove multiple hyphens
     text = re.sub(r'-+', '-', text)
     return text[:50] if text else None
+
+
+def get_unique_base_name(category, base_name, extension='webp'):
+    """Generate unique filename by appending -2, -3, etc. if file exists."""
+    target_path = os.path.join(GALLERY_DIR, category, f"{base_name}.{extension}")
+    if not os.path.exists(target_path):
+        return base_name
+
+    # File exists, find next available number
+    counter = 2
+    while True:
+        new_name = f"{base_name}-{counter}"
+        target_path = os.path.join(GALLERY_DIR, category, f"{new_name}.{extension}")
+        if not os.path.exists(target_path):
+            print(f"Duplicate detected: {base_name} -> {new_name}")
+            return new_name
+        counter += 1
+        if counter > 100:  # Safety limit
+            # Fallback to timestamp suffix
+            import time
+            return f"{base_name}-{int(time.time())}"
 
 
 def convert_image_to_webp(input_path, output_path, quality=85):
@@ -326,16 +495,35 @@ def get_gallery():
     formatted_items = []
     for row in items:
         item = dict(row)
-        # Main display URL (WebP or original)
-        item['url'] = f"/images/gallery/{item['filename']}"
-        # Thumbnail URL
+        cat = item.get('category', 'sonstiges')
+        filename = item['filename']
+
+        # Main display URL - avoid double category prefix
+        # Some filenames include category (e.g. "sonstiges/test.webp"), some don't (e.g. "abc123.jpg")
+        if filename.startswith(f"{cat}/"):
+            item['url'] = f"/images/gallery/{filename}"
+        else:
+            item['url'] = f"/images/gallery/{cat}/{filename}"
+
+        # Thumbnail URL - same logic
         if item.get('thumbnail_path'):
-            item['thumbnailUrl'] = f"/images/gallery/{item['thumbnail_path']}"
+            thumb = item['thumbnail_path']
+            if thumb.startswith(f"{cat}/") or thumb.startswith('/'):
+                item['thumbnailUrl'] = f"/images/gallery/{thumb}" if not thumb.startswith('/') else thumb
+            else:
+                item['thumbnailUrl'] = f"/images/gallery/{cat}/{thumb}"
         else:
             item['thumbnailUrl'] = item['url']  # Fallback to main image
+
         # Original URL (for download/fallback)
         if item.get('original_path'):
-            item['originalUrl'] = f"/images/gallery/{item['original_path']}"
+            orig_path = item['original_path']
+            if orig_path.startswith('/images/gallery/'):
+                item['originalUrl'] = orig_path
+            elif orig_path.startswith(f"{cat}/"):
+                item['originalUrl'] = f"/images/gallery/{orig_path}"
+            else:
+                item['originalUrl'] = f"/images/gallery/{cat}/{orig_path}"
         formatted_items.append(item)
 
     return jsonify({
@@ -369,7 +557,7 @@ def upload_file():
     file_id = hashlib.md5(f"{datetime.now().isoformat()}{original_name}".encode()).hexdigest()[:12]
 
     # Use slugified name if provided, otherwise use file_id
-    base_name = slugify(name) if name else file_id
+    base_name_raw = slugify(name) if name else file_id
     file_type = get_file_type(original_name)
 
     # Ensure category directory exists
@@ -383,6 +571,10 @@ def upload_file():
     # Save original file
     file.save(original_path)
     file_size = os.path.getsize(original_path)
+
+    # Get unique base name (handles duplicates: name -> name-2 -> name-3)
+    target_ext = 'mp4' if file_type == 'video' else 'webp'
+    base_name = get_unique_base_name(category, base_name_raw, target_ext)
 
     # Initialize paths
     webp_path = None
@@ -458,15 +650,18 @@ def upload_file():
 def delete_image(item_id):
     """Delete a gallery image and all associated files."""
     conn = get_db()
-    item = conn.execute('SELECT * FROM gallery_images WHERE id = ?', (item_id,)).fetchone()
+    row = conn.execute('SELECT * FROM gallery_images WHERE id = ?', (item_id,)).fetchone()
 
-    if not item:
+    if not row:
         conn.close()
         return jsonify({'error': 'Bild nicht gefunden'}), 404
 
+    # Convert Row to dict for easier access
+    item = dict(row)
+
     # Delete all associated files
     files_to_delete = [
-        item['filename'],
+        item.get('filename'),
         item.get('thumbnail_path'),
         item.get('webp_path'),
         item.get('original_path')
@@ -575,6 +770,556 @@ def complete_maintenance():
     conn.close()
 
     return jsonify({'success': True})
+
+
+# ============ Auth Routes ============
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """User login with email/username and password."""
+    data = request.json
+    login_id = data.get('email') or data.get('username')
+    password = data.get('password')
+
+    if not login_id or not password:
+        return jsonify({'error': 'Email/Username und Passwort erforderlich'}), 400
+
+    conn = get_db()
+    # Try both email and username
+    user = conn.execute('''
+        SELECT * FROM users WHERE email = ? OR username = ?
+    ''', (login_id, login_id)).fetchone()
+    conn.close()
+
+    if not user or not check_password_hash(user['password_hash'], password):
+        return jsonify({'error': 'Ungültige Anmeldedaten'}), 401
+
+    # Update last login
+    conn = get_db()
+    conn.execute('UPDATE users SET last_login = ? WHERE id = ?',
+                 (datetime.now().isoformat(), user['id']))
+    conn.commit()
+    conn.close()
+
+    token = create_token(user['id'], user['email'], user['role'])
+
+    return jsonify({
+        'success': True,
+        'token': token,
+        'user': {
+            'id': user['id'],
+            'email': user['email'],
+            'username': user['username'],
+            'name': user['name'],
+            'role': user['role']
+        }
+    })
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+@require_auth
+def logout(user):
+    """Invalidate current token."""
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(' ')[1]
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    conn = get_db()
+    conn.execute('DELETE FROM auth_tokens WHERE token_hash = ?', (token_hash,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Erfolgreich abgemeldet'})
+
+
+@app.route('/api/auth/verify', methods=['GET'])
+def verify_auth():
+    """Verify current token and return user data."""
+    user = get_current_user()
+    if not user:
+        return jsonify({'authenticated': False}), 401
+
+    return jsonify({
+        'authenticated': True,
+        'user': {
+            'id': user['user_id'],
+            'email': user['email'],
+            'role': user['role']
+        }
+    })
+
+
+@app.route('/api/auth/register', methods=['POST'])
+@require_admin
+def register_user(user):
+    """Register new user (admin only)."""
+    data = request.json
+
+    email = data.get('email')
+    username = data.get('username')
+    password = data.get('password')
+    name = data.get('name')
+    role = data.get('role', 'user')
+
+    if not email or not username or not password:
+        return jsonify({'error': 'Email, Username und Passwort erforderlich'}), 400
+
+    if role not in ['user', 'admin']:
+        return jsonify({'error': 'Ungültige Rolle'}), 400
+
+    conn = get_db()
+    try:
+        password_hash = generate_password_hash(password)
+        conn.execute('''
+            INSERT INTO users (email, username, password_hash, name, role)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (email, username, password_hash, name, role))
+        user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': user_id,
+                'email': email,
+                'username': username,
+                'name': name,
+                'role': role
+            }
+        })
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'Email oder Username bereits vergeben'}), 409
+
+
+# ============ Projects (Kanban) Routes ============
+
+@app.route('/api/projects', methods=['GET'])
+def get_projects():
+    """Get all projects with optional filters."""
+    status = request.args.get('status')
+    category = request.args.get('category')
+
+    conn = get_db()
+    query = 'SELECT * FROM projects WHERE 1=1'
+    params = []
+
+    if status:
+        query += ' AND status = ?'
+        params.append(status)
+    if category:
+        query += ' AND category = ?'
+        params.append(category)
+
+    query += ' ORDER BY CASE priority WHEN "kritisch" THEN 1 WHEN "hoch" THEN 2 WHEN "mittel" THEN 3 ELSE 4 END, created_at DESC'
+
+    projects = conn.execute(query, params).fetchall()
+    conn.close()
+
+    return jsonify({
+        'projects': [dict(p) for p in projects],
+        'total': len(projects)
+    })
+
+
+@app.route('/api/projects', methods=['POST'])
+@require_auth
+def create_project(user):
+    """Create new project."""
+    data = request.json
+
+    if not data.get('title') or not data.get('category'):
+        return jsonify({'error': 'Titel und Kategorie erforderlich'}), 400
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO projects (title, description, category, status, priority,
+                             estimated_cost, effort, timeframe, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data['title'],
+        data.get('description'),
+        data['category'],
+        data.get('status', 'offen'),
+        data.get('priority', 'mittel'),
+        data.get('estimatedCost') or data.get('estimated_cost'),
+        data.get('effort'),
+        data.get('timeframe'),
+        user['email']
+    ))
+    project_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'projectId': project_id,
+        'message': 'Projekt erstellt'
+    })
+
+
+@app.route('/api/projects/<int:project_id>', methods=['GET'])
+def get_project(project_id):
+    """Get single project by ID."""
+    conn = get_db()
+    project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
+    conn.close()
+
+    if not project:
+        return jsonify({'error': 'Projekt nicht gefunden'}), 404
+
+    return jsonify({'project': dict(project)})
+
+
+@app.route('/api/projects/<int:project_id>', methods=['PATCH'])
+@require_auth
+def update_project(project_id, user):
+    """Update project details."""
+    data = request.json
+
+    conn = get_db()
+    project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
+
+    if not project:
+        conn.close()
+        return jsonify({'error': 'Projekt nicht gefunden'}), 404
+
+    # Build update query dynamically
+    updates = []
+    params = []
+    allowed_fields = ['title', 'description', 'category', 'status', 'priority',
+                      'estimated_cost', 'effort', 'timeframe', 'assigned_to']
+
+    for field in allowed_fields:
+        # Also check camelCase variants
+        camel_field = ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field.split('_')))
+        value = data.get(field) or data.get(camel_field)
+        if value is not None:
+            updates.append(f'{field} = ?')
+            params.append(value)
+
+    if updates:
+        updates.append('updated_at = ?')
+        params.append(datetime.now().isoformat())
+        params.append(project_id)
+
+        conn.execute(f'''
+            UPDATE projects SET {', '.join(updates)} WHERE id = ?
+        ''', params)
+        conn.commit()
+
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Projekt aktualisiert'})
+
+
+@app.route('/api/projects/<int:project_id>/complete', methods=['POST'])
+@require_auth
+def complete_project(project_id, user):
+    """Mark project as completed (with optional photo)."""
+    conn = get_db()
+    project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
+
+    if not project:
+        conn.close()
+        return jsonify({'error': 'Projekt nicht gefunden'}), 404
+
+    notes = None
+    photo_path = None
+
+    # Handle multipart form data for photo upload
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        notes = request.form.get('notes')
+
+        if 'photo' in request.files:
+            photo = request.files['photo']
+            if photo and allowed_file(photo.filename):
+                ext = photo.filename.rsplit('.', 1)[1].lower()
+                photo_filename = f"completion_{project_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
+                photo_dir = os.path.join(GALLERY_DIR, 'completions')
+                os.makedirs(photo_dir, exist_ok=True)
+                photo_path = os.path.join('completions', photo_filename)
+                photo.save(os.path.join(GALLERY_DIR, photo_path))
+    else:
+        data = request.json or {}
+        notes = data.get('notes')
+        photo_path = data.get('photoPath')
+
+    conn.execute('''
+        UPDATE projects SET
+            status = 'done',
+            completed_at = ?,
+            completed_by = ?,
+            completion_photo = ?,
+            completion_notes = ?,
+            updated_at = ?
+        WHERE id = ?
+    ''', (
+        datetime.now().isoformat(),
+        user['email'],
+        photo_path,
+        notes,
+        datetime.now().isoformat(),
+        project_id
+    ))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Projekt als erledigt markiert',
+        'photoUrl': f'/images/gallery/{photo_path}' if photo_path else None
+    })
+
+
+@app.route('/api/projects/<int:project_id>/confirm', methods=['POST'])
+@require_admin
+def confirm_project(project_id, user):
+    """Admin: Confirm project completion and award credit."""
+    data = request.json or {}
+
+    conn = get_db()
+    project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
+
+    if not project:
+        conn.close()
+        return jsonify({'error': 'Projekt nicht gefunden'}), 404
+
+    if project['status'] != 'done':
+        conn.close()
+        return jsonify({'error': 'Projekt ist noch nicht als erledigt markiert'}), 400
+
+    if project['confirmed_at']:
+        conn.close()
+        return jsonify({'error': 'Projekt wurde bereits bestätigt'}), 400
+
+    credit_amount = data.get('creditAmount', 0)
+
+    # Update project
+    conn.execute('''
+        UPDATE projects SET
+            confirmed_at = ?,
+            confirmed_by = ?,
+            credit_awarded = ?,
+            updated_at = ?
+        WHERE id = ?
+    ''', (
+        datetime.now().isoformat(),
+        user['email'],
+        credit_amount,
+        datetime.now().isoformat(),
+        project_id
+    ))
+
+    # Award credit if applicable
+    if credit_amount > 0 and project['completed_by']:
+        conn.execute('''
+            INSERT INTO credits (guest_email, amount, reason, type)
+            VALUES (?, ?, ?, 'earned')
+        ''', (
+            project['completed_by'],
+            credit_amount,
+            f"Projekt: {project['title']}"
+        ))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Projekt bestätigt',
+        'creditAwarded': credit_amount
+    })
+
+
+@app.route('/api/projects/<int:project_id>', methods=['DELETE'])
+@require_admin
+def delete_project(project_id, user):
+    """Admin: Delete a project."""
+    conn = get_db()
+    project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
+
+    if not project:
+        conn.close()
+        return jsonify({'error': 'Projekt nicht gefunden'}), 404
+
+    # Delete completion photo if exists
+    if project['completion_photo']:
+        photo_path = os.path.join(GALLERY_DIR, project['completion_photo'])
+        if os.path.exists(photo_path):
+            try:
+                os.remove(photo_path)
+            except Exception as e:
+                print(f"Failed to delete completion photo: {e}")
+
+    conn.execute('DELETE FROM projects WHERE id = ?', (project_id,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Projekt gelöscht'})
+
+
+# ============ Admin Routes ============
+
+@app.route('/api/admin/stats', methods=['GET'])
+@require_admin
+def admin_stats(user):
+    """Get admin dashboard statistics."""
+    conn = get_db()
+
+    # Pending bookings
+    pending_bookings = conn.execute(
+        "SELECT COUNT(*) as count FROM bookings WHERE status = 'pending'"
+    ).fetchone()['count']
+
+    # Unconfirmed completions
+    unconfirmed = conn.execute(
+        "SELECT COUNT(*) as count FROM projects WHERE status = 'done' AND confirmed_at IS NULL"
+    ).fetchone()['count']
+
+    # Total credits
+    total_credits = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) as total FROM credits WHERE type = 'earned'"
+    ).fetchone()['total']
+
+    # Projects by status
+    project_stats = conn.execute('''
+        SELECT status, COUNT(*) as count FROM projects GROUP BY status
+    ''').fetchall()
+
+    conn.close()
+
+    return jsonify({
+        'pendingBookings': pending_bookings,
+        'unconfirmedCompletions': unconfirmed,
+        'totalCreditsAwarded': total_credits,
+        'projectsByStatus': {row['status']: row['count'] for row in project_stats}
+    })
+
+
+@app.route('/api/admin/pending-confirmations', methods=['GET'])
+@require_admin
+def pending_confirmations(user):
+    """Get projects awaiting confirmation."""
+    conn = get_db()
+    projects = conn.execute('''
+        SELECT * FROM projects
+        WHERE status = 'done' AND confirmed_at IS NULL
+        ORDER BY completed_at DESC
+    ''').fetchall()
+    conn.close()
+
+    return jsonify({
+        'projects': [dict(p) for p in projects],
+        'total': len(projects)
+    })
+
+
+@app.route('/api/admin/users', methods=['GET'])
+@require_admin
+def list_users(user):
+    """List all users (admin only)."""
+    conn = get_db()
+    users = conn.execute('''
+        SELECT id, email, username, name, role, last_login, created_at
+        FROM users ORDER BY created_at DESC
+    ''').fetchall()
+    conn.close()
+
+    return jsonify({
+        'users': [dict(u) for u in users],
+        'total': len(users)
+    })
+
+
+@app.route('/api/admin/users/<int:user_id>', methods=['PATCH'])
+@require_admin
+def update_user(user_id, user):
+    """Update user role or details (admin only)."""
+    data = request.json
+
+    conn = get_db()
+    target_user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+
+    if not target_user:
+        conn.close()
+        return jsonify({'error': 'User nicht gefunden'}), 404
+
+    # Prevent demoting the main admin
+    if target_user['email'] == 'moritzvoigt42@gmail.com' and data.get('role') != 'admin':
+        conn.close()
+        return jsonify({'error': 'Haupt-Admin kann nicht herabgestuft werden'}), 403
+
+    updates = []
+    params = []
+
+    if 'role' in data and data['role'] in ['user', 'admin']:
+        updates.append('role = ?')
+        params.append(data['role'])
+
+    if 'name' in data:
+        updates.append('name = ?')
+        params.append(data['name'])
+
+    if updates:
+        params.append(user_id)
+        conn.execute(f'''
+            UPDATE users SET {', '.join(updates)} WHERE id = ?
+        ''', params)
+        conn.commit()
+
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'User aktualisiert'})
+
+
+@app.route('/api/admin/bookings', methods=['GET'])
+@require_admin
+def admin_bookings(user):
+    """Get all bookings with full details."""
+    status = request.args.get('status')
+
+    conn = get_db()
+    query = 'SELECT * FROM bookings'
+    params = []
+
+    if status:
+        query += ' WHERE status = ?'
+        params.append(status)
+
+    query += ' ORDER BY created_at DESC'
+
+    bookings_list = conn.execute(query, params).fetchall()
+    conn.close()
+
+    return jsonify({
+        'bookings': [dict(b) for b in bookings_list],
+        'total': len(bookings_list)
+    })
+
+
+@app.route('/api/admin/bookings/<int:booking_id>', methods=['PATCH'])
+@require_admin
+def update_booking(booking_id, user):
+    """Update booking status."""
+    data = request.json
+
+    conn = get_db()
+    booking = conn.execute('SELECT * FROM bookings WHERE id = ?', (booking_id,)).fetchone()
+
+    if not booking:
+        conn.close()
+        return jsonify({'error': 'Buchung nicht gefunden'}), 404
+
+    status = data.get('status')
+    if status and status in ['pending', 'confirmed', 'cancelled']:
+        conn.execute('UPDATE bookings SET status = ? WHERE id = ?', (status, booking_id))
+        conn.commit()
+
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Buchung aktualisiert'})
 
 
 # Initialize database on startup
