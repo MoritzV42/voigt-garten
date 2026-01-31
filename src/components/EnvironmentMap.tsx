@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface POI {
   name: string;
@@ -11,7 +11,6 @@ interface POI {
 }
 
 // POIs in der Umgebung von Etzdorf/Heideland
-// Koordinaten basieren auf der Region um den Plus Code XXJ2+4JX Heideland
 const POIS: POI[] = [
   // Restaurants
   {
@@ -20,6 +19,7 @@ const POIS: POI[] = [
     lat: 51.2180,
     lng: 12.1350,
     description: 'Traditionelle sächsische Küche in rustikalem Ambiente',
+    website: 'https://www.gasthof-rosental.de',
     distance: '~3 km'
   },
   {
@@ -28,6 +28,7 @@ const POIS: POI[] = [
     lat: 51.2250,
     lng: 12.1200,
     description: 'Regionale Spezialitäten und Biergarten',
+    website: 'https://www.landgasthof-heideland.de',
     distance: '~4 km'
   },
   {
@@ -46,6 +47,7 @@ const POIS: POI[] = [
     lat: 51.1241,
     lng: 12.4956,
     description: 'Vollsortiment Supermarkt',
+    website: 'https://www.rewe.de',
     distance: '~15 km'
   },
   {
@@ -54,6 +56,7 @@ const POIS: POI[] = [
     lat: 51.1689,
     lng: 12.2522,
     description: 'Lebensmittel und regionale Produkte',
+    website: 'https://www.edeka.de',
     distance: '~10 km'
   },
   {
@@ -88,6 +91,7 @@ const POIS: POI[] = [
     lat: 51.1800,
     lng: 12.2000,
     description: 'Industriegeschichte und Landschaftswandel',
+    website: 'https://www.bergbau-technik-park.de',
     distance: '~8 km'
   },
 
@@ -98,6 +102,7 @@ const POIS: POI[] = [
     lat: 50.9853,
     lng: 12.4355,
     description: 'Historisches Residenzschloss mit Museum',
+    website: 'https://www.residenzschloss-altenburg.de',
     distance: '~25 km'
   },
   {
@@ -106,6 +111,7 @@ const POIS: POI[] = [
     lat: 51.3397,
     lng: 12.3731,
     description: 'Kulturstadt mit vielfältigem Angebot',
+    website: 'https://www.leipzig.travel',
     distance: '~30 km'
   },
 ];
@@ -126,17 +132,20 @@ const CATEGORY_STYLES: Record<string, { icon: string; color: string; label: stri
 export default function EnvironmentMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<Map<number, any>>(new Map());
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [selectedPOI, setSelectedPOI] = useState<number | null>(null);
+  const [expandedPOI, setExpandedPOI] = useState<number | null>(null);
 
   // Load Leaflet once on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const loadLeaflet = async () => {
-      // Add Leaflet CSS if not present
       if (!document.querySelector('link[href*="leaflet"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -144,7 +153,6 @@ export default function EnvironmentMap() {
         document.head.appendChild(link);
       }
 
-      // Load Leaflet JS if not present
       if (!(window as any).L) {
         await new Promise<void>((resolve) => {
           const script = document.createElement('script');
@@ -166,7 +174,6 @@ export default function EnvironmentMap() {
 
     const L = (window as any).L;
 
-    // Create map
     const map = L.map(mapContainerRef.current, {
       center: [GARDEN_LOCATION.lat, GARDEN_LOCATION.lng],
       zoom: 11,
@@ -177,24 +184,24 @@ export default function EnvironmentMap() {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
-    // Add garden marker (permanent)
+    // Garden marker - GROSSER (56x56px)
     const gardenIcon = L.divIcon({
       className: 'garden-marker',
-      html: `<div style="background: #16a34a; color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.4); cursor: pointer;">🏡</div>`,
-      iconSize: [44, 44],
-      iconAnchor: [22, 44],
-      popupAnchor: [0, -44],
+      html: `<div style="background: #16a34a; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer;">🏡</div>`,
+      iconSize: [56, 56],
+      iconAnchor: [28, 56],
+      popupAnchor: [0, -56],
     });
 
     L.marker([GARDEN_LOCATION.lat, GARDEN_LOCATION.lng], { icon: gardenIcon })
       .addTo(map)
       .bindPopup(`
-        <div style="text-align: center; padding: 10px; min-width: 160px;">
-          <strong style="font-size: 14px;">Garten Etzdorf</strong><br>
-          <span style="color: #666; font-size: 12px;">Dein Ziel!</span><br><br>
+        <div style="text-align: center; padding: 10px; min-width: 180px;">
+          <strong style="font-size: 16px;">Voigt-Garten Etzdorf</strong><br>
+          <span style="color: #666; font-size: 13px;">Dein Ziel!</span><br><br>
           <a href="https://www.google.com/maps/dir/?api=1&destination=51.2200,12.1300"
              target="_blank"
-             style="display: inline-block; background: #16a34a; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 12px;">
+             style="display: inline-block; background: #16a34a; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600;">
             🗺️ Route planen
           </a>
         </div>
@@ -203,7 +210,6 @@ export default function EnvironmentMap() {
     mapInstanceRef.current = map;
     setIsMapReady(true);
 
-    // Cleanup on unmount
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -221,38 +227,87 @@ export default function EnvironmentMap() {
 
     // Remove existing POI markers
     markersRef.current.forEach(marker => map.removeLayer(marker));
-    markersRef.current = [];
+    markersRef.current.clear();
 
     // Filter POIs
     const filteredPOIs = filterCategory
       ? POIS.filter(p => p.category === filterCategory)
       : POIS;
 
-    // Add new markers
-    filteredPOIs.forEach(poi => {
+    // Add new markers with click handlers
+    filteredPOIs.forEach((poi, filteredIndex) => {
+      const originalIndex = POIS.findIndex(p => p.name === poi.name);
       const style = CATEGORY_STYLES[poi.category];
+
       const poiIcon = L.divIcon({
         className: 'poi-marker',
-        html: `<div style="background: ${style.color}; color: white; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer;">${style.icon}</div>`,
+        html: `<div style="background: ${style.color}; color: white; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s;">${style.icon}</div>`,
         iconSize: [34, 34],
         iconAnchor: [17, 34],
         popupAnchor: [0, -34],
       });
 
       const marker = L.marker([poi.lat, poi.lng], { icon: poiIcon })
-        .addTo(map)
-        .bindPopup(`
-          <div style="min-width: 180px; padding: 5px;">
-            <strong style="font-size: 14px;">${poi.name}</strong><br>
-            <span style="color: #666; font-size: 12px;">${poi.description}</span><br>
-            ${poi.distance ? `<span style="color: #16a34a; font-size: 12px; display: block; margin-top: 4px;">📍 ${poi.distance}</span>` : ''}
-            ${poi.website ? `<a href="${poi.website}" target="_blank" style="color: #3b82f6; font-size: 12px; display: block; margin-top: 4px;">🔗 Website besuchen</a>` : ''}
-          </div>
-        `);
+        .addTo(map);
 
-      markersRef.current.push(marker);
+      // Click handler for marker -> scroll to card
+      marker.on('click', () => {
+        handleMarkerClick(originalIndex);
+      });
+
+      markersRef.current.set(originalIndex, marker);
     });
   }, [filterCategory, isMapReady]);
+
+  // Handle marker click -> scroll to card and expand
+  const handleMarkerClick = useCallback((index: number) => {
+    setSelectedPOI(index);
+    setExpandedPOI(index);
+
+    // Scroll to card
+    const cardElement = cardRefs.current.get(index);
+    if (cardElement) {
+      cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Clear highlight after 3 seconds
+    setTimeout(() => {
+      setSelectedPOI(null);
+    }, 3000);
+  }, []);
+
+  // Handle card click -> center map and expand
+  const handleCardClick = useCallback((index: number, poi: POI) => {
+    setSelectedPOI(index);
+
+    // Toggle expand
+    if (expandedPOI === index) {
+      setExpandedPOI(null);
+    } else {
+      setExpandedPOI(index);
+    }
+
+    // Center map on POI
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView([poi.lat, poi.lng], 13, { animate: true });
+
+      // Open marker popup
+      const marker = markersRef.current.get(index);
+      if (marker) {
+        marker.openPopup();
+      }
+    }
+
+    // Clear highlight after 3 seconds
+    setTimeout(() => {
+      setSelectedPOI(null);
+    }, 3000);
+  }, [expandedPOI]);
+
+  // Get Google Maps route URL for a POI
+  const getRouteUrl = (poi: POI) => {
+    return `https://www.google.com/maps/dir/?api=1&origin=${GARDEN_LOCATION.lat},${GARDEN_LOCATION.lng}&destination=${poi.lat},${poi.lng}`;
+  };
 
   const filteredPOIs = filterCategory
     ? POIS.filter(p => p.category === filterCategory)
@@ -260,6 +315,18 @@ export default function EnvironmentMap() {
 
   return (
     <div className="space-y-6">
+      {/* Route Button - Prominent at top */}
+      <div className="text-center">
+        <a
+          href="https://www.google.com/maps/dir/?api=1&destination=51.2200,12.1300"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-3 bg-garden-600 hover:bg-garden-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl"
+        >
+          🗺️ Route zum Garten berechnen
+        </a>
+      </div>
+
       {/* Filter Buttons */}
       <div className="flex flex-wrap gap-2 justify-center">
         <button
@@ -313,43 +380,93 @@ export default function EnvironmentMap() {
 
       {/* POI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredPOIs.map((poi, index) => {
+        {filteredPOIs.map((poi) => {
+          const originalIndex = POIS.findIndex(p => p.name === poi.name);
           const style = CATEGORY_STYLES[poi.category];
+          const isSelected = selectedPOI === originalIndex;
+          const isExpanded = expandedPOI === originalIndex;
+
           return (
             <div
-              key={index}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md hover:border-gray-200 transition-all"
+              key={originalIndex}
+              ref={(el) => {
+                if (el) cardRefs.current.set(originalIndex, el);
+              }}
+              className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all duration-300 cursor-pointer ${
+                isSelected
+                  ? 'border-garden-500 shadow-lg ring-2 ring-garden-200 animate-pulse'
+                  : 'border-gray-100 hover:shadow-md hover:border-gray-200'
+              }`}
+              onClick={() => handleCardClick(originalIndex, poi)}
             >
-              <div className="flex items-start gap-3">
-                <div
-                  className="w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0"
-                  style={{ backgroundColor: style.color + '15' }}
-                >
-                  {style.icon}
+              {/* Card Header - Always visible */}
+              <div className="p-4">
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0"
+                    style={{ backgroundColor: style.color + '15' }}
+                  >
+                    {style.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate">{poi.name}</h3>
+                    <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{poi.description}</p>
+                    {poi.distance && (
+                      <p className="text-xs text-garden-600 mt-2 font-medium">📍 {poi.distance}</p>
+                    )}
+                  </div>
+                  <div className={`text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                    ▼
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate">{poi.name}</h3>
-                  <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{poi.description}</p>
-                  {poi.distance && (
-                    <p className="text-xs text-garden-600 mt-2 font-medium">📍 {poi.distance}</p>
+              </div>
+
+              {/* Expanded Content */}
+              <div
+                className={`overflow-hidden transition-all duration-300 ${
+                  isExpanded ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'
+                }`}
+              >
+                <div className="border-t border-gray-100">
+                  {/* Website iframe */}
+                  {poi.website && (
+                    <div className="bg-gray-50 p-2">
+                      <iframe
+                        src={poi.website}
+                        title={poi.name}
+                        className="w-full h-48 rounded-lg border border-gray-200"
+                        sandbox="allow-scripts allow-same-origin"
+                        loading="lazy"
+                      />
+                      <a
+                        href={poi.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline mt-1 block text-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        🔗 Website in neuem Tab öffnen
+                      </a>
+                    </div>
                   )}
+
+                  {/* Route Button */}
+                  <div className="p-4 bg-gray-50">
+                    <a
+                      href={getRouteUrl(poi)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full bg-garden-600 hover:bg-garden-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      🗺️ Route planen
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
           );
         })}
-      </div>
-
-      {/* Navigation Button */}
-      <div className="text-center pt-4">
-        <a
-          href="https://www.google.com/maps/dir/?api=1&destination=51.2200,12.1300"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-garden-600 hover:bg-garden-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl"
-        >
-          🗺️ Navigation zum Garten starten
-        </a>
       </div>
     </div>
   );
