@@ -140,6 +140,7 @@ export default function GalleryUpload({ onUploadComplete }: Props) {
     const token = localStorage.getItem(TOKEN_KEY);
     setIsUploading(true);
     setUploadProgress(0);
+    let pendingCount = 0;
 
     try {
       for (let i = 0; i < files.length; i++) {
@@ -164,6 +165,11 @@ export default function GalleryUpload({ onUploadComplete }: Props) {
           throw new Error(`Upload failed for ${uploadFile.file.name}`);
         }
 
+        const result = await response.json();
+        if (result.status === 'pending') {
+          pendingCount++;
+        }
+
         setUploadProgress(((i + 1) / files.length) * 100);
       }
 
@@ -171,11 +177,15 @@ export default function GalleryUpload({ onUploadComplete }: Props) {
       files.forEach(f => URL.revokeObjectURL(f.preview));
       setFiles([]);
 
-      alert('✅ Alle Dateien erfolgreich hochgeladen!');
+      if (pendingCount > 0) {
+        alert(`Upload erfolgreich! ${pendingCount} ${pendingCount === 1 ? 'Datei wird' : 'Dateien werden'} vor der Veröffentlichung geprüft.`);
+      } else {
+        alert('Alle Dateien erfolgreich hochgeladen!');
+      }
       onUploadComplete?.();
     } catch (error) {
       console.error('Upload error:', error);
-      alert('❌ Fehler beim Hochladen. Bitte versuche es erneut.');
+      alert('Fehler beim Hochladen. Bitte versuche es erneut.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

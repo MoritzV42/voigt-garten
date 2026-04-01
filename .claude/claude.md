@@ -224,11 +224,11 @@ curl https://garten.infinityspace42.de/api/health
 ### Update/Rebuild (empfohlen)
 
 ```bash
-ssh is42 "bash ~/rebuild-voigt-garten.sh"
+ssh is42 "bash ~/voigt-garten/rebuild-voigt-garten.sh"
 ssh is42 "tail -f /tmp/rebuild-voigt-garten.log"
 ```
 
-Das Rebuild-Skript (`~/rebuild-voigt-garten.sh`) macht automatisch:
+Das Rebuild-Skript (`~/voigt-garten/rebuild-voigt-garten.sh`) macht automatisch:
 1. WAL-Checkpoint + DB-Backup
 2. `docker compose up -d --build --force-recreate`
 3. Health-Check

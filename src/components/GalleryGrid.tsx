@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PanoramaViewer from './PanoramaViewer';
 
 interface GalleryItem {
   id: string;
@@ -7,7 +8,7 @@ interface GalleryItem {
   name?: string;
   description?: string;
   category: string;
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'panorama';
   uploadedAt: string;
   uploadedBy?: string;
 }
@@ -177,14 +178,7 @@ function GalleryThumbnail({ item, onClick }: { item: GalleryItem; onClick: () =>
       onClick={onClick}
       className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group bg-gray-100"
     >
-      {item.type === 'image' ? (
-        <img
-          src={item.thumbnailUrl || item.url}
-          alt={item.name || 'Galeriebild'}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-          loading="lazy"
-        />
-      ) : (
+      {item.type === 'video' ? (
         <>
           <video
             src={item.url}
@@ -194,6 +188,13 @@ function GalleryThumbnail({ item, onClick }: { item: GalleryItem; onClick: () =>
             <span className="text-white text-4xl">▶️</span>
           </div>
         </>
+      ) : (
+        <img
+          src={item.thumbnailUrl || item.url}
+          alt={item.name || 'Galeriebild'}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+          loading="lazy"
+        />
       )}
 
       {/* Hover Overlay */}
@@ -207,6 +208,13 @@ function GalleryThumbnail({ item, onClick }: { item: GalleryItem; onClick: () =>
       {item.type === 'video' && (
         <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
           🎬 Video
+        </div>
+      )}
+
+      {/* Panorama Badge */}
+      {item.type === 'panorama' && (
+        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+          360°
         </div>
       )}
     </div>
@@ -275,10 +283,14 @@ function Lightbox({
 
       {/* Content */}
       <div
-        className="max-w-6xl max-h-[90vh] px-4"
+        className={`${item.type === 'panorama' ? 'w-full h-[80vh]' : 'max-w-6xl max-h-[90vh]'} px-4`}
         onClick={(e) => e.stopPropagation()}
       >
-        {item.type === 'image' ? (
+        {item.type === 'panorama' ? (
+          <div className="w-full h-full">
+            <PanoramaViewer imageUrl={item.url} />
+          </div>
+        ) : item.type === 'image' ? (
           <img
             src={item.url}
             alt={item.name || 'Galeriebild'}

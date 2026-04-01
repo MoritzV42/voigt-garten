@@ -14,8 +14,10 @@ import hashlib
 import subprocess
 import re
 import jwt
+import json
 import functools
 import secrets
+from collections import deque
 from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification, send_magic_link_email, send_welcome_email
 from telegram_service import send_moderation_request, answer_callback_query
 from storage import LocalStorage
@@ -351,6 +353,35 @@ def migrate_db():
         )
     ''')
 
+    conn.commit()
+
+    # -- Wartung Phase 0: New columns on projects --
+    for col_stmt in [
+        "ALTER TABLE projects ADD COLUMN parent_task_id INTEGER REFERENCES projects(id)",
+        "ALTER TABLE projects ADD COLUMN start_date DATE",
+        "ALTER TABLE projects ADD COLUMN due_date DATE",
+        "ALTER TABLE projects ADD COLUMN dependencies TEXT DEFAULT '[]'",
+        "ALTER TABLE projects ADD COLUMN assigned_to_list TEXT DEFAULT '[]'",
+    ]:
+        try:
+            conn.execute(col_stmt)
+            conn.commit()
+            print(f"Migration: {col_stmt}")
+        except Exception:
+            pass  # Column already exists
+
+    # Task comments table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS task_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL,
+            task_type TEXT NOT NULL,
+            user_email TEXT NOT NULL,
+            user_name TEXT,
+            comment TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.commit()
 
     # Seed inventory if empty
@@ -1745,17 +1776,46 @@ def update_project(project_id, user):
         conn.close()
         return jsonify({'error': 'Projekt nicht gefunden'}), 404
 
+    # Circular dependency detection (BFS)
+    new_deps = data.get('dependencies') or data.get('dependencies')
+    if new_deps is not None:
+        dep_ids = json.loads(new_deps) if isinstance(new_deps, str) else new_deps
+        if dep_ids:
+            visited = set()
+            queue = deque(dep_ids)
+            while queue:
+                dep_id = queue.popleft()
+                if dep_id == project_id:
+                    conn.close()
+                    return jsonify({'error': 'Zirkuläre Abhängigkeit erkannt'}), 400
+                if dep_id in visited:
+                    continue
+                visited.add(dep_id)
+                row = conn.execute('SELECT dependencies FROM projects WHERE id = ?', (dep_id,)).fetchone()
+                if row and row['dependencies']:
+                    try:
+                        child_deps = json.loads(row['dependencies'])
+                        queue.extend(child_deps)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
     # Build update query dynamically
     updates = []
     params = []
     allowed_fields = ['title', 'description', 'category', 'status', 'priority',
-                      'estimated_cost', 'effort', 'timeframe', 'assigned_to']
+                      'estimated_cost', 'effort', 'timeframe', 'assigned_to',
+                      'dependencies', 'start_date', 'due_date', 'assigned_to_list',
+                      'parent_task_id']
+    json_fields = {'dependencies', 'assigned_to_list'}
 
     for field in allowed_fields:
         # Also check camelCase variants
         camel_field = ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field.split('_')))
         value = data.get(field) or data.get(camel_field)
         if value is not None:
+            # Serialize list/dict values as JSON strings for storage
+            if field in json_fields and not isinstance(value, str):
+                value = json.dumps(value)
             updates.append(f'{field} = ?')
             params.append(value)
 
@@ -1787,6 +1847,7 @@ def complete_project(project_id, user):
 
     notes = None
     photo_path = None
+    cascade = False
 
     # Handle multipart form data for photo upload
     if request.content_type and 'multipart/form-data' in request.content_type:
@@ -1805,7 +1866,9 @@ def complete_project(project_id, user):
         data = request.json or {}
         notes = data.get('notes')
         photo_path = data.get('photoPath')
+        cascade = data.get('cascade', False)
 
+    now_iso = datetime.now().isoformat()
     conn.execute('''
         UPDATE projects SET
             status = 'done',
@@ -1815,14 +1878,20 @@ def complete_project(project_id, user):
             completion_notes = ?,
             updated_at = ?
         WHERE id = ?
-    ''', (
-        datetime.now().isoformat(),
-        user['email'],
-        photo_path,
-        notes,
-        datetime.now().isoformat(),
-        project_id
-    ))
+    ''', (now_iso, user['email'], photo_path, notes, now_iso, project_id))
+
+    # Cascade: also complete all child tasks
+    if cascade:
+        conn.execute('''
+            UPDATE projects SET
+                status = 'done',
+                completed_at = ?,
+                completed_by = ?,
+                completion_notes = 'Automatisch mit Elternaufgabe abgeschlossen',
+                updated_at = ?
+            WHERE parent_task_id = ? AND status != 'done'
+        ''', (now_iso, user['email'], now_iso, project_id))
+
     conn.commit()
     conn.close()
 
@@ -2520,10 +2589,25 @@ def get_unified_tasks():
     status = request.args.get('status')
     effort = request.args.get('effort')
     assignee = request.args.get('assignee')
+    search = request.args.get('search')
+    priority = request.args.get('priority')
+    assigned_to = request.args.get('assigned_to')
+    sort_by = request.args.get('sort', 'created_at')
+    order = request.args.get('order', 'desc')
 
     conn = get_db()
     tasks = []
     today = datetime.now().date()
+
+    # Pre-fetch comment counts
+    comment_counts = {}
+    for row in conn.execute('SELECT task_type, task_id, COUNT(*) as cnt FROM task_comments GROUP BY task_type, task_id').fetchall():
+        comment_counts[(row['task_type'], row['task_id'])] = row['cnt']
+
+    # Pre-fetch children counts
+    children_counts = {}
+    for row in conn.execute('SELECT parent_task_id, COUNT(*) as cnt FROM projects WHERE parent_task_id IS NOT NULL GROUP BY parent_task_id').fetchall():
+        children_counts[row['parent_task_id']] = row['cnt']
 
     # Get recurring tasks
     if task_type in ['recurring', 'all']:
@@ -2536,6 +2620,12 @@ def get_unified_tasks():
         if effort:
             query += ' AND effort = ?'
             params.append(effort)
+        if search:
+            if search.startswith('#') and search[1:].isdigit():
+                pass  # recurring tasks don't have meaningful IDs to search
+            else:
+                query += ' AND (title LIKE ? OR description LIKE ?)'
+                params.extend([f'%{search}%', f'%{search}%'])
 
         recurring = conn.execute(query, params).fetchall()
 
@@ -2560,6 +2650,11 @@ def get_unified_tasks():
             if status and t['due_status'] != status:
                 continue
 
+            # Computed fields
+            t['comment_count'] = comment_counts.get(('recurring', t['id']), 0)
+            t['children_count'] = 0
+            t['has_blockers'] = False
+
             tasks.append(t)
 
     # Get projects
@@ -2576,21 +2671,86 @@ def get_unified_tasks():
         if assignee:
             query += ' AND assigned_to = ?'
             params.append(assignee)
+        if priority:
+            query += ' AND priority = ?'
+            params.append(priority)
+        if assigned_to:
+            query += ' AND assigned_to_list LIKE ?'
+            params.append(f'%{assigned_to}%')
+        if search:
+            if search.startswith('#') and search[1:].isdigit():
+                query += ' AND id = ?'
+                params.append(int(search[1:]))
+            else:
+                query += ' AND (title LIKE ? OR description LIKE ?)'
+                params.extend([f'%{search}%', f'%{search}%'])
 
         projects = conn.execute(query, params).fetchall()
 
         for project in projects:
             p = dict(project)
             p['task_type'] = 'project'
-            p['due_status'] = 'ok'  # Projects don't have due dates like recurring tasks
+
+            # Compute due_status from due_date
+            if p.get('due_date'):
+                try:
+                    due_dt = datetime.strptime(p['due_date'], '%Y-%m-%d').date()
+                    days_until = (due_dt - today).days
+                    if days_until < 0:
+                        p['due_status'] = 'overdue'
+                    elif days_until <= 7:
+                        p['due_status'] = 'due-soon'
+                    else:
+                        p['due_status'] = 'ok'
+                except (ValueError, TypeError):
+                    p['due_status'] = 'ok'
+            else:
+                p['due_status'] = 'ok'
+
+            # Computed fields
+            p['comment_count'] = comment_counts.get(('project', p['id']), 0)
+            p['children_count'] = children_counts.get(p['id'], 0)
+
+            # has_blockers: check if any dependency is not done
+            has_blockers = False
+            if p.get('dependencies'):
+                try:
+                    dep_ids = json.loads(p['dependencies'])
+                    if dep_ids:
+                        placeholders = ','.join('?' for _ in dep_ids)
+                        blocker = conn.execute(
+                            f"SELECT COUNT(*) as cnt FROM projects WHERE id IN ({placeholders}) AND status != 'done'",
+                            dep_ids
+                        ).fetchone()
+                        has_blockers = blocker['cnt'] > 0
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            p['has_blockers'] = has_blockers
+
             tasks.append(p)
 
     conn.close()
 
+    # Sorting
+    valid_sorts = {'start_date', 'created_at', 'priority', 'due_date', 'title'}
+    if sort_by in valid_sorts:
+        priority_order = {'hoch': 0, 'mittel': 1, 'niedrig': 2}
+        reverse = (order == 'desc')
+
+        def sort_key(t):
+            val = t.get(sort_by)
+            if sort_by == 'priority':
+                return priority_order.get(val, 99)
+            if val is None:
+                return '' if not reverse else '\xff'
+            return val
+
+        tasks.sort(key=sort_key, reverse=reverse)
+
     # Get unique values for filters
     categories = list(set(t.get('category') for t in tasks if t.get('category')))
     efforts = list(set(t.get('effort') for t in tasks if t.get('effort')))
-    assignees = list(set(t.get('assigned_to') for t in tasks if t.get('assigned_to')))
+    assignees_list = list(set(t.get('assigned_to') for t in tasks if t.get('assigned_to')))
 
     return jsonify({
         'tasks': tasks,
@@ -2598,7 +2758,7 @@ def get_unified_tasks():
         'filters': {
             'categories': sorted(categories),
             'efforts': ['leicht', 'mittel', 'schwer'],
-            'assignees': sorted(assignees)
+            'assignees': sorted(assignees_list)
         }
     })
 
@@ -2984,6 +3144,291 @@ def update_furniture_meta(user):
     conn.close()
 
     return jsonify({'success': True})
+
+
+# ============ Service Providers CRUD ============
+
+@app.route('/api/service-providers', methods=['GET'])
+def get_service_providers():
+    """Get all service providers, optionally filtered by category."""
+    category = request.args.get('category')
+    conn = get_db()
+
+    if category:
+        providers = conn.execute('SELECT * FROM service_providers WHERE category = ?', (category,)).fetchall()
+    else:
+        providers = conn.execute('SELECT * FROM service_providers').fetchall()
+
+    conn.close()
+    return jsonify({'providers': [dict(p) for p in providers]})
+
+
+@app.route('/api/service-providers', methods=['POST'])
+@require_admin
+def create_service_provider(user):
+    """Admin: Create a service provider."""
+    data = request.json
+    if not data or not data.get('name') or not data.get('category'):
+        return jsonify({'error': 'Name und Kategorie sind erforderlich'}), 400
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO service_providers (category, name, email, phone, rating, notes, verified)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data['category'],
+        data['name'],
+        data.get('email'),
+        data.get('phone'),
+        data.get('rating', 0),
+        data.get('notes'),
+        data.get('verified', False)
+    ))
+    provider_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'id': provider_id, 'message': 'Dienstleister erstellt'})
+
+
+@app.route('/api/service-providers/<int:id>', methods=['PATCH'])
+@require_admin
+def update_service_provider(id, user):
+    """Admin: Update a service provider."""
+    data = request.json
+    conn = get_db()
+    provider = conn.execute('SELECT * FROM service_providers WHERE id = ?', (id,)).fetchone()
+
+    if not provider:
+        conn.close()
+        return jsonify({'error': 'Dienstleister nicht gefunden'}), 404
+
+    updates = []
+    params = []
+    for field in ['category', 'name', 'email', 'phone', 'rating', 'notes', 'verified']:
+        if field in data:
+            updates.append(f'{field} = ?')
+            params.append(data[field])
+
+    if updates:
+        params.append(id)
+        conn.execute(f'UPDATE service_providers SET {", ".join(updates)} WHERE id = ?', params)
+        conn.commit()
+
+    conn.close()
+    return jsonify({'success': True, 'message': 'Dienstleister aktualisiert'})
+
+
+@app.route('/api/service-providers/<int:id>', methods=['DELETE'])
+@require_admin
+def delete_service_provider(id, user):
+    """Admin: Delete a service provider."""
+    conn = get_db()
+    provider = conn.execute('SELECT * FROM service_providers WHERE id = ?', (id,)).fetchone()
+
+    if not provider:
+        conn.close()
+        return jsonify({'error': 'Dienstleister nicht gefunden'}), 404
+
+    conn.execute('DELETE FROM service_providers WHERE id = ?', (id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Dienstleister gelöscht'})
+
+
+# ============ Assignees ============
+
+@app.route('/api/assignees', methods=['GET'])
+def get_assignees():
+    """Get combined list of users and service providers as assignees."""
+    conn = get_db()
+    users = conn.execute('SELECT id, name, email, role FROM users').fetchall()
+    providers = conn.execute('SELECT id, name, email, category FROM service_providers').fetchall()
+    conn.close()
+
+    assignees = []
+    for u in users:
+        assignees.append({
+            'id': u['id'],
+            'name': u['name'] or u['email'],
+            'email': u['email'],
+            'type': 'user'
+        })
+    for p in providers:
+        assignees.append({
+            'id': p['id'],
+            'name': p['name'],
+            'email': p['email'],
+            'type': 'provider',
+            'category': p['category']
+        })
+
+    return jsonify({'assignees': assignees})
+
+
+# ============ Subtasks ============
+
+@app.route('/api/projects/<int:id>/subtasks', methods=['GET'])
+def get_subtasks(id):
+    """Get subtasks (children) of a project."""
+    recursive = request.args.get('recursive', 'false').lower() == 'true'
+    conn = get_db()
+
+    if recursive:
+        # Gather all descendants via BFS
+        all_subtasks = []
+        queue = deque([id])
+        while queue:
+            parent_id = queue.popleft()
+            children = conn.execute(
+                'SELECT * FROM projects WHERE parent_task_id = ?', (parent_id,)
+            ).fetchall()
+            for child in children:
+                c = dict(child)
+                all_subtasks.append(c)
+                queue.append(c['id'])
+        conn.close()
+        return jsonify({'subtasks': all_subtasks, 'total': len(all_subtasks)})
+    else:
+        subtasks = conn.execute(
+            'SELECT * FROM projects WHERE parent_task_id = ?', (id,)
+        ).fetchall()
+        conn.close()
+        return jsonify({'subtasks': [dict(s) for s in subtasks], 'total': len(subtasks)})
+
+
+@app.route('/api/projects/<int:id>/subtasks', methods=['POST'])
+@require_auth
+def create_subtask(id, user):
+    """Create a child project (subtask) under the given parent."""
+    data = request.json
+    if not data or not data.get('title') or not data.get('category'):
+        return jsonify({'error': 'Titel und Kategorie sind erforderlich'}), 400
+
+    conn = get_db()
+    # Verify parent exists
+    parent = conn.execute('SELECT id FROM projects WHERE id = ?', (id,)).fetchone()
+    if not parent:
+        conn.close()
+        return jsonify({'error': 'Elternprojekt nicht gefunden'}), 404
+
+    conn.execute('''
+        INSERT INTO projects (title, description, category, status, priority,
+                              estimated_cost, effort, timeframe, parent_task_id, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data['title'],
+        data.get('description'),
+        data['category'],
+        data.get('status', 'offen'),
+        data.get('priority', 'mittel'),
+        data.get('estimatedCost') or data.get('estimated_cost'),
+        data.get('effort'),
+        data.get('timeframe'),
+        id,
+        user['email']
+    ))
+    subtask_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'id': subtask_id,
+        'message': 'Unteraufgabe erstellt'
+    })
+
+
+# ============ Dependencies / Blockers ============
+
+@app.route('/api/projects/<int:id>/blockers', methods=['GET'])
+def get_blockers(id):
+    """Get non-completed dependencies (blockers) for a project."""
+    conn = get_db()
+    project = conn.execute('SELECT dependencies FROM projects WHERE id = ?', (id,)).fetchone()
+
+    if not project:
+        conn.close()
+        return jsonify({'error': 'Projekt nicht gefunden'}), 404
+
+    dep_ids = []
+    if project['dependencies']:
+        try:
+            dep_ids = json.loads(project['dependencies'])
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    blockers = []
+    for dep_id in dep_ids:
+        dep = conn.execute('SELECT * FROM projects WHERE id = ? AND status != ?', (dep_id, 'done')).fetchone()
+        if dep:
+            blockers.append(dict(dep))
+
+    conn.close()
+    return jsonify({'blockers': blockers, 'total': len(blockers)})
+
+
+# ============ Task Comments ============
+
+@app.route('/api/tasks/<task_type>/<int:task_id>/comments', methods=['GET'])
+def get_task_comments(task_type, task_id):
+    """Get comments for a task."""
+    if task_type not in ('project', 'recurring'):
+        return jsonify({'error': 'Ungültiger task_type (project oder recurring)'}), 400
+
+    conn = get_db()
+    comments = conn.execute(
+        'SELECT * FROM task_comments WHERE task_id = ? AND task_type = ? ORDER BY created_at ASC',
+        (task_id, task_type)
+    ).fetchall()
+    conn.close()
+
+    return jsonify({'comments': [dict(c) for c in comments], 'total': len(comments)})
+
+
+@app.route('/api/tasks/<task_type>/<int:task_id>/comments', methods=['POST'])
+@require_auth
+def create_task_comment(task_type, task_id, user):
+    """Create a comment on a task."""
+    if task_type not in ('project', 'recurring'):
+        return jsonify({'error': 'Ungültiger task_type (project oder recurring)'}), 400
+
+    data = request.json
+    if not data or not data.get('comment'):
+        return jsonify({'error': 'Kommentar ist erforderlich'}), 400
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO task_comments (task_id, task_type, user_email, user_name, comment)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (task_id, task_type, user['email'], user.get('name'), data['comment']))
+    comment_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'id': comment_id, 'message': 'Kommentar erstellt'})
+
+
+@app.route('/api/comments/<int:comment_id>', methods=['DELETE'])
+@require_auth
+def delete_comment(comment_id, user):
+    """Delete a comment (admin or author only)."""
+    conn = get_db()
+    comment = conn.execute('SELECT * FROM task_comments WHERE id = ?', (comment_id,)).fetchone()
+
+    if not comment:
+        conn.close()
+        return jsonify({'error': 'Kommentar nicht gefunden'}), 404
+
+    if comment['user_email'] != user['email'] and user.get('role') != 'admin':
+        conn.close()
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+
+    conn.execute('DELETE FROM task_comments WHERE id = ?', (comment_id,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Kommentar gelöscht'})
 
 
 # Initialize database on startup

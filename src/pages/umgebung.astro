@@ -1,11 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import EnvironmentMap from '../components/EnvironmentMap';
+import VideoBackground from '../components/VideoBackground';
 ---
 
 <Layout title="Umgebung" description="Restaurants, Einkaufsmöglichkeiten und Sehenswürdigkeiten rund um den Garten Etzdorf">
   <!-- Header -->
-  <section class="bg-gradient-to-b from-garden-100 to-white py-12">
+  <VideoBackground page="umgebung" className="bg-gradient-to-b from-garden-100 to-white py-12" client:load>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
       <h1 class="font-display text-4xl md:text-5xl font-bold text-garden-900 mb-4">
         Umgebung & Anfahrt
@@ -14,7 +15,7 @@ import EnvironmentMap from '../components/EnvironmentMap';
         Restaurants, Einkaufsmöglichkeiten und Ausflugsziele in der Nähe des Gartens
       </p>
     </div>
-  </section>
+  </VideoBackground>
 
   <!-- Anfahrt Info -->
   <section class="py-8 bg-white border-b border-gray-200">
