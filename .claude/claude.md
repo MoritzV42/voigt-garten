@@ -414,6 +414,22 @@ CREATE TABLE inventory_furniture_meta (
 
 ---
 
+## Bekannte Pitfalls
+
+### SQLite JSON-Felder (WICHTIG)
+Die Tabelle `projects` speichert `assigned_to_list` und `dependencies` als TEXT (JSON-Strings).
+Beim Lesen aus der DB MUSS `json.loads()` aufgerufen werden, sonst gibt die API Strings statt Arrays zurück.
+Das crashed das React-Frontend: `TypeError: g.map is not a function`.
+**Alle API-Endpoints die Projekte zurückgeben müssen JSON-Felder parsen!**
+
+### E2E-Tests (Playwright)
+- Tests liegen in `tests/` (api, pages, wartung)
+- Laufen gegen Produktion: `npx playwright test`
+- React-Hydration kann 5-30s dauern - nie `networkidle` verwenden
+- `waitForSelector` auf React-Elemente mit Retry-Helper
+
+---
+
 ## Fehlerbehebung
 
 ### Container startet nicht
