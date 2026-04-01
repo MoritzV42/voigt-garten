@@ -42,6 +42,12 @@ Volume Mounts -> Pi Filesystem
 |       |-- galerie.astro   # Fotogalerie
 |       |-- wartung.astro   # Wartungsaufgaben + Guthaben
 |       |-- dienstleister.astro  # Dienstleister-Management
+|       |-- inventar.astro  # Inventar-Verwaltung
+|       |-- auth/
+|           |-- verify.astro # Magic Link Verify Page
+|   |-- components/
+|       |-- InventarPage.tsx    # Inventar Frontend (Gebäude/Räume/Gegenstände)
+|       |-- VerifyPage.tsx      # Magic Link Verify Frontend
 |-- public/                 # Static Assets
 |   |-- images/gallery/     # Hochgeladene Bilder (Volume)
 |-- docs/                   # Dokumentation zum Garten
@@ -51,8 +57,12 @@ Volume Mounts -> Pi Filesystem
 |-- pi-backend/
 |   |-- app.py              # Flask API + Static Serving
 |   |-- email_service.py    # Resend Email
+|   |-- telegram_service.py # Telegram Bot Moderation
+|   |-- telegram_agent.py   # Autonomer Telegram Bot Agent (@Garten_Bot)
+|   |-- storage.py          # Storage-Interface (Local + erweiterbar)
 |   |-- gallery.db          # SQLite (Volume)
 |   |-- requirements.txt
+|   |-- start.sh            # Init + Migration + Gunicorn Start
 |-- .claude/
 |   |-- claude.md           # Diese Dokumentation
 
@@ -78,14 +88,42 @@ Response: { "status": "ok", "service": "voigt-garten-pi", "timestamp": "..." }
 ```
 GET /api/gallery
 GET /api/gallery?category=garten
+GET /api/gallery?include_pending=true  (Admin: zeigt auch pending/rejected)
 Response: { "items": [...], "total": 10 }
 
 POST /api/gallery/upload
 Body: multipart/form-data (file, category, name, description)
-Response: { "success": true, "id": "...", "url": "/images/gallery/..." }
+Response: { "success": true, "id": "...", "url": "...", "status": "approved|pending" }
+Note: Non-Admin Uploads → status='pending', Telegram-Moderation wird ausgelöst
+
+POST /api/admin/gallery/panorama  (Admin only)
+Body: multipart/form-data (file, name, description, category)
+Note: Kein WebP-Konvertierung (Equirectangular muss original bleiben), type='panorama'
 
 DELETE /api/gallery/{item_id}
 Response: { "success": true }
+```
+
+### Telegram Webhook
+```
+POST /api/telegram/webhook
+Body: Telegram Bot API callback (approve/reject Inline-Buttons)
+Action: Setzt gallery_images.status auf 'approved' oder 'rejected'
+```
+
+### Hintergrundvideos
+```
+GET /api/background-video?page=startseite
+Response: { "video_url": "/images/gallery/...", "page": "startseite" }
+
+POST /api/admin/background-video  (Admin only)
+Body: { "page": "startseite", "video_path": "...", "thumbnail_path": "..." }
+```
+
+### Livestream (Vorbereitung)
+```
+GET /api/livestream/cameras
+Response: { "cameras": [], "available": false }
 ```
 
 ### Buchungen
@@ -111,6 +149,56 @@ Body: { "taskId", "completedBy", "notes", "creditValue" }
 Response: { "success": true }
 ```
 
+### Magic Link Auth
+```
+POST /api/auth/request-magic-link
+Body: { "email": "user@example.com" }
+Response: { "success": true, "message": "Magic Link gesendet" }
+Note: Sendet Email mit Verify-Link via Resend
+
+GET /api/auth/verify-email?token=...
+Response: Redirect zu /auth/verify mit Token-Validierung
+Note: Prüft Token-Gültigkeit, setzt Session/Cookie
+
+POST /api/auth/complete-registration
+Body: { "token": "...", "name": "Max Mustermann" }
+Response: { "success": true, "user": { "email": "...", "name": "...", "role": "guest" } }
+Note: Erstregistrierung nach erster Magic-Link-Verifizierung
+```
+
+### Inventar
+```
+GET /api/inventory/buildings
+Response: { "buildings": [{ "id": 1, "name": "Gartenhaus", "floors": [...] }] }
+
+POST /api/inventory/buildings
+Body: { "name": "Gartenhaus", "description": "..." }
+Response: { "success": true, "id": 1 }
+
+GET /api/inventory/rooms?building_id=1
+Response: { "rooms": [{ "id": 1, "name": "Wohnzimmer", "floor": "EG" }] }
+
+POST /api/inventory/rooms
+Body: { "building_id": 1, "floor_id": 1, "name": "Wohnzimmer" }
+Response: { "success": true, "id": 1 }
+
+GET /api/inventory/items?room_id=1
+GET /api/inventory/items?building_id=1
+GET /api/inventory/items?search=Schaufel
+Response: { "items": [{ "id": 1, "name": "Schaufel", "category": "Werkzeug", ... }] }
+
+POST /api/inventory/items
+Body: { "room_id": 1, "name": "Schaufel", "category": "Werkzeug", "quantity": 2 }
+Response: { "success": true, "id": 1 }
+
+PATCH /api/inventory/items/{item_id}
+Body: { "name": "...", "quantity": 3, "condition": "gut" }
+Response: { "success": true }
+
+DELETE /api/inventory/items/{item_id}
+Response: { "success": true }
+```
+
 ---
 
 ## Deployment
@@ -133,7 +221,19 @@ curl http://localhost:5055/api/health
 curl https://garten.infinityspace42.de/api/health
 ```
 
-### Update/Rebuild
+### Update/Rebuild (empfohlen)
+
+```bash
+ssh is42 "bash ~/rebuild-voigt-garten.sh"
+ssh is42 "tail -f /tmp/rebuild-voigt-garten.log"
+```
+
+Das Rebuild-Skript (`~/rebuild-voigt-garten.sh`) macht automatisch:
+1. WAL-Checkpoint + DB-Backup
+2. `docker compose up -d --build --force-recreate`
+3. Health-Check
+
+### Manueller Rebuild
 
 ```bash
 cd /home/moritz/stacks/voigt-garten
@@ -154,6 +254,8 @@ docker logs voigt-garten-app -f
 | Variable | Beschreibung | Standard |
 |----------|--------------|----------|
 | `RESEND_API_KEY` | Resend API fur Emails | (required) |
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot Token für Galerie-Moderation | (optional) |
+| `TELEGRAM_CHAT_ID` | Telegram Chat-ID für Moderations-Nachrichten | (optional) |
 | `DATA_DIR` | Pfad zur Datenbank | `/app/data` |
 | `STATIC_DIR` | Astro Build Output | `/app/static` |
 | `GALLERY_DIR` | Galerie-Bilder | `/app/public/images/gallery` |
@@ -171,10 +273,39 @@ CREATE TABLE gallery_images (
     name TEXT,
     description TEXT,
     category TEXT DEFAULT 'sonstiges',
-    type TEXT DEFAULT 'image',
+    type TEXT DEFAULT 'image',       -- 'image', 'video', 'panorama'
     size INTEGER,
     uploaded_at TEXT,
-    uploaded_by TEXT
+    uploaded_by TEXT,
+    thumbnail_path TEXT,
+    webp_path TEXT,
+    original_path TEXT,
+    status TEXT DEFAULT 'approved'   -- 'pending', 'approved', 'rejected' (Migration)
+);
+```
+
+### background_videos
+```sql
+CREATE TABLE background_videos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page TEXT UNIQUE NOT NULL,       -- 'startseite', 'ueber-den-garten', 'umgebung'
+    video_path TEXT NOT NULL,
+    thumbnail_path TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### livestream_cameras (Vorbereitung)
+```sql
+CREATE TABLE livestream_cameras (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    stream_url TEXT,
+    hls_url TEXT,
+    is_active BOOLEAN DEFAULT 0,
+    privacy_mode BOOLEAN DEFAULT 1,  -- Kameras aus bei aktiver Buchung
+    placeholder_image TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -206,6 +337,83 @@ CREATE TABLE credits (
     reason TEXT NOT NULL,
     type TEXT DEFAULT 'earned',
     created_at TEXT
+);
+```
+
+### email_verification_tokens
+```sql
+CREATE TABLE email_verification_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    expires_at TEXT NOT NULL,
+    used BOOLEAN DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### inventory_buildings
+```sql
+CREATE TABLE inventory_buildings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### inventory_floors
+```sql
+CREATE TABLE inventory_floors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    building_id INTEGER NOT NULL REFERENCES inventory_buildings(id),
+    name TEXT NOT NULL,              -- 'EG', 'OG', 'DG', 'Keller'
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### inventory_rooms
+```sql
+CREATE TABLE inventory_rooms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    building_id INTEGER NOT NULL REFERENCES inventory_buildings(id),
+    floor_id INTEGER REFERENCES inventory_floors(id),
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### inventory_items
+```sql
+CREATE TABLE inventory_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    room_id INTEGER NOT NULL REFERENCES inventory_rooms(id),
+    name TEXT NOT NULL,
+    description TEXT,
+    category TEXT,                   -- 'Werkzeug', 'Möbel', 'Elektro', 'Garten', etc.
+    quantity INTEGER DEFAULT 1,
+    condition TEXT DEFAULT 'gut',    -- 'neu', 'gut', 'gebraucht', 'defekt'
+    image_path TEXT,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### inventory_furniture_meta
+```sql
+CREATE TABLE inventory_furniture_meta (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id INTEGER NOT NULL REFERENCES inventory_items(id),
+    material TEXT,
+    dimensions TEXT,                 -- z.B. '120x80x75cm'
+    weight_kg REAL,
+    brand TEXT,
+    purchase_date TEXT,
+    purchase_price REAL,
+    warranty_until TEXT
 );
 ```
 
@@ -286,7 +494,55 @@ Folgende Dateien/Ordner werden nicht mehr benotigt:
 
 ---
 
-**Version:** 1.1
+---
+
+## Storage-Architektur
+
+```python
+# pi-backend/storage.py
+StorageBackend (Interface)
+  └── LocalStorage (aktiv)  # os.path.join, file.save, os.remove
+  └── GoogleDriveStorage     # Zukunft: Google Drive API
+  └── HetznerStorageBox      # Zukunft: Hetzner Storage Box (SFTP/WebDAV)
+```
+
+Interface-Pattern für spätere Nachrüstung vorbereitet. Upload-Endpoint nutzt `storage.save()`.
+
+## Medientypen
+
+| Typ | Beschreibung | WebP-Konvertierung | Viewer |
+|-----|-------------|-------------------|--------|
+| `image` | Standard-Fotos | Ja (automatisch) | img Tag / Lightbox |
+| `video` | Videos (MP4) | Nein | video Tag mit Controls |
+| `panorama` | 360°-Equirectangular | Nein (muss original bleiben) | Pannellum.js Viewer |
+
+## Telegram Bot (@Garten_Bot)
+
+### Galerie-Moderation
+- Non-Admin Upload -> `status='pending'` -> Telegram-Nachricht mit Inline-Buttons (Freigeben/Ablehnen)
+- Admin Upload -> `status='approved'` (sofort sichtbar)
+- Webhook: `POST /api/telegram/webhook` verarbeitet Button-Callbacks
+
+### Autonomer Agent (`telegram_agent.py`)
+Keyword-basierter Bot (kein LLM), verarbeitet Nachrichten im konfigurierten Chat.
+
+**Kommandos:**
+- `/aufgaben` / `/tasks` -- Offene Wartungsaufgaben anzeigen
+- `/inventar` / `/inventory` -- Inventar durchsuchen (z.B. `/inventar Schaufel`)
+- `/buchungen` / `/bookings` -- Aktuelle und kommende Buchungen
+- `/galerie` / `/gallery` -- Galerie-Statistiken (Anzahl Bilder, pending)
+- `/status` -- System-Status (DB-Groesse, Speicherplatz, Container-Uptime)
+- `/hilfe` / `/help` -- Alle verfuegbaren Kommandos anzeigen
+
+**Architektur:**
+- Polling-basiert (Long Polling via `getUpdates`)
+- Laeuft als separater Thread im Gunicorn-Worker
+- Greift direkt auf SQLite-DB zu (read-only fuer Abfragen)
+- Konfiguration: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` in `.env`
+
+---
+
+**Version:** 1.3
 **Erstellt:** 2026-01-26
-**Aktualisiert:** 2026-01-31
+**Aktualisiert:** 2026-04-01
 **Hosting:** Raspberry Pi 5 (via Cloudflare Tunnel)

@@ -20,6 +20,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: Props) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   if (!isOpen) return null;
 
@@ -62,49 +63,24 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: Props) {
     setIsLoading(false);
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRequestMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (password !== confirmPassword) {
-      setError('Passwörter stimmen nicht überein');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Passwort muss mindestens 6 Zeichen haben');
-      return;
-    }
-
-    if (username.length < 3) {
-      setError('Username muss mindestens 3 Zeichen haben');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
+      const response = await fetch(`${API_URL}/api/auth/request-magic-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password, name })
+        body: JSON.stringify({ email, name })
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        localStorage.setItem(TOKEN_KEY, data.token);
-        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-        // Dispatch custom event for same-tab updates
-        window.dispatchEvent(new CustomEvent('auth-change', { detail: { user: data.user } }));
-        resetForm();
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          onClose();
-        }
+        setMagicLinkSent(true);
       } else {
-        setError(data.error || 'Registrierung fehlgeschlagen');
+        setError(data.error || 'Fehler beim Senden des Links');
       }
     } catch (err) {
       setError('Verbindungsfehler. Bitte erneut versuchen.');
@@ -121,6 +97,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: Props) {
     setUsername('');
     setName('');
     setError('');
+    setMagicLinkSent(false);
   };
 
   const switchMode = (newMode: 'login' | 'register') => {
@@ -209,100 +186,83 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: Props) {
             </button>
           </form>
         ) : (
-          /* Register Form */
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email *
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
-                placeholder="email@example.com"
-                required
-                autoFocus
-              />
+          /* Register Form - Magic Link */
+          magicLinkSent ? (
+            <div className="text-center py-6">
+              <div className="text-5xl mb-4">📧</div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Pruefe dein Postfach!
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Wir haben einen Bestaetigungslink an<br />
+                <strong className="text-garden-700">{email}</strong><br />
+                gesendet.
+              </p>
+              <p className="text-gray-500 text-xs mb-6">
+                Der Link ist 30 Minuten gueltig. Pruefe auch deinen Spam-Ordner.
+              </p>
+              <button
+                onClick={() => { setMagicLinkSent(false); setEmail(''); setName(''); }}
+                className="text-garden-600 hover:text-garden-700 text-sm font-medium transition"
+              >
+                Andere Email-Adresse verwenden
+              </button>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Username * <span className="text-gray-400 text-xs">(min. 3 Zeichen)</span>
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
-                placeholder="mein_username"
-                required
-                minLength={3}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name <span className="text-gray-400 text-xs">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
-                placeholder="Max Mustermann"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Passwort * <span className="text-gray-400 text-xs">(min. 6 Zeichen)</span>
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
-                placeholder="********"
-                required
-                minLength={6}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Passwort bestätigen *
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
-                placeholder="********"
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 text-red-700 px-4 py-2 rounded-lg text-sm">
-                {error}
+          ) : (
+            <form onSubmit={handleRequestMagicLink} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email-Adresse *
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
+                  placeholder="email@example.com"
+                  required
+                  autoFocus
+                />
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-garden-600 hover:bg-garden-700 disabled:bg-gray-400 text-white py-3 rounded-lg font-medium transition"
-            >
-              {isLoading ? 'Wird registriert...' : 'Registrieren'}
-            </button>
-          </form>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name <span className="text-gray-400 text-xs">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
+                  placeholder="Max Mustermann"
+                />
+              </div>
+
+              {error && (
+                <div className="bg-red-50 text-red-700 px-4 py-2 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-garden-600 hover:bg-garden-700 disabled:bg-gray-400 text-white py-3 rounded-lg font-medium transition"
+              >
+                {isLoading ? 'Wird gesendet...' : 'Magic Link senden'}
+              </button>
+
+              <p className="text-xs text-gray-500 text-center">
+                Wir senden dir einen Link per Email, um deinen Account zu erstellen oder dich anzumelden.
+              </p>
+            </form>
+          )
         )}
 
         <p className="mt-4 text-sm text-gray-500 text-center">
           {mode === 'login'
             ? 'Noch kein Account? Wechsle zu Registrieren!'
-            : 'Mit der Registrierung akzeptierst du die Nutzungsbedingungen.'
+            : 'Bereits registriert? Wechsle zu Anmelden!'
           }
         </p>
       </div>

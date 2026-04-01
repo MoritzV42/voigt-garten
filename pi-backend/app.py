@@ -15,7 +15,10 @@ import subprocess
 import re
 import jwt
 import functools
-from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification
+import secrets
+from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification, send_magic_link_email, send_welcome_email
+from telegram_service import send_moderation_request, answer_callback_query
+from storage import LocalStorage
 
 # JWT Secret Key (use env var in production)
 JWT_SECRET = os.environ.get('JWT_SECRET', 'voigt-garten-secret-key-change-in-production-2026')
@@ -45,6 +48,9 @@ DB_PATH = os.path.join(DATA_DIR, 'gallery.db')
 # Ensure directories exist
 os.makedirs(GALLERY_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
+
+# Storage backend
+storage = LocalStorage(GALLERY_DIR)
 
 # Allowed file types
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'}
@@ -213,6 +219,17 @@ def init_db():
         conn.commit()
         print("Main admin user created: moritzvoigt42@gmail.com")
 
+    # Create Konny Voigt admin if not exists
+    cursor = conn.execute("SELECT id FROM users WHERE email = 'konny.voigt@web.de'")
+    if not cursor.fetchone():
+        konny_password_hash = generate_password_hash('darnok47')
+        conn.execute('''
+            INSERT INTO users (email, username, password_hash, name, role)
+            VALUES (?, ?, ?, ?, ?)
+        ''', ('konny.voigt@web.de', 'KonnyVoigt', konny_password_hash, 'Konny Voigt', 'admin'))
+        conn.commit()
+        print("Admin user created: konny.voigt@web.de")
+
     # Seed recurring tasks if empty
     cursor = conn.execute("SELECT COUNT(*) as count FROM recurring_tasks")
     if cursor.fetchone()['count'] == 0:
@@ -220,6 +237,161 @@ def init_db():
 
     conn.close()
     print("Database initialized")
+
+
+def migrate_db():
+    """Run database migrations."""
+    conn = get_db()
+
+    # Add status column to gallery_images
+    try:
+        conn.execute("ALTER TABLE gallery_images ADD COLUMN status TEXT DEFAULT 'approved'")
+        conn.commit()
+        print("Migration: Added status column to gallery_images")
+    except Exception:
+        pass  # Column already exists
+
+    # Background videos table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS background_videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page TEXT UNIQUE NOT NULL,
+            video_path TEXT NOT NULL,
+            thumbnail_path TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Livestream cameras table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS livestream_cameras (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            stream_url TEXT,
+            hls_url TEXT,
+            is_active BOOLEAN DEFAULT 0,
+            privacy_mode BOOLEAN DEFAULT 1,
+            placeholder_image TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Email verification tokens table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS email_verification_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Inventory tables
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_buildings (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            icon TEXT DEFAULT '🏠',
+            has_floors BOOLEAN DEFAULT 0,
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_floors (
+            id TEXT PRIMARY KEY,
+            building_id TEXT NOT NULL REFERENCES inventory_buildings(id),
+            name TEXT NOT NULL,
+            icon TEXT DEFAULT '🏢',
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_rooms (
+            id TEXT PRIMARY KEY,
+            building_id TEXT NOT NULL REFERENCES inventory_buildings(id),
+            floor_id TEXT REFERENCES inventory_floors(id),
+            name TEXT NOT NULL,
+            icon TEXT DEFAULT '🚪',
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_items (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            room_id TEXT REFERENCES inventory_rooms(id),
+            category TEXT,
+            notes TEXT,
+            quantity INTEGER DEFAULT 1,
+            photo_path TEXT,
+            ablageort TEXT,
+            position TEXT,
+            kauflink TEXT,
+            vorhanden BOOLEAN DEFAULT 1,
+            created_by TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_furniture_meta (
+            room_id TEXT,
+            ablageort TEXT,
+            icon TEXT DEFAULT '🪑',
+            PRIMARY KEY (room_id, ablageort)
+        )
+    ''')
+
+    conn.commit()
+
+    # Seed inventory if empty
+    seed_inventory(conn)
+
+    # Seed Starlink project if not exists
+    existing = conn.execute("SELECT id FROM projects WHERE title = 'Starlink bestellen, anbringen & einrichten'").fetchone()
+    if not existing:
+        conn.execute('''
+            INSERT INTO projects (title, description, category, status, priority, estimated_cost, effort, timeframe, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            'Starlink bestellen, anbringen & einrichten',
+            'Komplettpaket Starlink-Internet für den Garten:\n'
+            '1. Starlink Standard Kit bestellen (~300€ Hardware + 50€/Monat)\n'
+            '2. Schüssel auf Dach/Mast montieren (Südausrichtung, freie Sicht)\n'
+            '3. Stromversorgung sicherstellen (Solar-Erweiterung oder Steckdose im Haus)\n'
+            '4. WLAN-Repeater aufstellen für Gartenabdeckung (z.B. TP-Link Outdoor)\n'
+            '5. Starlink-Schüssel ausrichten (App-gesteuert, automatische Justierung)\n'
+            '6. Überwachungskamera bestellen & anbringen (z.B. Reolink Solar-Cam)\n'
+            '7. Kamera mit WLAN verbinden & App-Setup (Reolink/Tapo App)\n'
+            '8. Fernsteuerung einrichten: Starlink-App + Kamera-App + ggf. Home Assistant\n\n'
+            'Geschätzte Gesamtkosten:\n'
+            '- Starlink Kit: ~300€\n'
+            '- WLAN-Repeater Outdoor: ~50€\n'
+            '- Solar-Kamera: ~100€\n'
+            '- Montagematerial (Mast, Kabel, Kabelbinder): ~50€\n'
+            '- Gesamt: ~500€ einmalig + 50€/Monat',
+            'elektrik',
+            'offen',
+            'hoch',
+            '~500€ einmalig + 50€/Monat',
+            'schwer',
+            '1-2 Wochenenden',
+            'moritzvoigt42@gmail.com'
+        ))
+        conn.commit()
+        print("Seeded Starlink project")
+
+    conn.close()
+    print("Database migrations complete")
 
 
 def seed_recurring_tasks(conn):
@@ -267,6 +439,62 @@ def seed_recurring_tasks(conn):
 
     conn.commit()
     print(f"Seeded {len(tasks)} recurring tasks")
+
+
+def seed_inventory(conn):
+    """Seed inventory buildings, floors and rooms if empty."""
+    cursor = conn.execute("SELECT COUNT(*) as count FROM inventory_buildings")
+    if cursor.fetchone()['count'] > 0:
+        return
+
+    BUILDINGS = [
+        ('haus', 'Haus', '🏠', True, 0),
+        ('gartenhaus', 'Gartenhäuschen', '🏡', False, 1),
+        ('schuppen1', 'Schuppen 1', '🏚️', False, 2),
+        ('schuppen2', 'Schuppen 2', '🏚️', False, 3),
+        ('werkstatt', 'Werkstatt', '🔧', False, 4),
+        ('carport', 'Carport', '🚗', False, 5),
+    ]
+
+    FLOORS = [
+        ('keller', 'haus', 'Keller', '⬇️', 0),
+        ('erdgeschoss', 'haus', 'Erdgeschoss', '🏠', 1),
+    ]
+
+    ROOMS = [
+        ('schlafzimmer', 'haus', 'erdgeschoss', 'Schlafzimmer', '🛏️', 0),
+        ('flur_eg', 'haus', 'erdgeschoss', 'Flur', '🚶', 1),
+        ('wohnzimmer', 'haus', 'erdgeschoss', 'Wohnzimmer', '🛋️', 2),
+        ('bad', 'haus', 'keller', 'Bad', '🚿', 0),
+        ('flur_keller', 'haus', 'keller', 'Flur', '🚶', 1),
+        ('weinkeller', 'haus', 'keller', 'Weinkeller', '🍷', 2),
+        ('schuppen1_raum', 'schuppen1', None, 'Lagerraum', '📦', 0),
+        ('schuppen2_raum', 'schuppen2', None, 'Lagerraum', '📦', 0),
+        ('werkstatt_raum', 'werkstatt', None, 'Werkstatt', '🔧', 0),
+        ('gartenhaus_raum', 'gartenhaus', None, 'Hauptraum', '🏡', 0),
+        ('carport_raum', 'carport', None, 'Stellplatz', '🚗', 0),
+    ]
+
+    for id, name, icon, has_floors, sort_order in BUILDINGS:
+        conn.execute(
+            'INSERT INTO inventory_buildings (id, name, icon, has_floors, sort_order) VALUES (?, ?, ?, ?, ?)',
+            (id, name, icon, has_floors, sort_order)
+        )
+
+    for id, building_id, name, icon, sort_order in FLOORS:
+        conn.execute(
+            'INSERT INTO inventory_floors (id, building_id, name, icon, sort_order) VALUES (?, ?, ?, ?, ?)',
+            (id, building_id, name, icon, sort_order)
+        )
+
+    for id, building_id, floor_id, name, icon, sort_order in ROOMS:
+        conn.execute(
+            'INSERT INTO inventory_rooms (id, building_id, floor_id, name, icon, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+            (id, building_id, floor_id, name, icon, sort_order)
+        )
+
+    conn.commit()
+    print("Seeded inventory buildings, floors and rooms")
 
 
 def allowed_file(filename):
@@ -560,17 +788,32 @@ def health():
 def get_gallery():
     """Get all gallery images with proper URLs."""
     category = request.args.get('category')
+    include_pending = request.args.get('include_pending', 'false') == 'true'
+    # Check if current user is admin for pending access
+    user = get_current_user()
+    is_admin = user and user.get('role') == 'admin'
 
     conn = get_db()
     if category and category != 'all':
-        items = conn.execute(
-            'SELECT * FROM gallery_images WHERE category = ? ORDER BY uploaded_at DESC',
-            (category,)
-        ).fetchall()
+        if is_admin and include_pending:
+            items = conn.execute(
+                'SELECT * FROM gallery_images WHERE category = ? ORDER BY uploaded_at DESC',
+                (category,)
+            ).fetchall()
+        else:
+            items = conn.execute(
+                "SELECT * FROM gallery_images WHERE category = ? AND status = 'approved' ORDER BY uploaded_at DESC",
+                (category,)
+            ).fetchall()
     else:
-        items = conn.execute(
-            'SELECT * FROM gallery_images ORDER BY uploaded_at DESC'
-        ).fetchall()
+        if is_admin and include_pending:
+            items = conn.execute(
+                'SELECT * FROM gallery_images ORDER BY uploaded_at DESC'
+            ).fetchall()
+        else:
+            items = conn.execute(
+                "SELECT * FROM gallery_images WHERE status = 'approved' ORDER BY uploaded_at DESC"
+            ).fetchall()
     conn.close()
 
     # Format items with proper URLs
@@ -709,16 +952,25 @@ def upload_file(user):
             thumbnail_path = thumb_filename
             print(f"Created video thumbnail: {thumb_filename}")
 
+    # Determine upload status based on user role
+    is_admin = user.get('role') == 'admin'
+    upload_status = 'approved' if is_admin else 'pending'
+
     # Save to database
     conn = get_db()
     conn.execute('''
-        INSERT INTO gallery_images (id, filename, original_name, name, description, category, type, size, uploaded_by, thumbnail_path, webp_path, original_path)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (file_id, display_filename, original_name, name or None, description or None, category, file_type, file_size, uploaded_by, thumbnail_path, webp_path, original_filename))
+        INSERT INTO gallery_images (id, filename, original_name, name, description, category, type, size, uploaded_by, thumbnail_path, webp_path, original_path, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (file_id, display_filename, original_name, name or None, description or None, category, file_type, file_size, uploaded_by, thumbnail_path, webp_path, original_filename, upload_status))
     conn.commit()
     conn.close()
 
-    print(f"Uploaded: {display_filename} ({file_size} bytes)")
+    print(f"Uploaded: {display_filename} ({file_size} bytes) [status: {upload_status}]")
+
+    # Send Telegram moderation request if pending
+    if upload_status == 'pending':
+        thumb_full = os.path.join(GALLERY_DIR, thumbnail_path) if thumbnail_path else None
+        send_moderation_request(file_id, thumb_full, uploaded_by, name, category)
 
     # Send notification to admin
     send_activity_notification('gallery_upload', {
@@ -734,6 +986,7 @@ def upload_file(user):
         'filename': display_filename,
         'url': f'/images/gallery/{display_filename}',
         'thumbnailUrl': f'/images/gallery/{thumbnail_path}' if thumbnail_path else None,
+        'status': upload_status,
         'message': 'Datei erfolgreich hochgeladen!'
     })
 
@@ -775,6 +1028,181 @@ def delete_image(item_id):
     conn.close()
 
     return jsonify({'success': True, 'message': 'Bild geloscht'})
+
+
+@app.route('/api/telegram/webhook', methods=['POST'])
+def telegram_webhook():
+    """Handle Telegram bot callbacks and messages."""
+    data = request.json or {}
+
+    # Import agent
+    try:
+        from telegram_agent import GartenAgent
+        agent = GartenAgent(DB_PATH)
+    except ImportError:
+        agent = None
+
+    # Callback queries (gallery moderation + agent confirmations)
+    if 'callback_query' in data:
+        callback_query = data['callback_query']
+        callback_data = callback_query.get('data', '')
+        callback_id = callback_query.get('id', '')
+
+        # Let agent handle non-gallery callbacks
+        if agent and not callback_data.startswith(('approve:', 'reject:')):
+            agent.handle_callback(callback_query)
+            return jsonify({'ok': True})
+
+        # Gallery moderation (existing logic)
+        if ':' not in callback_data:
+            return jsonify({'ok': True})
+
+        action, image_id = callback_data.split(':', 1)
+        if action not in ('approve', 'reject'):
+            return jsonify({'ok': True})
+
+        conn = get_db()
+        row = conn.execute('SELECT * FROM gallery_images WHERE id = ?', (image_id,)).fetchone()
+
+        if not row:
+            answer_callback_query(callback_id, "Bild nicht gefunden")
+            conn.close()
+            return jsonify({'ok': True})
+
+        if action == 'approve':
+            conn.execute("UPDATE gallery_images SET status = 'approved' WHERE id = ?", (image_id,))
+            conn.commit()
+            answer_callback_query(callback_id, "Freigegeben!")
+        elif action == 'reject':
+            conn.execute("UPDATE gallery_images SET status = 'rejected' WHERE id = ?", (image_id,))
+            conn.commit()
+            answer_callback_query(callback_id, "Abgelehnt!")
+
+        conn.close()
+
+    # Text messages → Agent
+    elif 'message' in data and 'text' in data['message']:
+        if agent:
+            agent.process_message(
+                chat_id=data['message']['chat']['id'],
+                text=data['message']['text'],
+                user_info=data['message'].get('from', {})
+            )
+
+    return jsonify({'ok': True})
+
+
+@app.route('/api/admin/gallery/panorama', methods=['POST'])
+@require_admin
+def upload_panorama(user):
+    """Upload panorama image without WebP conversion (equirectangular must stay original)."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'Keine Datei'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Keine Datei ausgewählt'}), 400
+
+    name = request.form.get('name', '')
+    description = request.form.get('description', '')
+    category = request.form.get('category', 'luftaufnahmen')
+    uploaded_by = user.get('name') or user.get('email', 'admin')
+
+    original_name = secure_filename(file.filename)
+    ext = original_name.rsplit('.', 1)[1].lower() if '.' in original_name else 'jpg'
+    file_id = hashlib.md5(f"{datetime.now().isoformat()}{original_name}".encode()).hexdigest()[:12]
+
+    base_name = slugify(name) if name else file_id
+
+    category_dir = os.path.join(GALLERY_DIR, category)
+    os.makedirs(category_dir, exist_ok=True)
+
+    # Save original (no WebP conversion for panoramas)
+    filename = f"{category}/{base_name}.{ext}"
+    full_path = os.path.join(GALLERY_DIR, filename)
+    file.save(full_path)
+    file_size = os.path.getsize(full_path)
+
+    # Create thumbnail for grid view
+    thumbnail_path = None
+    if PILLOW_AVAILABLE:
+        thumb_filename = f"{category}/{base_name}_thumb.webp"
+        thumb_full_path = os.path.join(GALLERY_DIR, thumb_filename)
+        if create_thumbnail(full_path, thumb_full_path):
+            thumbnail_path = thumb_filename
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO gallery_images (id, filename, original_name, name, description, category, type, size, uploaded_by, thumbnail_path, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'panorama', ?, ?, ?, 'approved')
+    ''', (file_id, filename, original_name, name or None, description or None, category, file_size, uploaded_by, thumbnail_path))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'id': file_id,
+        'url': f'/images/gallery/{filename}',
+        'type': 'panorama'
+    })
+
+
+@app.route('/api/background-video', methods=['GET'])
+def get_background_video():
+    """Get background video URL for a page."""
+    page = request.args.get('page')
+    if not page:
+        return jsonify({'error': 'page parameter required'}), 400
+
+    conn = get_db()
+    row = conn.execute('SELECT * FROM background_videos WHERE page = ?', (page,)).fetchone()
+    conn.close()
+
+    if row:
+        return jsonify({
+            'video_url': f'/images/gallery/{row["video_path"]}',
+            'thumbnail_url': f'/images/gallery/{row["thumbnail_path"]}' if row['thumbnail_path'] else None,
+            'page': row['page']
+        })
+
+    return jsonify({'video_url': None, 'page': page})
+
+
+@app.route('/api/admin/background-video', methods=['POST'])
+@require_admin
+def set_background_video(user):
+    """Assign a video to a page background."""
+    data = request.json or {}
+    page = data.get('page')
+    video_path = data.get('video_path')
+    thumbnail_path = data.get('thumbnail_path')
+
+    if not page or not video_path:
+        return jsonify({'error': 'page and video_path required'}), 400
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO background_videos (page, video_path, thumbnail_path)
+        VALUES (?, ?, ?)
+        ON CONFLICT(page) DO UPDATE SET video_path = ?, thumbnail_path = ?, created_at = CURRENT_TIMESTAMP
+    ''', (page, video_path, thumbnail_path, video_path, thumbnail_path))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'page': page})
+
+
+@app.route('/api/livestream/cameras', methods=['GET'])
+def get_livestream_cameras():
+    """Get livestream cameras (preparation endpoint)."""
+    conn = get_db()
+    cameras = conn.execute('SELECT * FROM livestream_cameras WHERE is_active = 1').fetchall()
+    conn.close()
+
+    return jsonify({
+        'cameras': [dict(c) for c in cameras],
+        'available': len(cameras) > 0
+    })
 
 
 @app.route('/api/bookings', methods=['GET', 'POST'])
@@ -990,6 +1418,184 @@ def register_user():
         return jsonify({
             'success': True,
             'token': token,
+            'user': {
+                'id': user_id,
+                'email': email,
+                'username': username,
+                'name': name,
+                'role': 'user'
+            }
+        })
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'Email oder Username bereits vergeben'}), 409
+
+
+# ============ Magic Link Auth ============
+
+@app.route('/api/auth/request-magic-link', methods=['POST'])
+def request_magic_link():
+    """Send magic link email for registration/login."""
+    data = request.json
+    email = data.get('email', '').strip().lower()
+    name = data.get('name', '').strip()
+
+    if not email or '@' not in email or '.' not in email:
+        return jsonify({'error': 'Gueltige Email-Adresse erforderlich'}), 400
+
+    # Generate secure token
+    token = secrets.token_urlsafe(48)
+    expires_at = (datetime.utcnow() + timedelta(minutes=30)).isoformat()
+
+    conn = get_db()
+    # Invalidate any existing unused tokens for this email
+    conn.execute('''
+        UPDATE email_verification_tokens SET used = 1
+        WHERE email = ? AND used = 0
+    ''', (email,))
+
+    # Store new token
+    conn.execute('''
+        INSERT INTO email_verification_tokens (email, token, expires_at)
+        VALUES (?, ?, ?)
+    ''', (email, token, expires_at))
+    conn.commit()
+    conn.close()
+
+    # Send magic link email
+    send_magic_link_email(email, token, name=name or None)
+
+    return jsonify({
+        'success': True,
+        'message': 'Email gesendet. Pruefe dein Postfach!'
+    })
+
+
+@app.route('/api/auth/verify-email', methods=['GET'])
+def verify_email_token():
+    """Verify magic link token."""
+    token = request.args.get('token', '').strip()
+
+    if not token:
+        return jsonify({'error': 'Token erforderlich'}), 400
+
+    conn = get_db()
+    row = conn.execute('''
+        SELECT * FROM email_verification_tokens
+        WHERE token = ? AND used = 0 AND expires_at > ?
+    ''', (token, datetime.utcnow().isoformat())).fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({'error': 'Token ungueltig oder abgelaufen'}), 400
+
+    email = row['email']
+
+    # Mark token as used
+    conn.execute('UPDATE email_verification_tokens SET used = 1 WHERE id = ?', (row['id'],))
+    conn.commit()
+
+    # Check if user already exists
+    user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+    conn.close()
+
+    if user:
+        # Existing user: auto-login
+        conn = get_db()
+        conn.execute('UPDATE users SET last_login = ? WHERE id = ?',
+                     (datetime.now().isoformat(), user['id']))
+        conn.commit()
+        conn.close()
+
+        auth_token = create_token(user['id'], user['email'], user['role'])
+
+        return jsonify({
+            'success': True,
+            'authenticated': True,
+            'token': auth_token,
+            'user': {
+                'id': user['id'],
+                'email': user['email'],
+                'username': user['username'],
+                'name': user['name'],
+                'role': user['role']
+            }
+        })
+    else:
+        # New user: needs to complete registration
+        return jsonify({
+            'success': True,
+            'needs_password': True,
+            'email': email,
+            'token': token
+        })
+
+
+@app.route('/api/auth/complete-registration', methods=['POST'])
+def complete_registration():
+    """Complete registration after magic link verification."""
+    data = request.json
+    token = data.get('token', '').strip()
+    password = data.get('password', '').strip()
+    username = data.get('username', '').strip()
+    name = data.get('name', '').strip()
+
+    if not token or not password or not username:
+        return jsonify({'error': 'Token, Passwort und Username erforderlich'}), 400
+
+    if len(password) < 6:
+        return jsonify({'error': 'Passwort muss mindestens 6 Zeichen haben'}), 400
+
+    if len(username) < 3:
+        return jsonify({'error': 'Username muss mindestens 3 Zeichen haben'}), 400
+
+    conn = get_db()
+    # Token must be used=1 (verified) and not older than 60 minutes
+    cutoff = (datetime.utcnow() - timedelta(minutes=60)).isoformat()
+    row = conn.execute('''
+        SELECT * FROM email_verification_tokens
+        WHERE token = ? AND used = 1 AND created_at > ?
+    ''', (token, cutoff)).fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({'error': 'Token ungueltig oder abgelaufen'}), 400
+
+    email = row['email']
+
+    # Check if user already exists
+    existing = conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({'error': 'Benutzer existiert bereits. Bitte anmelden.'}), 409
+
+    try:
+        password_hash = generate_password_hash(password)
+        conn.execute('''
+            INSERT INTO users (email, username, password_hash, name, role)
+            VALUES (?, ?, ?, ?, 'user')
+        ''', (email, username, password_hash, name or None))
+        user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        conn.commit()
+        conn.close()
+
+        # Create auth token
+        auth_token = create_token(user_id, email, 'user')
+
+        # Send welcome email
+        send_welcome_email(email, name or username)
+
+        # Notify admin
+        send_activity_notification('user_registered', {
+            'Name': name or username,
+            'Email': email,
+            'Username': username,
+            'Methode': 'Magic Link'
+        })
+
+        return jsonify({
+            'success': True,
+            'token': auth_token,
             'user': {
                 'id': user_id,
                 'email': email,
@@ -1408,8 +2014,9 @@ def update_user(user_id, user):
         conn.close()
         return jsonify({'error': 'User nicht gefunden'}), 404
 
-    # Prevent demoting the main admin
-    if target_user['email'] == 'moritzvoigt42@gmail.com' and data.get('role') != 'admin':
+    # Prevent demoting protected admins
+    protected_admins = ['moritzvoigt42@gmail.com', 'konny.voigt@web.de']
+    if target_user['email'] in protected_admins and data.get('role') != 'admin':
         conn.close()
         return jsonify({'error': 'Haupt-Admin kann nicht herabgestuft werden'}), 403
 
@@ -2025,6 +2632,358 @@ def delete_user(user_id, user):
     conn.close()
 
     return jsonify({'success': True, 'message': 'User gelöscht'})
+
+
+# ============ Inventory Endpoints ============
+
+@app.route('/api/inventory/buildings', methods=['GET'])
+def get_inventory_buildings():
+    """Get all buildings with nested floors and rooms, including item counts."""
+    conn = get_db()
+
+    buildings = conn.execute('SELECT * FROM inventory_buildings ORDER BY sort_order').fetchall()
+    floors = conn.execute('SELECT * FROM inventory_floors ORDER BY sort_order').fetchall()
+    rooms = conn.execute('SELECT * FROM inventory_rooms ORDER BY sort_order').fetchall()
+
+    # Get item counts per room
+    item_counts = {}
+    for row in conn.execute('SELECT room_id, COUNT(*) as cnt FROM inventory_items GROUP BY room_id').fetchall():
+        item_counts[row['room_id']] = row['cnt']
+
+    conn.close()
+
+    # Build nested structure
+    floors_by_building = {}
+    for f in floors:
+        bid = f['building_id']
+        if bid not in floors_by_building:
+            floors_by_building[bid] = []
+        floors_by_building[bid].append(dict(f))
+
+    rooms_by_floor = {}
+    rooms_by_building_no_floor = {}
+    for r in rooms:
+        rd = dict(r)
+        rd['item_count'] = item_counts.get(r['id'], 0)
+        if r['floor_id']:
+            if r['floor_id'] not in rooms_by_floor:
+                rooms_by_floor[r['floor_id']] = []
+            rooms_by_floor[r['floor_id']].append(rd)
+        else:
+            bid = r['building_id']
+            if bid not in rooms_by_building_no_floor:
+                rooms_by_building_no_floor[bid] = []
+            rooms_by_building_no_floor[bid].append(rd)
+
+    result = []
+    for b in buildings:
+        bd = dict(b)
+        bd['has_floors'] = bool(b['has_floors'])
+        if bd['has_floors']:
+            bd['floors'] = []
+            for f in floors_by_building.get(b['id'], []):
+                f['rooms'] = rooms_by_floor.get(f['id'], [])
+                bd['floors'].append(f)
+            bd['rooms'] = []
+        else:
+            bd['floors'] = []
+            bd['rooms'] = rooms_by_building_no_floor.get(b['id'], [])
+        result.append(bd)
+
+    return jsonify({'buildings': result})
+
+
+@app.route('/api/inventory/buildings', methods=['POST'])
+@require_admin
+def create_inventory_building(user):
+    """Admin: Create a new building."""
+    data = request.get_json()
+    if not data or not data.get('name'):
+        return jsonify({'error': 'Name ist erforderlich'}), 400
+
+    bid = slugify(data['name']) or hashlib.md5(data['name'].encode()).hexdigest()[:12]
+    conn = get_db()
+    try:
+        conn.execute(
+            'INSERT INTO inventory_buildings (id, name, icon, has_floors, sort_order) VALUES (?, ?, ?, ?, ?)',
+            (bid, data['name'], data.get('icon', '🏠'), data.get('has_floors', False),
+             data.get('sort_order', 0))
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'Gebäude existiert bereits'}), 409
+    conn.close()
+    return jsonify({'success': True, 'id': bid}), 201
+
+
+@app.route('/api/inventory/buildings/<building_id>', methods=['PATCH'])
+@require_admin
+def update_inventory_building(building_id, user):
+    """Admin: Update a building."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Keine Daten'}), 400
+
+    conn = get_db()
+    building = conn.execute('SELECT * FROM inventory_buildings WHERE id = ?', (building_id,)).fetchone()
+    if not building:
+        conn.close()
+        return jsonify({'error': 'Gebäude nicht gefunden'}), 404
+
+    updates = []
+    params = []
+    for field in ['name', 'icon', 'has_floors', 'sort_order']:
+        if field in data:
+            updates.append(f'{field} = ?')
+            params.append(data[field])
+
+    if updates:
+        params.append(building_id)
+        conn.execute(f'UPDATE inventory_buildings SET {", ".join(updates)} WHERE id = ?', params)
+        conn.commit()
+
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/inventory/rooms', methods=['GET'])
+def get_inventory_rooms():
+    """Get all rooms, optionally filtered by building."""
+    building_id = request.args.get('building')
+    conn = get_db()
+
+    if building_id:
+        rooms = conn.execute('''
+            SELECT r.*, b.name as building_name, f.name as floor_name
+            FROM inventory_rooms r
+            JOIN inventory_buildings b ON r.building_id = b.id
+            LEFT JOIN inventory_floors f ON r.floor_id = f.id
+            WHERE r.building_id = ?
+            ORDER BY r.sort_order
+        ''', (building_id,)).fetchall()
+    else:
+        rooms = conn.execute('''
+            SELECT r.*, b.name as building_name, f.name as floor_name
+            FROM inventory_rooms r
+            JOIN inventory_buildings b ON r.building_id = b.id
+            LEFT JOIN inventory_floors f ON r.floor_id = f.id
+            ORDER BY b.sort_order, f.sort_order, r.sort_order
+        ''').fetchall()
+
+    conn.close()
+    return jsonify({'rooms': [dict(r) for r in rooms]})
+
+
+@app.route('/api/inventory/rooms', methods=['POST'])
+@require_admin
+def create_inventory_room(user):
+    """Admin: Create a new room."""
+    data = request.get_json()
+    if not data or not data.get('name') or not data.get('building_id'):
+        return jsonify({'error': 'Name und building_id sind erforderlich'}), 400
+
+    rid = slugify(data['name']) or hashlib.md5(data['name'].encode()).hexdigest()[:12]
+    # Make ID unique by prepending building
+    rid = f"{data['building_id']}_{rid}"
+
+    conn = get_db()
+    try:
+        conn.execute(
+            'INSERT INTO inventory_rooms (id, building_id, floor_id, name, icon, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+            (rid, data['building_id'], data.get('floor_id'), data['name'],
+             data.get('icon', '🚪'), data.get('sort_order', 0))
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'Raum existiert bereits'}), 409
+    conn.close()
+    return jsonify({'success': True, 'id': rid}), 201
+
+
+@app.route('/api/inventory/items', methods=['GET'])
+def get_inventory_items():
+    """Get inventory items with optional filters."""
+    room_id = request.args.get('room')
+    search = request.args.get('search')
+    vorhanden = request.args.get('vorhanden')
+
+    conn = get_db()
+    query = '''
+        SELECT i.*, r.name as room_name, r.building_id, b.name as building_name
+        FROM inventory_items i
+        LEFT JOIN inventory_rooms r ON i.room_id = r.id
+        LEFT JOIN inventory_buildings b ON r.building_id = b.id
+        WHERE 1=1
+    '''
+    params = []
+
+    if room_id:
+        query += ' AND i.room_id = ?'
+        params.append(room_id)
+
+    if search:
+        query += ' AND (i.name LIKE ? OR i.notes LIKE ? OR i.ablageort LIKE ? OR i.category LIKE ?)'
+        s = f'%{search}%'
+        params.extend([s, s, s, s])
+
+    if vorhanden is not None:
+        query += ' AND i.vorhanden = ?'
+        params.append(1 if vorhanden.lower() in ('true', '1') else 0)
+
+    query += ' ORDER BY i.room_id, i.ablageort, i.position, i.name'
+    items = conn.execute(query, params).fetchall()
+    conn.close()
+
+    return jsonify({'items': [dict(item) for item in items], 'total': len(items)})
+
+
+@app.route('/api/inventory/items', methods=['POST'])
+@require_auth
+def create_inventory_item(user):
+    """Create a new inventory item."""
+    data = request.get_json()
+    if not data or not data.get('name'):
+        return jsonify({'error': 'Name ist erforderlich'}), 400
+
+    item_id = hashlib.md5(f"{data['name']}-{datetime.now().isoformat()}-{secrets.token_hex(4)}".encode()).hexdigest()[:16]
+    now = datetime.now().isoformat()
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO inventory_items (id, name, room_id, category, notes, quantity, ablageort, position, kauflink, vorhanden, created_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        item_id, data['name'], data.get('room_id'), data.get('category'),
+        data.get('notes'), data.get('quantity', 1), data.get('ablageort'),
+        data.get('position'), data.get('kauflink'),
+        data.get('vorhanden', True), user.get('email'), now, now
+    ))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'id': item_id}), 201
+
+
+@app.route('/api/inventory/items/<item_id>', methods=['PATCH'])
+@require_auth
+def update_inventory_item(item_id, user):
+    """Update an inventory item."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Keine Daten'}), 400
+
+    conn = get_db()
+    item = conn.execute('SELECT * FROM inventory_items WHERE id = ?', (item_id,)).fetchone()
+    if not item:
+        conn.close()
+        return jsonify({'error': 'Item nicht gefunden'}), 404
+
+    allowed_fields = ['name', 'room_id', 'category', 'notes', 'quantity', 'ablageort', 'position', 'kauflink', 'vorhanden']
+    updates = []
+    params = []
+    for field in allowed_fields:
+        if field in data:
+            updates.append(f'{field} = ?')
+            params.append(data[field])
+
+    if updates:
+        updates.append('updated_at = ?')
+        params.append(datetime.now().isoformat())
+        params.append(item_id)
+        conn.execute(f'UPDATE inventory_items SET {", ".join(updates)} WHERE id = ?', params)
+        conn.commit()
+
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/inventory/items/<item_id>', methods=['DELETE'])
+@require_admin
+def delete_inventory_item(item_id, user):
+    """Admin: Delete an inventory item."""
+    conn = get_db()
+    item = conn.execute('SELECT * FROM inventory_items WHERE id = ?', (item_id,)).fetchone()
+    if not item:
+        conn.close()
+        return jsonify({'error': 'Item nicht gefunden'}), 404
+
+    # Delete photo if exists
+    if item['photo_path']:
+        photo_full = os.path.join(GALLERY_DIR, item['photo_path'])
+        if os.path.exists(photo_full):
+            os.remove(photo_full)
+
+    conn.execute('DELETE FROM inventory_items WHERE id = ?', (item_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/inventory/items/<item_id>/photo', methods=['POST'])
+@require_auth
+def upload_inventory_photo(item_id, user):
+    """Upload a photo for an inventory item."""
+    conn = get_db()
+    item = conn.execute('SELECT * FROM inventory_items WHERE id = ?', (item_id,)).fetchone()
+    if not item:
+        conn.close()
+        return jsonify({'error': 'Item nicht gefunden'}), 404
+
+    if 'file' not in request.files:
+        conn.close()
+        return jsonify({'error': 'Keine Datei'}), 400
+
+    file = request.files['file']
+    if not file.filename or not allowed_file(file.filename):
+        conn.close()
+        return jsonify({'error': 'Ungültiger Dateityp'}), 400
+
+    # Save to inventory subfolder
+    inv_dir = os.path.join(GALLERY_DIR, 'inventory')
+    os.makedirs(inv_dir, exist_ok=True)
+
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    filename = f"{item_id}.{ext}"
+    filepath = os.path.join(inv_dir, filename)
+    file.save(filepath)
+
+    photo_path = f"inventory/{filename}"
+    conn.execute('UPDATE inventory_items SET photo_path = ?, updated_at = ? WHERE id = ?',
+                 (photo_path, datetime.now().isoformat(), item_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'photo_path': photo_path})
+
+
+@app.route('/api/inventory/furniture-meta', methods=['GET'])
+def get_furniture_meta():
+    """Get furniture/ablageort icons."""
+    conn = get_db()
+    meta = conn.execute('SELECT * FROM inventory_furniture_meta').fetchall()
+    conn.close()
+    return jsonify({'meta': [dict(m) for m in meta]})
+
+
+@app.route('/api/inventory/furniture-meta', methods=['PATCH'])
+@require_auth
+def update_furniture_meta(user):
+    """Set icon for a furniture/ablageort."""
+    data = request.get_json()
+    if not data or not data.get('room_id') or not data.get('ablageort'):
+        return jsonify({'error': 'room_id und ablageort sind erforderlich'}), 400
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO inventory_furniture_meta (room_id, ablageort, icon) VALUES (?, ?, ?)
+        ON CONFLICT(room_id, ablageort) DO UPDATE SET icon = excluded.icon
+    ''', (data['room_id'], data['ablageort'], data.get('icon', '🪑')))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True})
 
 
 # Initialize database on startup

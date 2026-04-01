@@ -19,6 +19,9 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Pannellum 360° Panorama Viewer -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js" is:inline></script>
     <title>{title} | Voigt-Garten</title>
   </head>
   <body class="min-h-screen bg-garden-50 font-sans text-gray-800">
@@ -37,6 +40,7 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
             <a href="/galerie" class="text-gray-600 hover:text-garden-700 transition">Galerie</a>
             <a href="/buchen" class="text-gray-600 hover:text-garden-700 transition">Buchen</a>
             <a href="/wartung" class="text-gray-600 hover:text-garden-700 transition">Wartung</a>
+            <a href="/inventar" class="text-gray-600 hover:text-garden-700 transition">Inventar</a>
             <a href="/umgebung" class="text-gray-600 hover:text-garden-700 transition">Umgebung</a>
             <div class="border-l border-gray-200 h-6 mx-2"></div>
             <GlobalNavbar client:load />
@@ -60,6 +64,7 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
           <a href="/galerie" class="block py-2 text-gray-600 hover:text-garden-700">Galerie</a>
           <a href="/buchen" class="block py-2 text-gray-600 hover:text-garden-700">Buchen</a>
           <a href="/wartung" class="block py-2 text-gray-600 hover:text-garden-700">Wartung</a>
+          <a href="/inventar" class="block py-2 text-gray-600 hover:text-garden-700">Inventar</a>
           <a href="/umgebung" class="block py-2 text-gray-600 hover:text-garden-700">Umgebung</a>
         </div>
       </div>

@@ -11,7 +11,7 @@ from datetime import datetime
 resend.api_key = os.environ.get('RESEND_API_KEY', '')
 
 # Sender & Admin
-FROM_EMAIL = "Voigt-Garten <garten-etzdorf@infinityspace42.de>"
+FROM_EMAIL = "Voigt-Garten <garten@infinityspace42.de>"
 ADMIN_EMAIL = "moritz.infinityspace42@gmail.com"
 
 
@@ -199,6 +199,201 @@ def send_maintenance_reminder(task_title: str, days_overdue: int) -> bool:
         }
 
         resend.Emails.send(params)
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
+
+def send_magic_link_email(email: str, token: str, name: str = None) -> bool:
+    """Send magic link email for registration/login."""
+    if not resend.api_key:
+        print("RESEND_API_KEY not configured")
+        return False
+
+    greeting = f"Hallo {name}" if name else "Hallo"
+    verify_url = f"https://garten.infinityspace42.de/auth/verify?token={token}"
+
+    try:
+        params = {
+            "from": FROM_EMAIL,
+            "to": [email],
+            "subject": "Dein Zugang zum Voigt-Garten",
+            "html": f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="margin: 0; padding: 0; background-color: #f0fdf4; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); border-radius: 16px 16px 0 0; padding: 40px 30px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">🌳</div>
+                            <h1 style="color: white; margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 600;">
+                                Voigt-Garten
+                            </h1>
+                            <p style="color: #bbf7d0; margin: 8px 0 0 0; font-size: 14px;">
+                                Familien-Garten in Etzdorf
+                            </p>
+                        </div>
+
+                        <!-- Content -->
+                        <div style="background: white; padding: 40px 30px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                            <h2 style="color: #1a1a1a; margin: 0 0 16px 0; font-size: 22px;">
+                                {greeting}!
+                            </h2>
+                            <p style="color: #4a5568; line-height: 1.6; margin: 0 0 24px 0;">
+                                Klicke auf den Button unten, um deinen Zugang zum Voigt-Garten zu aktivieren.
+                                Damit kannst du Aufenthalte buchen, die Galerie nutzen und vieles mehr.
+                            </p>
+
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 32px 0;">
+                                <a href="{verify_url}"
+                                   style="display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(22,163,74,0.3);">
+                                    Jetzt Zugang aktivieren
+                                </a>
+                            </div>
+
+                            <!-- Info Box -->
+                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px 20px; margin: 24px 0;">
+                                <p style="color: #166534; margin: 0; font-size: 13px;">
+                                    ⏰ Dieser Link ist <strong>30 Minuten</strong> gueltig.
+                                    Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:
+                                </p>
+                                <p style="color: #16a34a; margin: 8px 0 0 0; font-size: 12px; word-break: break-all;">
+                                    {verify_url}
+                                </p>
+                            </div>
+
+                            <p style="color: #9ca3af; font-size: 13px; margin: 24px 0 0 0;">
+                                Falls du diese Email nicht angefordert hast, kannst du sie einfach ignorieren.
+                            </p>
+                        </div>
+
+                        <!-- Footer -->
+                        <div style="text-align: center; padding: 24px 0; color: #9ca3af; font-size: 12px;">
+                            <p style="margin: 0;">Familie Voigt &middot; Garten in Etzdorf im Rosental</p>
+                            <p style="margin: 4px 0 0 0;">
+                                <a href="https://garten.infinityspace42.de" style="color: #16a34a; text-decoration: none;">
+                                    garten.infinityspace42.de
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            """,
+            "reply_to": ADMIN_EMAIL
+        }
+
+        resend.Emails.send(params)
+        print(f"Magic link email sent to {email}")
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
+
+def send_welcome_email(email: str, name: str) -> bool:
+    """Send welcome email after successful registration."""
+    if not resend.api_key:
+        print("RESEND_API_KEY not configured")
+        return False
+
+    try:
+        params = {
+            "from": FROM_EMAIL,
+            "to": [email],
+            "subject": "Willkommen im Voigt-Garten!",
+            "html": f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="margin: 0; padding: 0; background-color: #f0fdf4; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); border-radius: 16px 16px 0 0; padding: 40px 30px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">🌳</div>
+                            <h1 style="color: white; margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 600;">
+                                Willkommen im Voigt-Garten!
+                            </h1>
+                        </div>
+
+                        <!-- Content -->
+                        <div style="background: white; padding: 40px 30px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                            <h2 style="color: #1a1a1a; margin: 0 0 16px 0; font-size: 22px;">
+                                Hallo {name}!
+                            </h2>
+                            <p style="color: #4a5568; line-height: 1.6; margin: 0 0 24px 0;">
+                                Dein Account wurde erfolgreich erstellt. Willkommen in unserem
+                                Familien-Garten in Etzdorf im Rosental!
+                            </p>
+
+                            <!-- Features -->
+                            <div style="margin: 24px 0;">
+                                <div style="display: flex; margin-bottom: 16px;">
+                                    <div style="background: #f0fdf4; border-radius: 10px; padding: 16px; width: 100%; border: 1px solid #dcfce7;">
+                                        <p style="margin: 0 0 4px 0; font-weight: 600; color: #166534;">🌿 5.300 m² Natur pur</p>
+                                        <p style="margin: 0; color: #4a5568; font-size: 13px;">Suedhang-Lage mit altem Baumbestand, Obstbaeumen und viel Platz zum Erholen.</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; margin-bottom: 16px;">
+                                    <div style="background: #f0fdf4; border-radius: 10px; padding: 16px; width: 100%; border: 1px solid #dcfce7;">
+                                        <p style="margin: 0 0 4px 0; font-weight: 600; color: #166534;">☀️ Solar-Autarkie</p>
+                                        <p style="margin: 0; color: #4a5568; font-size: 13px;">700W Solar + 1,4kWh Akku, eigener Brunnen - nachhaltig und unabhaengig.</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; margin-bottom: 16px;">
+                                    <div style="background: #f0fdf4; border-radius: 10px; padding: 16px; width: 100%; border: 1px solid #dcfce7;">
+                                        <p style="margin: 0 0 4px 0; font-weight: 600; color: #166534;">🏡 51 Jahre Tradition</p>
+                                        <p style="margin: 0; color: #4a5568; font-size: 13px;">Seit Generationen in Familienbesitz - ein Ort mit Geschichte und Herz.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Price Info -->
+                            <div style="background: #faf5f0; border-radius: 10px; padding: 20px; margin: 24px 0; text-align: center; border: 1px solid #fde68a;">
+                                <p style="margin: 0; font-size: 14px; color: #92400e;">
+                                    Aufenthalte ab <strong style="font-size: 20px; color: #78350f;">45 EUR/Nacht</strong>
+                                </p>
+                                <p style="margin: 4px 0 0 0; font-size: 12px; color: #b45309;">
+                                    Familien-Rabattcode: VOIGT-GARTEN (50%)
+                                </p>
+                            </div>
+
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 32px 0;">
+                                <a href="https://garten.infinityspace42.de/buchen"
+                                   style="display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(22,163,74,0.3);">
+                                    Jetzt Aufenthalt buchen
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div style="text-align: center; padding: 24px 0; color: #9ca3af; font-size: 12px;">
+                            <p style="margin: 0;">Familie Voigt &middot; Garten in Etzdorf im Rosental</p>
+                            <p style="margin: 4px 0 0 0;">
+                                <a href="https://garten.infinityspace42.de" style="color: #16a34a; text-decoration: none;">
+                                    garten.infinityspace42.de
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            """,
+            "reply_to": ADMIN_EMAIL
+        }
+
+        resend.Emails.send(params)
+        print(f"Welcome email sent to {email}")
         return True
     except Exception as e:
         print(f"Email error: {e}")

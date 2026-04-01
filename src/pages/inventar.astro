@@ -1,0 +1,22 @@
+---
+import Layout from '../layouts/Layout.astro';
+import InventarPage from '../components/InventarPage';
+---
+
+<Layout title="Inventar" description="Inventar-Verwaltung für den Voigt-Garten">
+  <section class="bg-gradient-to-b from-garden-100 to-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="font-display text-4xl md:text-5xl font-bold text-garden-900 mb-4">
+        Inventar
+      </h1>
+      <p class="text-xl text-garden-700 max-w-2xl mx-auto">
+        Was ist wo? Alle Gegenstände auf einen Blick.
+      </p>
+    </div>
+  </section>
+  <section class="py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <InventarPage client:load />
+    </div>
+  </section>
+</Layout>

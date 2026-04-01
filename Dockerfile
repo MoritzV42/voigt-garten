@@ -37,10 +37,8 @@ COPY pi-backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
-COPY pi-backend/app.py .
-COPY pi-backend/email_service.py .
-COPY pi-backend/seed_projects.py .
-COPY pi-backend/start.sh .
+COPY pi-backend/*.py /app/
+COPY pi-backend/start.sh /app/
 RUN chmod +x start.sh
 
 # Copy built frontend from Stage 1
