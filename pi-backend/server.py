@@ -1,7 +1,7 @@
 """
 Voigt-Garten - Kompletter Server
 Serviert sowohl die statische Website als auch die API.
-Läuft komplett auf dem Pi via Cloudflare Tunnel.
+Läuft auf Hetzner Cloud Server via Cloudflare Tunnel.
 """
 
 from flask import Flask, request, jsonify, send_from_directory, send_file
@@ -154,7 +154,7 @@ def serve_static(path):
 
 @app.route('/api/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'ok', 'service': 'voigt-garten', 'mode': 'pi-hosted'})
+    return jsonify({'status': 'ok', 'service': 'voigt-garten', 'mode': 'cloud-hosted'})
 
 
 @app.route('/api/gallery', methods=['GET'])

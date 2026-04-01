@@ -72,7 +72,7 @@ Ein privates Buchungs- und Wartungssystem für den Familiengarten in Etzdorf im 
 
 ### Deployment
 - **Container:** Docker (Multi-Stage Build)
-- **Hosting:** Raspberry Pi 5 (via Cloudflare Tunnel)
+- **Hosting:** Hetzner CX32 Cloud Server (via Cloudflare Tunnel)
 - **URL:** garten.infinityspace42.de → localhost:5055
 
 ---

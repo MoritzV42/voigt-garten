@@ -1,6 +1,6 @@
 # Voigt-Garten - Projekt Dokumentation
 
-**Familien-Garten Management System - Pi-Hosted**
+**Familien-Garten Management System - Hetzner Cloud Hosted**
 
 ---
 
@@ -16,13 +16,13 @@ Docker Container (voigt-garten-app:5055)
     |-- SQLite DB (/app/data/gallery.db)
     |-- Bilder (/app/public/images/gallery/)
     |
-Volume Mounts -> Pi Filesystem
+Volume Mounts -> Server Filesystem
 ```
 
-### Warum Pi-Hosting statt Cloudflare Pages?
+### Warum Self-Hosting statt Cloudflare Pages?
 
-1. **Bilder/Videos auf Pi** - 836GB verfugbar, keine Cloudflare-Limits
-2. **SQLite direkt auf Pi** - Keine D1-Datenbank nötig
+1. **Bilder/Videos auf Server** - 80GB SSD, keine Cloudflare-Limits
+2. **SQLite direkt auf Server** - Keine D1-Datenbank nötig
 3. **Einfacher Workflow** - Alles an einem Ort
 4. **Bekanntes Pattern** - Wie doku-app, reinhelden-crm etc.
 
@@ -81,7 +81,7 @@ Volume Mounts -> Pi Filesystem
 ### Health Check
 ```
 GET /api/health
-Response: { "status": "ok", "service": "voigt-garten-pi", "timestamp": "..." }
+Response: { "status": "ok", "service": "voigt-garten", "timestamp": "..." }
 ```
 
 ### Galerie
@@ -540,4 +540,5 @@ Keyword-basierter Bot (kein LLM), verarbeitet Nachrichten im konfigurierten Chat
 **Version:** 1.3
 **Erstellt:** 2026-01-26
 **Aktualisiert:** 2026-04-01
-**Hosting:** Raspberry Pi 5 (via Cloudflare Tunnel)
+**Hosting:** Hetzner CX32 Cloud Server (4 vCPU, 8GB RAM, 80GB SSD, Debian 13, Falkenstein) via Cloudflare Tunnel
+**SSH:** `ssh is42` (moritz@49.12.244.18)

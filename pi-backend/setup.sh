@@ -1,5 +1,5 @@
 #!/bin/bash
-# Setup script for Voigt-Garten Pi Backend
+# Setup script for Voigt-Garten Backend
 
 set -e
 
