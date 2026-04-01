@@ -221,25 +221,20 @@ curl http://localhost:5055/api/health
 curl https://garten.infinityspace42.de/api/health
 ```
 
-### Update/Rebuild (empfohlen)
+### Deploy (commit, push, rebuild)
+
+1. Lokal committen und pushen (`git push`)
+2. Rebuild-Skript ausführen:
 
 ```bash
 ssh is42 "bash ~/voigt-garten/rebuild-voigt-garten.sh"
-ssh is42 "tail -f /tmp/rebuild-voigt-garten.log"
 ```
 
 Das Rebuild-Skript (`~/voigt-garten/rebuild-voigt-garten.sh`) macht automatisch:
-1. WAL-Checkpoint + DB-Backup
-2. `docker compose up -d --build --force-recreate`
-3. Health-Check
-
-### Manueller Rebuild
-
-```bash
-cd /home/moritz/stacks/voigt-garten
-docker compose down
-docker compose up -d --build
-```
+1. Git stash + pull
+2. WAL-Checkpoint + DB-Backup
+3. `docker compose up -d --build --force-recreate`
+4. Health-Check
 
 ### Logs
 
