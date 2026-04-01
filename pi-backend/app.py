@@ -1,6 +1,6 @@
 """
-Voigt-Garten Pi Backend
-Flask API + Static File Serving for Pi-hosted deployment.
+Voigt-Garten Backend
+Flask API + Static File Serving for Hetzner Cloud deployment.
 """
 
 from flask import Flask, request, jsonify, send_from_directory, send_file
@@ -1708,9 +1708,23 @@ def get_projects():
     projects = conn.execute(query, params).fetchall()
     conn.close()
 
+    result = []
+    for p in projects:
+        proj = dict(p)
+        # Parse JSON fields stored as text
+        for field in ('assigned_to_list', 'dependencies'):
+            if proj.get(field) and isinstance(proj[field], str):
+                try:
+                    proj[field] = json.loads(proj[field])
+                except (json.JSONDecodeError, TypeError):
+                    proj[field] = []
+            elif not proj.get(field):
+                proj[field] = []
+        result.append(proj)
+
     return jsonify({
-        'projects': [dict(p) for p in projects],
-        'total': len(projects)
+        'projects': result,
+        'total': len(result)
     })
 
 
@@ -1760,7 +1774,17 @@ def get_project(project_id):
     if not project:
         return jsonify({'error': 'Projekt nicht gefunden'}), 404
 
-    return jsonify({'project': dict(project)})
+    proj = dict(project)
+    for field in ('assigned_to_list', 'dependencies'):
+        if proj.get(field) and isinstance(proj[field], str):
+            try:
+                proj[field] = json.loads(proj[field])
+            except (json.JSONDecodeError, TypeError):
+                proj[field] = []
+        elif not proj.get(field):
+            proj[field] = []
+
+    return jsonify({'project': proj})
 
 
 @app.route('/api/projects/<int:project_id>', methods=['PATCH'])
@@ -2707,23 +2731,39 @@ def get_unified_tasks():
             else:
                 p['due_status'] = 'ok'
 
+            # Parse JSON fields stored as text
+            if p.get('assigned_to_list'):
+                try:
+                    p['assigned_to_list'] = json.loads(p['assigned_to_list'])
+                except (json.JSONDecodeError, TypeError):
+                    p['assigned_to_list'] = []
+            else:
+                p['assigned_to_list'] = []
+
+            if p.get('dependencies'):
+                try:
+                    p['dependencies'] = json.loads(p['dependencies'])
+                except (json.JSONDecodeError, TypeError):
+                    p['dependencies'] = []
+            else:
+                p['dependencies'] = []
+
             # Computed fields
             p['comment_count'] = comment_counts.get(('project', p['id']), 0)
             p['children_count'] = children_counts.get(p['id'], 0)
 
             # has_blockers: check if any dependency is not done
             has_blockers = False
-            if p.get('dependencies'):
+            dep_ids = p.get('dependencies', [])
+            if dep_ids and isinstance(dep_ids, list) and len(dep_ids) > 0:
                 try:
-                    dep_ids = json.loads(p['dependencies'])
-                    if dep_ids:
-                        placeholders = ','.join('?' for _ in dep_ids)
-                        blocker = conn.execute(
-                            f"SELECT COUNT(*) as cnt FROM projects WHERE id IN ({placeholders}) AND status != 'done'",
-                            dep_ids
-                        ).fetchone()
-                        has_blockers = blocker['cnt'] > 0
-                except (json.JSONDecodeError, TypeError):
+                    placeholders = ','.join('?' for _ in dep_ids)
+                    blocker = conn.execute(
+                        f"SELECT COUNT(*) as cnt FROM projects WHERE id IN ({placeholders}) AND status != 'done'",
+                        dep_ids
+                    ).fetchone()
+                    has_blockers = blocker['cnt'] > 0
+                except (TypeError, Exception):
                     pass
             p['has_blockers'] = has_blockers
 
@@ -3435,7 +3475,7 @@ def delete_comment(comment_id, user):
 init_db()
 
 if __name__ == '__main__':
-    print("Voigt-Garten Pi Backend starting...")
+    print("Voigt-Garten Backend starting...")
     print(f"Static dir: {STATIC_DIR}")
     print(f"Gallery dir: {GALLERY_DIR}")
     print(f"Database: {DB_PATH}")
