@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import UnifiedWartungPage from '../components/UnifiedWartungPage';
 import CreditSystem from '../components/CreditSystem';
+import GardenMap from '../components/GardenMap';
 ---
 
 <Layout title="Wartung" description="Wartungsaufgaben und Guthaben-System für den Voigt-Garten">
@@ -17,13 +18,11 @@ import CreditSystem from '../components/CreditSystem';
     </div>
   </section>
 
-  <!-- Garden Map Placeholder - wird aktiviert sobald Drohnenfoto vorhanden -->
+  <!-- Garden Map -->
   <section class="py-6 bg-gray-50">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="bg-white rounded-xl border-2 border-dashed border-garden-300 p-6 text-center">
-        <span class="text-3xl mb-2 block">🗺️</span>
-        <p class="text-garden-700 font-medium">Interaktive Garten-Karte</p>
-        <p class="text-sm text-gray-500 mt-1">Wird bald mit Drohnenfoto freigeschaltet</p>
+      <div id="garden-map-wartung">
+        <GardenMap client:load mode="wartung" showModeSwitch={true} />
       </div>
     </div>
   </section>

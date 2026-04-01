@@ -1,0 +1,27 @@
+---
+import Layout from '../layouts/Layout.astro';
+import GardenMap from '../components/GardenMap';
+---
+
+<Layout title="Gartenkarte" description="Interaktive Karte des Voigt-Gartens">
+  <section class="bg-gradient-to-b from-garden-100 to-white py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="font-display text-4xl md:text-5xl font-bold text-garden-900 mb-4">
+        Gartenkarte
+      </h1>
+      <p class="text-xl text-garden-700 max-w-2xl mx-auto">
+        Interaktive Karte mit allen Bereichen des Gartens.
+      </p>
+    </div>
+  </section>
+  <section class="py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div id="gartenkarte-fullscreen" class="relative">
+        <GardenMap client:load mode="wartung" showModeSwitch={true} />
+      </div>
+      <div id="area-detail-panel" class="mt-6 hidden">
+        <!-- Will be populated by GardenMap click events via JS -->
+      </div>
+    </div>
+  </section>
+</Layout>

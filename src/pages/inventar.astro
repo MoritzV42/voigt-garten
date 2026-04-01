@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import InventarPage from '../components/InventarPage';
+import GardenMap from '../components/GardenMap';
 ---
 
 <Layout title="Inventar" description="Inventar-Verwaltung für den Voigt-Garten">
@@ -12,6 +13,13 @@ import InventarPage from '../components/InventarPage';
       <p class="text-xl text-garden-700 max-w-2xl mx-auto">
         Was ist wo? Alle Gegenstände auf einen Blick.
       </p>
+    </div>
+  </section>
+  <section class="py-4 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div id="garden-map-inventar">
+        <GardenMap client:load mode="kategorie" compact={true} />
+      </div>
     </div>
   </section>
   <section class="py-12">

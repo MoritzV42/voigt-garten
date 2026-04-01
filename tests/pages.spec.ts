@@ -10,6 +10,7 @@ test.describe('Seitenladung - Alle Seiten erreichbar', () => {
     { path: '/umgebung', title: 'Umgebung' },
     { path: '/inventar', title: 'Inventar' },
     { path: '/dienstleister', title: 'Dienstleister' },
+    { path: '/gartenkarte', title: 'Gartenkarte' },
     { path: '/admin', title: 'Admin' },
   ];
 

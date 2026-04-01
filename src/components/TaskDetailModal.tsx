@@ -54,6 +54,7 @@ interface Task {
   comment_count?: number;
   children_count?: number;
   has_blockers?: boolean;
+  map_area?: string;
 }
 
 interface Props {
@@ -449,6 +450,11 @@ export default function TaskDetailModal({
               {task.has_blockers && (
                 <span className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded-full">
                   🔒 Blockiert
+                </span>
+              )}
+              {task.map_area && (
+                <span className="text-sm bg-garden-100 text-garden-800 px-3 py-1 rounded-full capitalize">
+                  📍 {task.map_area.replace(/-/g, ' ')}
                 </span>
               )}
             </div>

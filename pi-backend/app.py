@@ -384,6 +384,19 @@ def migrate_db():
     ''')
     conn.commit()
 
+    # -- Garden Map: map_area columns --
+    for col_stmt in [
+        "ALTER TABLE projects ADD COLUMN map_area TEXT",
+        "ALTER TABLE recurring_tasks ADD COLUMN map_area TEXT",
+        "ALTER TABLE inventory_buildings ADD COLUMN map_area TEXT",
+    ]:
+        try:
+            conn.execute(col_stmt)
+            conn.commit()
+            print(f"Migration: {col_stmt}")
+        except Exception:
+            pass  # Column already exists
+
     # Seed inventory if empty
     seed_inventory(conn)
 
@@ -1740,8 +1753,8 @@ def create_project(user):
     conn = get_db()
     conn.execute('''
         INSERT INTO projects (title, description, category, status, priority,
-                             estimated_cost, effort, timeframe, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             estimated_cost, effort, timeframe, created_by, map_area)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         data['title'],
         data.get('description'),
@@ -1751,7 +1764,8 @@ def create_project(user):
         data.get('estimatedCost') or data.get('estimated_cost'),
         data.get('effort'),
         data.get('timeframe'),
-        user['email']
+        user['email'],
+        data.get('map_area')
     ))
     project_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
     conn.commit()
@@ -1829,7 +1843,7 @@ def update_project(project_id, user):
     allowed_fields = ['title', 'description', 'category', 'status', 'priority',
                       'estimated_cost', 'effort', 'timeframe', 'assigned_to',
                       'dependencies', 'start_date', 'due_date', 'assigned_to_list',
-                      'parent_task_id']
+                      'parent_task_id', 'map_area']
     json_fields = {'dependencies', 'assigned_to_list'}
 
     for field in allowed_fields:
@@ -2284,7 +2298,7 @@ def update_recurring_task(task_id, user):
 
     updates = []
     params = []
-    allowed_fields = ['title', 'description', 'category', 'cycle_days', 'credit_value', 'effort', 'next_due', 'is_active']
+    allowed_fields = ['title', 'description', 'category', 'cycle_days', 'credit_value', 'effort', 'next_due', 'is_active', 'map_area']
 
     for field in allowed_fields:
         if field in data:
@@ -2616,6 +2630,7 @@ def get_unified_tasks():
     search = request.args.get('search')
     priority = request.args.get('priority')
     assigned_to = request.args.get('assigned_to')
+    map_area = request.args.get('map_area')
     sort_by = request.args.get('sort', 'created_at')
     order = request.args.get('order', 'desc')
 
@@ -2644,6 +2659,9 @@ def get_unified_tasks():
         if effort:
             query += ' AND effort = ?'
             params.append(effort)
+        if map_area:
+            query += ' AND map_area = ?'
+            params.append(map_area)
         if search:
             if search.startswith('#') and search[1:].isdigit():
                 pass  # recurring tasks don't have meaningful IDs to search
@@ -2692,6 +2710,9 @@ def get_unified_tasks():
         if effort:
             query += ' AND effort = ?'
             params.append(effort)
+        if map_area:
+            query += ' AND map_area = ?'
+            params.append(map_area)
         if assignee:
             query += ' AND assigned_to = ?'
             params.append(assignee)
@@ -2801,6 +2822,57 @@ def get_unified_tasks():
             'assignees': sorted(assignees_list)
         }
     })
+
+
+@app.route('/api/map/areas', methods=['GET'])
+def get_map_areas():
+    """Get aggregated data per map area for the garden map."""
+    conn = get_db()
+    today = datetime.now().date()
+    areas = {}
+
+    # Count open projects per area
+    for row in conn.execute(
+        "SELECT map_area, COUNT(*) as cnt FROM projects WHERE map_area IS NOT NULL AND status NOT IN ('erledigt', 'abgeschlossen') GROUP BY map_area"
+    ).fetchall():
+        area = row['map_area']
+        if area not in areas:
+            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0}
+        areas[area]['task_count'] += row['cnt']
+
+    # Count and check recurring tasks per area
+    for row in conn.execute(
+        "SELECT map_area, next_due FROM recurring_tasks WHERE map_area IS NOT NULL AND is_active = 1"
+    ).fetchall():
+        area = row['map_area']
+        if area not in areas:
+            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0}
+        areas[area]['task_count'] += 1
+
+        if row['next_due']:
+            due_date = datetime.strptime(row['next_due'], '%Y-%m-%d').date()
+            days_until = (due_date - today).days
+            if days_until < 0:
+                areas[area]['status'] = 'overdue'
+            elif days_until <= 7 and areas[area]['status'] != 'overdue':
+                areas[area]['status'] = 'due-soon'
+
+    # Count inventory items per area (via buildings)
+    for row in conn.execute("""
+        SELECT b.map_area, COUNT(i.id) as cnt
+        FROM inventory_buildings b
+        JOIN inventory_rooms r ON r.building_id = b.id
+        JOIN inventory_items i ON i.room_id = r.id
+        WHERE b.map_area IS NOT NULL
+        GROUP BY b.map_area
+    """).fetchall():
+        area = row['map_area']
+        if area not in areas:
+            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0}
+        areas[area]['inventory_count'] = row['cnt']
+
+    conn.close()
+    return jsonify({'areas': areas})
 
 
 @app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
@@ -2933,7 +3005,7 @@ def update_inventory_building(building_id, user):
 
     updates = []
     params = []
-    for field in ['name', 'icon', 'has_floors', 'sort_order']:
+    for field in ['name', 'icon', 'has_floors', 'sort_order', 'map_area']:
         if field in data:
             updates.append(f'{field} = ?')
             params.append(data[field])

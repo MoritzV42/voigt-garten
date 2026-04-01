@@ -49,6 +49,7 @@ interface Task {
   comment_count?: number;
   children_count?: number;
   has_blockers?: boolean;
+  map_area?: string;
 }
 
 interface Filters {
@@ -145,7 +146,22 @@ export default function UnifiedKanban() {
   // Mobile Kanban tab
   const [mobileActiveTab, setMobileActiveTab] = useState('offen');
 
+  // Map area filter (from URL hash)
+  const [mapAreaFilter, setMapAreaFilter] = useState<string | null>(null);
+
   const API_URL = import.meta.env.PUBLIC_API_URL || 'https://garten.infinityspace42.de';
+
+  // Listen to URL hash for map area filter
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      const match = hash.match(/#area=([^&]+)/);
+      setMapAreaFilter(match ? decodeURIComponent(match[1]) : null);
+    };
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Debounce search
   useEffect(() => {
@@ -190,12 +206,14 @@ export default function UnifiedKanban() {
   useEffect(() => {
     fetchTasks();
     fetchAssignees();
-  }, []);
+  }, [mapAreaFilter]);
 
   const fetchTasks = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/tasks/unified`);
+      let url = `${API_URL}/api/tasks/unified`;
+      if (mapAreaFilter) url += `?map_area=${encodeURIComponent(mapAreaFilter)}`;
+      const response = await fetch(url);
       const data = await response.json();
 
       if (response.ok) {
@@ -1087,6 +1105,16 @@ export default function UnifiedKanban() {
               className="px-3 py-2 text-sm text-red-600 hover:text-red-700 min-h-[44px]"
             >
               Alle Filter zurücksetzen
+            </button>
+          )}
+
+          {mapAreaFilter && (
+            <button
+              onClick={() => { window.location.hash = ''; setMapAreaFilter(null); }}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-garden-100 text-garden-800 hover:bg-garden-200 min-h-[44px]"
+            >
+              Bereich: {mapAreaFilter}
+              <span className="ml-1">&times;</span>
             </button>
           )}
 
