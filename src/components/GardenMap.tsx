@@ -68,6 +68,61 @@ function parseSvgShapes(svgText: string): SvgShape[] {
   return shapes;
 }
 
+function getPathAbsolutePoints(d: string): { x: number; y: number }[] {
+  const points: { x: number; y: number }[] = [];
+  // Tokenize: split into commands and numbers
+  const tokens = d.match(/[a-zA-Z]|-?[\d.]+/g);
+  if (!tokens) return points;
+
+  let cx = 0, cy = 0; // current point
+  let i = 0;
+
+  while (i < tokens.length) {
+    const cmd = tokens[i];
+    if (!/[a-zA-Z]/.test(cmd)) { i++; continue; }
+    i++;
+
+    const readNum = () => parseFloat(tokens[i++] || '0');
+
+    switch (cmd) {
+      case 'M': cx = readNum(); cy = readNum(); points.push({ x: cx, y: cy }); break;
+      case 'm': {
+        // First pair after 'm' is absolute move, subsequent are relative lineTo
+        if (points.length === 0) { cx = readNum(); cy = readNum(); } else { cx += readNum(); cy += readNum(); }
+        points.push({ x: cx, y: cy });
+        // Consume implicit relative lineTo pairs
+        while (i < tokens.length && /^-?[\d.]/.test(tokens[i])) {
+          cx += readNum(); cy += readNum();
+          points.push({ x: cx, y: cy });
+        }
+        break;
+      }
+      case 'L': cx = readNum(); cy = readNum(); points.push({ x: cx, y: cy }); break;
+      case 'l': cx += readNum(); cy += readNum(); points.push({ x: cx, y: cy });
+        while (i < tokens.length && /^-?[\d.]/.test(tokens[i])) {
+          cx += readNum(); cy += readNum(); points.push({ x: cx, y: cy });
+        }
+        break;
+      case 'H': cx = readNum(); points.push({ x: cx, y: cy }); break;
+      case 'h': cx += readNum(); points.push({ x: cx, y: cy }); break;
+      case 'V': cy = readNum(); points.push({ x: cx, y: cy }); break;
+      case 'v': cy += readNum(); points.push({ x: cx, y: cy }); break;
+      case 'C': { // absolute cubic bezier: 3 pairs
+        for (let j = 0; j < 3; j++) { const px = readNum(); const py = readNum(); if (j === 2) { cx = px; cy = py; points.push({ x: cx, y: cy }); } }
+        break;
+      }
+      case 'c': { // relative cubic bezier: 3 pairs
+        const sx = cx, sy = cy;
+        for (let j = 0; j < 3; j++) { const dx = readNum(); const dy = readNum(); if (j === 2) { cx = sx + dx; cy = sy + dy; points.push({ x: cx, y: cy }); } }
+        break;
+      }
+      case 'Z': case 'z': break;
+      default: break;
+    }
+  }
+  return points;
+}
+
 function getShapeCenter(shape: SvgShape): { x: number; y: number } | null {
   const a = shape.attrs;
   switch (shape.tagName) {
@@ -78,15 +133,17 @@ function getShapeCenter(shape: SvgShape): { x: number; y: number } | null {
     case 'ellipse':
       return { x: parseFloat(a.cx || '0'), y: parseFloat(a.cy || '0') };
     case 'path': {
-      const nums = (a.d || '').match(/-?[\d.]+/g);
-      if (!nums || nums.length < 2) return null;
-      let sumX = 0, sumY = 0, count = 0;
-      for (let i = 0; i < nums.length - 1; i += 2) {
-        sumX += parseFloat(nums[i]);
-        sumY += parseFloat(nums[i + 1]);
-        count++;
+      const pts = getPathAbsolutePoints(a.d || '');
+      if (pts.length === 0) return null;
+      // Use bounding box center for more stable results
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of pts) {
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y > maxY) maxY = p.y;
       }
-      return count > 0 ? { x: sumX / count, y: sumY / count } : null;
+      return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
     }
     default:
       return null;
