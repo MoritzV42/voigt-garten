@@ -459,6 +459,7 @@ export default function GardenMap({
           </div>
         ) : (
           <div
+            className="relative"
             style={{
               transform: `scale(${scale}) translate(${translate.x / scale}px, ${translate.y / scale}px)`,
               transformOrigin: 'center center',
@@ -467,7 +468,7 @@ export default function GardenMap({
           >
             {/* Background image */}
             <img
-              src="/images/gartenplan-bg.jpg"
+              src="/images/gartenplan-bg.png"
               alt="Gartenplan"
               className="w-full h-auto block"
               draggable={false}
