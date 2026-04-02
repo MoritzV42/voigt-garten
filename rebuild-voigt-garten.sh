@@ -6,6 +6,15 @@
 LOGFILE="/tmp/rebuild-voigt-garten.log"
 (
     echo "=== Rebuild gestartet: $(date) ===" > "$LOGFILE"
+
+    # Git pull im Source-Verzeichnis
+    echo "Git pull..." >> "$LOGFILE"
+    cd ~/voigt-garten
+    git stash >> "$LOGFILE" 2>&1
+    git pull >> "$LOGFILE" 2>&1
+    git stash pop >> "$LOGFILE" 2>&1 || true
+    echo "Git: $(git log --oneline -1)" >> "$LOGFILE"
+
     cd ~/stacks/voigt-garten
 
     # WAL Checkpoint + DB Backup
