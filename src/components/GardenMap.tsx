@@ -94,30 +94,90 @@ function getShapeCenter(shape: SvgShape): { x: number; y: number } | null {
 }
 
 function computeLabelPositions(shapes: SvgShape[]): { id: string; label: string; cx: number; cy: number; lx: number; ly: number }[] {
-  const labels: { id: string; label: string; cx: number; cy: number; lx: number; ly: number }[] = [];
+  const VB_W = 1602, VB_H = 787;
+  const LABEL_H = 18;
+  const PAD = 8; // padding from viewBox edges
+
+  type Placed = { id: string; label: string; cx: number; cy: number; lx: number; ly: number; hw: number };
+  const placed: Placed[] = [];
+
+  function labelHalfWidth(label: string): number {
+    return (label.length * 8 + 12) / 2;
+  }
+
+  function overlapsAny(lx: number, ly: number, hw: number): boolean {
+    for (const p of placed) {
+      const dx = Math.abs(lx - p.lx);
+      const dy = Math.abs(ly - p.ly);
+      if (dx < (hw + p.hw + 4) && dy < (LABEL_H + 2)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function inBounds(lx: number, ly: number, hw: number): boolean {
+    return (lx - hw >= PAD) && (lx + hw <= VB_W - PAD) && (ly - 9 >= PAD) && (ly + 9 <= VB_H - PAD);
+  }
+
+  // Direction offsets: [dx, dy] — top, right, bottom, left
+  const directions: [number, number][] = [
+    [0, -1],  // top
+    [1, 0],   // right
+    [0, 1],   // bottom
+    [-1, 0],  // left
+  ];
 
   for (const shape of shapes) {
     const center = getShapeCenter(shape);
     if (!center) continue;
 
-    let lx = center.x;
-    let ly = center.y - 30;
+    const hw = labelHalfWidth(shape.label);
+    let bestLx = center.x;
+    let bestLy = center.y - 35;
+    let found = false;
 
-    for (const existing of labels) {
-      const dx = Math.abs(lx - existing.lx);
-      const dy = Math.abs(ly - existing.ly);
-      if (dx < 80 && dy < 18) {
-        ly = existing.ly - 20;
+    // Try each direction at increasing distances
+    for (let dist = 35; dist <= 80 && !found; dist += 15) {
+      for (const [ddx, ddy] of directions) {
+        const lx = center.x + ddx * dist;
+        const ly = center.y + ddy * dist;
+        if (inBounds(lx, ly, hw) && !overlapsAny(lx, ly, hw)) {
+          bestLx = lx;
+          bestLy = ly;
+          found = true;
+          break;
+        }
       }
     }
 
-    ly = Math.max(15, ly);
-    lx = Math.max(50, Math.min(1552, lx));
+    // Fallback: if nothing found, try diagonal directions
+    if (!found) {
+      const diagonals: [number, number][] = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+      for (let dist = 40; dist <= 100 && !found; dist += 15) {
+        for (const [ddx, ddy] of diagonals) {
+          const lx = center.x + ddx * dist * 0.7;
+          const ly = center.y + ddy * dist * 0.7;
+          if (inBounds(lx, ly, hw) && !overlapsAny(lx, ly, hw)) {
+            bestLx = lx;
+            bestLy = ly;
+            found = true;
+            break;
+          }
+        }
+      }
+    }
 
-    labels.push({ id: shape.id, label: shape.label, cx: center.x, cy: center.y, lx, ly });
+    // Final fallback: clamp to bounds
+    if (!found) {
+      bestLx = Math.max(PAD + hw, Math.min(VB_W - PAD - hw, bestLx));
+      bestLy = Math.max(PAD + 9, Math.min(VB_H - PAD - 9, bestLy));
+    }
+
+    placed.push({ id: shape.id, label: shape.label, cx: center.x, cy: center.y, lx: bestLx, ly: bestLy, hw });
   }
 
-  return labels;
+  return placed.map(({ id, label, cx, cy, lx, ly }) => ({ id, label, cx, cy, lx, ly }));
 }
 
 export default function GardenMap({
@@ -195,9 +255,9 @@ export default function GardenMap({
       const highlighted = isHighlighted(shape.id);
 
       if (mode === 'kategorie') {
-        let opacity = 0.3;
-        if (active || (selectable && selectedId === shape.id)) opacity = 0.8;
-        else if (hovered || highlighted) opacity = 0.6;
+        let opacity = 0.55;
+        if (active || (selectable && selectedId === shape.id)) opacity = 0.85;
+        else if (hovered || highlighted) opacity = 0.75;
         // Use original fill with adjusted opacity
         return { fill: shape.originalFill, opacity };
       }
@@ -205,9 +265,9 @@ export default function GardenMap({
       if (mode === 'wartung') {
         const status = areaStatuses[shape.id]?.status || 'no-data';
         const rgb = WARTUNG_COLORS[status];
-        let opacity = 0.4;
-        if (active || (selectable && selectedId === shape.id)) opacity = 0.8;
-        else if (hovered || highlighted) opacity = 0.6;
+        let opacity = 0.55;
+        if (active || (selectable && selectedId === shape.id)) opacity = 0.85;
+        else if (hovered || highlighted) opacity = 0.75;
         return { fill: `rgb(${rgb})`, opacity };
       }
 
