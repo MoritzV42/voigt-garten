@@ -424,28 +424,35 @@ export default function EnvironmentMap() {
               {/* Expanded Content */}
               <div
                 className={`overflow-hidden transition-all duration-300 ${
-                  isExpanded ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'
+                  isExpanded ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
                 }`}
               >
                 <div className="border-t border-gray-100">
-                  {/* Website iframe */}
+                  {/* Website Preview */}
                   {poi.website && (
-                    <div className="bg-gray-50 p-2">
-                      <iframe
-                        src={poi.website}
-                        title={poi.name}
-                        className="w-full h-48 rounded-lg border border-gray-200"
-                        sandbox="allow-scripts allow-same-origin"
-                        loading="lazy"
-                      />
+                    <div className="p-4 border-t border-gray-100">
                       <a
                         href={poi.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline mt-1 block text-center"
+                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition group"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        🔗 Website in neuem Tab öffnen
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0"
+                          style={{ backgroundColor: style.color }}
+                        >
+                          🌐
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition truncate">
+                            {poi.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+                          </div>
+                          <div className="text-xs text-gray-500">Website besuchen</div>
+                        </div>
+                        <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
                       </a>
                     </div>
                   )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 const API_BASE = import.meta.env.DEV ? 'http://localhost:5055' : '';
 
@@ -68,6 +68,58 @@ function parseSvgShapes(svgText: string): SvgShape[] {
   return shapes;
 }
 
+function getShapeCenter(shape: SvgShape): { x: number; y: number } | null {
+  const a = shape.attrs;
+  switch (shape.tagName) {
+    case 'rect':
+      return { x: parseFloat(a.x || '0') + parseFloat(a.width || '0') / 2, y: parseFloat(a.y || '0') + parseFloat(a.height || '0') / 2 };
+    case 'circle':
+      return { x: parseFloat(a.cx || '0'), y: parseFloat(a.cy || '0') };
+    case 'ellipse':
+      return { x: parseFloat(a.cx || '0'), y: parseFloat(a.cy || '0') };
+    case 'path': {
+      const nums = (a.d || '').match(/-?[\d.]+/g);
+      if (!nums || nums.length < 2) return null;
+      let sumX = 0, sumY = 0, count = 0;
+      for (let i = 0; i < nums.length - 1; i += 2) {
+        sumX += parseFloat(nums[i]);
+        sumY += parseFloat(nums[i + 1]);
+        count++;
+      }
+      return count > 0 ? { x: sumX / count, y: sumY / count } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+function computeLabelPositions(shapes: SvgShape[]): { id: string; label: string; cx: number; cy: number; lx: number; ly: number }[] {
+  const labels: { id: string; label: string; cx: number; cy: number; lx: number; ly: number }[] = [];
+
+  for (const shape of shapes) {
+    const center = getShapeCenter(shape);
+    if (!center) continue;
+
+    let lx = center.x;
+    let ly = center.y - 30;
+
+    for (const existing of labels) {
+      const dx = Math.abs(lx - existing.lx);
+      const dy = Math.abs(ly - existing.ly);
+      if (dx < 80 && dy < 18) {
+        ly = existing.ly - 20;
+      }
+    }
+
+    ly = Math.max(15, ly);
+    lx = Math.max(50, Math.min(1552, lx));
+
+    labels.push({ id: shape.id, label: shape.label, cx: center.x, cy: center.y, lx, ly });
+  }
+
+  return labels;
+}
+
 export default function GardenMap({
   mode: initialMode = 'kategorie',
   onAreaClick,
@@ -83,6 +135,8 @@ export default function GardenMap({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [areaStatuses, setAreaStatuses] = useState<Record<string, AreaStatus>>({});
+
+  const labelPositions = useMemo(() => computeLabelPositions(shapes), [shapes]);
 
   // Zoom & pan state
   const [scale, setScale] = useState(1);
@@ -260,9 +314,11 @@ export default function GardenMap({
     (e: React.TouchEvent) => {
       if (compact) return;
       if (e.touches.length === 2) {
+        e.preventDefault();
         lastTouchDist.current = getTouchDist(e.touches);
         lastTouchCenter.current = getTouchCenter(e.touches);
       } else if (e.touches.length === 1 && scale > 1) {
+        e.preventDefault();
         setIsPanning(true);
         panStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         translateStart.current = { ...translate };
@@ -371,7 +427,7 @@ export default function GardenMap({
 
   const hoveredShape = shapes.find((s) => s.id === hoveredId);
 
-  const tooltipContent = hoveredShape ? (
+  const tooltipContent = (hoveredShape && mode === 'wartung') ? (
     <div className="absolute top-3 left-3 bg-white/95 backdrop-blur rounded-lg shadow-lg px-3 py-2 pointer-events-none z-10">
       <div className="font-semibold text-gray-800 text-sm">{hoveredShape.label}</div>
       {mode === 'wartung' && (
@@ -399,7 +455,7 @@ export default function GardenMap({
       <div
         ref={containerRef}
         className={`relative overflow-hidden rounded-xl ${compact ? 'max-h-64' : ''}`}
-        style={{ userSelect: 'none' }}
+        style={{ userSelect: 'none', touchAction: 'none' }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -481,6 +537,37 @@ export default function GardenMap({
               preserveAspectRatio="xMidYMid meet"
             >
               {shapes.map(renderShape)}
+              {/* Labels with leader lines */}
+              {labelPositions.map(({ id, label, cx, cy, lx, ly }) => (
+                <g key={`label-${id}`} className="pointer-events-none">
+                  <line
+                    x1={cx} y1={cy} x2={lx} y2={ly + 7}
+                    stroke="white" strokeWidth="1.5" opacity="0.8"
+                  />
+                  <rect
+                    x={lx - label.length * 4 - 6}
+                    y={ly - 9}
+                    width={label.length * 8 + 12}
+                    height={18}
+                    rx={3}
+                    fill="white"
+                    opacity="0.9"
+                    stroke="#374151"
+                    strokeWidth="0.5"
+                  />
+                  <text
+                    x={lx}
+                    y={ly + 4}
+                    textAnchor="middle"
+                    fill="#1f2937"
+                    fontSize="11"
+                    fontWeight="600"
+                    fontFamily="Inter, system-ui, sans-serif"
+                  >
+                    {label}
+                  </text>
+                </g>
+              ))}
             </svg>
 
             {/* Tooltip */}
