@@ -250,6 +250,7 @@ export default function GardenMap({
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState(initialMode);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [areaStatuses, setAreaStatuses] = useState<Record<string, AreaStatus>>({});
 
@@ -497,6 +498,12 @@ export default function GardenMap({
       } as React.CSSProperties,
       onMouseEnter: () => setHoveredId(shape.id),
       onMouseLeave: () => setHoveredId(null),
+      onMouseMove: (e: React.MouseEvent) => {
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        }
+      },
       onClick: (e: React.MouseEvent) => {
         e.stopPropagation();
         handleShapeClick(shape.id);
@@ -544,8 +551,14 @@ export default function GardenMap({
 
   const hoveredShape = shapes.find((s) => s.id === hoveredId);
 
-  const tooltipContent = (hoveredShape && mode === 'wartung') ? (
-    <div className="absolute top-3 left-3 bg-white/95 backdrop-blur rounded-lg shadow-lg px-3 py-2 pointer-events-none z-10">
+  const tooltipContent = hoveredShape ? (
+    <div
+      className="absolute bg-white/95 backdrop-blur rounded-lg shadow-lg px-3 py-2 pointer-events-none z-30"
+      style={{
+        left: mousePos.x + 16,
+        top: mousePos.y - 10,
+      }}
+    >
       <div className="font-semibold text-gray-800 text-sm">{hoveredShape.label}</div>
       {mode === 'wartung' && (
         <div className="text-xs mt-0.5" style={{ color: `rgb(${WARTUNG_COLORS[areaStatuses[hoveredShape.id]?.status || 'no-data']})` }}>
@@ -687,10 +700,11 @@ export default function GardenMap({
               ))}
             </svg>
 
-            {/* Tooltip */}
-            {tooltipContent}
           </div>
         )}
+
+        {/* Tooltip - outside transformed container */}
+        {tooltipContent}
       </div>
 
       {/* Legend (Wartung mode only) */}
