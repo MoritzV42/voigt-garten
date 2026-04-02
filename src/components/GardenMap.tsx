@@ -468,7 +468,7 @@ export default function GardenMap({
           >
             {/* Background image */}
             <img
-              src="/images/gartenplan-bg.png"
+              src="/images/gartenplan-bg.jpg"
               alt="Gartenplan"
               className="w-full h-auto block"
               draggable={false}
