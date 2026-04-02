@@ -82,7 +82,7 @@ test.describe('Wartungsseite - Filter', () => {
   });
 
   test('Kategorie-Filter Dropdown öffnet sich', async ({ page }) => {
-    const btn = page.locator('button:has-text("Kategorie")');
+    const btn = page.locator('#wartung-content button:has-text("Kategorie")');
     await btn.scrollIntoViewIfNeeded();
     await btn.click();
     await page.waitForTimeout(300);
@@ -111,7 +111,7 @@ test.describe('Wartungsseite - Filter', () => {
   });
 
   test('Filter auswählen zeigt Badge-Count', async ({ page }) => {
-    const btn = page.locator('button:has-text("Kategorie")');
+    const btn = page.locator('#wartung-content button:has-text("Kategorie")');
     await btn.scrollIntoViewIfNeeded();
     await btn.click();
     await page.waitForTimeout(300);
@@ -128,7 +128,7 @@ test.describe('Wartungsseite - Filter', () => {
   });
 
   test('"Alle Filter zurücksetzen" Button erscheint bei aktiven Filtern', async ({ page }) => {
-    const btn = page.locator('button:has-text("Kategorie")');
+    const btn = page.locator('#wartung-content button:has-text("Kategorie")');
     await btn.scrollIntoViewIfNeeded();
     await btn.click();
     await page.waitForTimeout(300);
