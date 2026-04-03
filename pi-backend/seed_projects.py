@@ -9,7 +9,7 @@ import sqlite3
 import os
 
 DATA_DIR = os.environ.get('DATA_DIR', '/app/data')
-DB_PATH = os.path.join(DATA_DIR, 'gallery.db')
+DB_PATH = os.path.join(DATA_DIR, 'garten.db')
 
 # Initial projects from the original wartung.astro
 INITIAL_PROJECTS = [

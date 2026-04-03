@@ -22,9 +22,9 @@ LOGFILE="/tmp/rebuild-voigt-garten.log"
         echo "DB WAL Checkpoint + Backup..." >> "$LOGFILE"
         docker exec voigt-garten-app python3 -c "
 import sqlite3
-conn = sqlite3.connect('/app/data/gallery.db', timeout=30)
+conn = sqlite3.connect('/app/data/garten.db', timeout=30)
 conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
-dst = sqlite3.connect('/app/data/gallery.db.pre-rebuild')
+dst = sqlite3.connect('/app/data/garten.db.pre-rebuild')
 conn.backup(dst)
 dst.close()
 conn.close()
