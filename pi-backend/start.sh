@@ -3,6 +3,14 @@ set -e
 
 echo "Starting Voigt-Garten Backend..."
 
+DATA_DIR="${DATA_DIR:-/app/data}"
+
+# Rename legacy database if needed
+if [ -f "$DATA_DIR/gallery.db" ] && [ ! -f "$DATA_DIR/garten.db" ]; then
+  mv "$DATA_DIR/gallery.db" "$DATA_DIR/garten.db"
+  echo "Renamed gallery.db -> garten.db"
+fi
+
 # Initialize database first (creates tables if not exist)
 echo "Initializing database..."
 python -c "from app import init_db; init_db()"

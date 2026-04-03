@@ -46,8 +46,8 @@ interface Task {
   confirmed_at?: string;
   last_completed_at?: string;
   last_completed_by?: string;
+  is_recurring?: boolean;
   parent_task_id?: number;
-  start_date?: string;
   due_date?: string;
   dependencies?: number[];
   assigned_to_list?: Assignee[];
@@ -134,8 +134,11 @@ export default function TaskDetailModal({
   const [selectedAssignees, setSelectedAssignees] = useState<Assignee[]>(task.assigned_to_list || []);
 
   // Dates
-  const [startDate, setStartDate] = useState(task.start_date || '');
   const [dueDate, setDueDate] = useState(task.due_date || '');
+
+  // Recurring fields
+  const [cycleDays, setCycleDays] = useState(task.cycle_days || 0);
+  const [creditValue, setCreditValue] = useState(task.credit_value || 0);
 
   const API_URL = import.meta.env.PUBLIC_API_URL || 'https://garten.infinityspace42.de';
 
@@ -148,8 +151,9 @@ export default function TaskDetailModal({
       loadComments();
     }
     setSelectedAssignees(task.assigned_to_list || []);
-    setStartDate(task.start_date || '');
     setDueDate(task.due_date || '');
+    setCycleDays(task.cycle_days || 0);
+    setCreditValue(task.credit_value || 0);
   }, [isOpen, task.id]);
 
   const getToken = () => localStorage.getItem(TOKEN_KEY);
@@ -384,12 +388,11 @@ export default function TaskDetailModal({
     }
   };
 
-  const handleDateChange = (field: 'start_date' | 'due_date', value: string) => {
-    if (field === 'start_date') setStartDate(value);
-    else setDueDate(value);
+  const handleDateChange = (value: string) => {
+    setDueDate(value);
 
     if (onTaskUpdate && task.task_type === 'project') {
-      onTaskUpdate(task.id, { [field]: value || null });
+      onTaskUpdate(task.id, { due_date: value || null });
     }
   };
 
@@ -442,8 +445,8 @@ export default function TaskDetailModal({
               <span className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full ${category.color}`}>
                 {category.emoji} {category.label}
               </span>
-              {task.task_type === 'recurring' && (
-                <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
+              {task.is_recurring && task.cycle_days && (
+                <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
                   🔄 Alle {task.cycle_days} Tage
                 </span>
               )}
@@ -536,26 +539,50 @@ export default function TaskDetailModal({
             )}
           </div>
 
-          {/* Date Pickers (Projects only) */}
-          {task.task_type === 'project' && isAdmin && (
+          {/* Date Picker */}
+          {isAdmin && (
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Zeitraum</h3>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Fällig bis</label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-garden-500 focus:border-garden-500 min-h-[44px]"
+              />
+            </div>
+          )}
+
+          {/* Recurring Fields */}
+          {task.is_recurring && isAdmin && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Wiederkehrend</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Startdatum</label>
+                  <label className="block text-xs text-gray-500 mb-1">Zyklus (Tage)</label>
                   <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => handleDateChange('start_date', e.target.value)}
+                    type="number"
+                    min="1"
+                    value={cycleDays}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      setCycleDays(val);
+                      if (onTaskUpdate) onTaskUpdate(task.id, { cycle_days: val });
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-garden-500 focus:border-garden-500 min-h-[44px]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Enddatum</label>
+                  <label className="block text-xs text-gray-500 mb-1">Guthaben-Wert (EUR)</label>
                   <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => handleDateChange('due_date', e.target.value)}
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={creditValue}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setCreditValue(val);
+                      if (onTaskUpdate) onTaskUpdate(task.id, { credit_value: val });
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-garden-500 focus:border-garden-500 min-h-[44px]"
                   />
                 </div>

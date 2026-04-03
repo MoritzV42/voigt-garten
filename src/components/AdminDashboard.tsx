@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import LoginModal from './LoginModal';
-import RecurringTaskEditor from './RecurringTaskEditor';
+import EditableTable, { ColumnDef } from './EditableTable';
+import { MAP_AREAS, getAreaLabel } from './mapAreas';
 
 interface Stats {
   pendingBookings: number;
@@ -63,7 +64,7 @@ interface Issue {
   created_at: string;
 }
 
-type Tab = 'dashboard' | 'bookings' | 'projects' | 'users' | 'issues' | 'recurring';
+type Tab = 'dashboard' | 'bookings' | 'projects' | 'users' | 'issues' | 'galerie' | 'credits' | 'dienstleister' | 'kosten' | 'karte';
 
 const API_BASE = import.meta.env.PUBLIC_API_URL || 'https://garten.infinityspace42.de';
 
@@ -78,6 +79,11 @@ export default function AdminDashboard() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<any[]>([]);
+  const [credits, setCredits] = useState<any[]>([]);
+  const [serviceProviders, setServiceProviders] = useState<any[]>([]);
+  const [costs, setCosts] = useState<any[]>([]);
+  const [costsSummary, setCostsSummary] = useState<any>(null);
 
   // Fetch data when user is admin
   useEffect(() => {
@@ -95,7 +101,12 @@ export default function AdminDashboard() {
       fetchPendingProjects(),
       fetchBookings(),
       fetchUsers(),
-      fetchIssues()
+      fetchIssues(),
+      fetchGalleryItems(),
+      fetchCredits(),
+      fetchServiceProviders(),
+      fetchCosts(),
+      fetchCostsSummary(),
     ]);
     setIsLoading(false);
   };
@@ -170,6 +181,76 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchGalleryItems = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/gallery?include_pending=true`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setGalleryItems(data.items || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch gallery items:', error);
+    }
+  };
+
+  const fetchCredits = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/credits`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCredits(data.credits || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch credits:', error);
+    }
+  };
+
+  const fetchServiceProviders = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/service-providers`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setServiceProviders(data.providers || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch service providers:', error);
+    }
+  };
+
+  const fetchCosts = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/costs`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCosts(data.costs || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch costs:', error);
+    }
+  };
+
+  const fetchCostsSummary = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/costs/summary`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCostsSummary(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch costs summary:', error);
+    }
+  };
+
   const confirmProject = async (projectId: number, creditAmount: number) => {
     try {
       const response = await fetch(`${API_BASE}/api/projects/${projectId}/confirm`, {
@@ -186,64 +267,6 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Failed to confirm project:', error);
-    }
-  };
-
-  const updateBookingStatus = async (bookingId: number, status: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
-      });
-
-      if (response.ok) {
-        await fetchBookings();
-      }
-    } catch (error) {
-      console.error('Failed to update booking:', error);
-    }
-  };
-
-  const updateUserRole = async (userId: number, role: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ role })
-      });
-
-      if (response.ok) {
-        await fetchUsers();
-      }
-    } catch (error) {
-      console.error('Failed to update user:', error);
-    }
-  };
-
-  const deleteUser = async (userId: number) => {
-    if (!confirm('User wirklich löschen?')) return;
-
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        await fetchUsers();
-      } else {
-        const data = await response.json();
-        alert(data.error || 'Fehler beim Löschen');
-      }
-    } catch (error) {
-      console.error('Failed to delete user:', error);
     }
   };
 
@@ -455,20 +478,12 @@ export default function AdminDashboard() {
                     {new Date(booking.check_in).toLocaleDateString('de-DE')} - {new Date(booking.check_out).toLocaleDateString('de-DE')}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => updateBookingStatus(booking.id, 'confirmed')}
-                    className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                  >
-                    Bestätigen
-                  </button>
-                  <button
-                    onClick={() => updateBookingStatus(booking.id, 'cancelled')}
-                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                  >
-                    Ablehnen
-                  </button>
-                </div>
+                <button
+                  onClick={() => setActiveTab('bookings')}
+                  className="text-garden-600 hover:text-garden-800 text-sm font-medium"
+                >
+                  Bearbeiten →
+                </button>
               </div>
             ))}
           </div>
@@ -538,64 +553,29 @@ export default function AdminDashboard() {
 
   // Bookings Tab
   const BookingsTab = () => (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Gast</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Zeitraum</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Preis</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Aktionen</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {bookings.map(booking => (
-            <tr key={booking.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3">
-                <div className="font-medium">{booking.guest_name}</div>
-                <div className="text-sm text-gray-500">{booking.guest_email}</div>
-              </td>
-              <td className="px-4 py-3 text-sm">
-                {new Date(booking.check_in).toLocaleDateString('de-DE')} - {new Date(booking.check_out).toLocaleDateString('de-DE')}
-              </td>
-              <td className="px-4 py-3 text-sm font-medium">{booking.total_price}€</td>
-              <td className="px-4 py-3">
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                  booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                  'bg-amber-100 text-amber-800'
-                }`}>
-                  {booking.status === 'confirmed' ? 'Bestätigt' :
-                   booking.status === 'cancelled' ? 'Storniert' : 'Offen'}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                {booking.status === 'pending' && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => updateBookingStatus(booking.id, 'confirmed')}
-                      className="text-green-600 hover:text-green-800 text-sm"
-                    >
-                      Bestätigen
-                    </button>
-                    <button
-                      onClick={() => updateBookingStatus(booking.id, 'cancelled')}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                    >
-                      Ablehnen
-                    </button>
-                  </div>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {bookings.length === 0 && (
-        <div className="text-center py-8 text-gray-500">Keine Buchungen vorhanden</div>
-      )}
-    </div>
+    <EditableTable
+      data={bookings}
+      columns={[
+        { field: 'id', label: 'ID', type: 'readonly', width: 'w-16' },
+        { field: 'guest_name', label: 'Name', type: 'text' },
+        { field: 'guest_email', label: 'Email', type: 'email' },
+        { field: 'guest_phone', label: 'Telefon', type: 'text' },
+        { field: 'check_in', label: 'Check-in', type: 'date' },
+        { field: 'check_out', label: 'Check-out', type: 'date' },
+        { field: 'guests', label: 'Gaeste', type: 'number', width: 'w-20' },
+        { field: 'total_price', label: 'Preis (EUR)', type: 'number', width: 'w-24' },
+        { field: 'status', label: 'Status', type: 'select', options: [
+          { value: 'pending', label: 'Offen', color: 'bg-amber-100 text-amber-800' },
+          { value: 'confirmed', label: 'Bestaetigt', color: 'bg-green-100 text-green-800' },
+          { value: 'cancelled', label: 'Storniert', color: 'bg-red-100 text-red-800' },
+        ]},
+        { field: 'notes', label: 'Notizen', type: 'textarea' },
+      ] as ColumnDef<any>[]}
+      apiBase="/api/admin/bookings"
+      token={token!}
+      onDataChange={setBookings}
+      emptyMessage="Keine Buchungen vorhanden"
+    />
   );
 
   // Projects Tab
@@ -850,70 +830,361 @@ export default function AdminDashboard() {
             + Neuer User
           </button>
         </div>
-
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">User</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Rolle</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Letzter Login</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Aktionen</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {users.map(u => (
-                <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{u.name || u.username}</div>
-                    <div className="text-sm text-gray-500">{u.email}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {u.role === 'admin' ? 'Admin' : 'User'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {u.last_login ? new Date(u.last_login).toLocaleString('de-DE') : 'Noch nie'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.email !== 'moritzvoigt42@gmail.com' && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => updateUserRole(u.id, u.role === 'admin' ? 'user' : 'admin')}
-                          className="text-sm text-garden-600 hover:text-garden-800"
-                        >
-                          {u.role === 'admin' ? 'Herabstufen' : 'Befördern'}
-                        </button>
-                        <button
-                          onClick={() => deleteUser(u.id)}
-                          className="text-sm text-red-600 hover:text-red-800"
-                        >
-                          Löschen
-                        </button>
-                      </div>
-                    )}
-                    {u.email === 'moritzvoigt42@gmail.com' && (
-                      <span className="text-xs text-gray-400">Haupt-Admin</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
+        <EditableTable
+          data={users}
+          columns={[
+            { field: 'id', label: 'ID', type: 'readonly', width: 'w-16' },
+            { field: 'email', label: 'Email', type: 'readonly' },
+            { field: 'username', label: 'Username', type: 'text' },
+            { field: 'name', label: 'Name', type: 'text' },
+            { field: 'role', label: 'Rolle', type: 'select', options: [
+              { value: 'admin', label: 'Admin', color: 'bg-purple-100 text-purple-800' },
+              { value: 'user', label: 'User', color: 'bg-gray-100 text-gray-800' },
+              { value: 'guest', label: 'Gast', color: 'bg-blue-100 text-blue-800' },
+            ]},
+            { field: 'last_login', label: 'Letzter Login', type: 'readonly',
+              render: (v: string) => v ? new Date(v).toLocaleString('de-DE') : 'Noch nie' },
+            { field: 'created_at', label: 'Erstellt', type: 'readonly',
+              render: (v: string) => v ? new Date(v).toLocaleDateString('de-DE') : '-' },
+          ] as ColumnDef<any>[]}
+          apiBase="/api/admin/users"
+          token={token!}
+          onDataChange={setUsers}
+          canDelete={true}
+        />
         {showCreateUserModal && <CreateUserModal />}
       </div>
     );
   };
 
-  // Recurring Tasks Tab
-  const RecurringTab = () => (
-    <RecurringTaskEditor />
+  // Galerie Tab
+  const GalerieTab = () => (
+    <EditableTable
+      data={galleryItems}
+      columns={[
+        { field: 'id', label: 'ID', type: 'readonly', width: 'w-20' },
+        { field: 'name', label: 'Name', type: 'text' },
+        { field: 'description', label: 'Beschreibung', type: 'textarea' },
+        { field: 'category', label: 'Kategorie', type: 'select', options: [
+          { value: 'garten', label: 'Garten' },
+          { value: 'haus', label: 'Haus' },
+          { value: 'umgebung', label: 'Umgebung' },
+          { value: 'sonstiges', label: 'Sonstiges' },
+        ]},
+        { field: 'status', label: 'Status', type: 'select', options: [
+          { value: 'approved', label: 'Freigegeben', color: 'bg-green-100 text-green-800' },
+          { value: 'pending', label: 'Ausstehend', color: 'bg-amber-100 text-amber-800' },
+          { value: 'rejected', label: 'Abgelehnt', color: 'bg-red-100 text-red-800' },
+        ]},
+        { field: 'uploaded_at', label: 'Hochgeladen', type: 'readonly',
+          render: (v: string) => v ? new Date(v).toLocaleDateString('de-DE') : '-' },
+      ] as ColumnDef<any>[]}
+      apiBase="/api/admin/gallery"
+      token={token!}
+      onDataChange={setGalleryItems}
+      canDelete={true}
+      emptyMessage="Keine Galerie-Eintraege"
+    />
   );
+
+  // Credits Tab
+  const CreditsTab = () => (
+    <EditableTable
+      data={credits}
+      columns={[
+        { field: 'id', label: 'ID', type: 'readonly', width: 'w-16' },
+        { field: 'guest_email', label: 'Email', type: 'email' },
+        { field: 'amount', label: 'Betrag (EUR)', type: 'number', width: 'w-24' },
+        { field: 'reason', label: 'Grund', type: 'text' },
+        { field: 'type', label: 'Typ', type: 'select', options: [
+          { value: 'earned', label: 'Verdient', color: 'bg-green-100 text-green-800' },
+          { value: 'spent', label: 'Ausgegeben', color: 'bg-red-100 text-red-800' },
+        ]},
+        { field: 'created_at', label: 'Datum', type: 'readonly',
+          render: (v: string) => v ? new Date(v).toLocaleDateString('de-DE') : '-' },
+      ] as ColumnDef<any>[]}
+      apiBase="/api/admin/credits"
+      token={token!}
+      onDataChange={setCredits}
+      canAdd={true}
+      canDelete={true}
+      newRowDefaults={{ guest_email: '', amount: 0, reason: '', type: 'earned' }}
+      emptyMessage="Keine Credits vorhanden"
+    />
+  );
+
+  // Dienstleister Tab
+  const DienstleisterTab = () => (
+    <EditableTable
+      data={serviceProviders}
+      columns={[
+        { field: 'id', label: 'ID', type: 'readonly', width: 'w-16' },
+        { field: 'name', label: 'Name', type: 'text' },
+        { field: 'category', label: 'Kategorie', type: 'select', options: [
+          { value: 'Elektriker', label: 'Elektriker' },
+          { value: 'Klempner', label: 'Klempner' },
+          { value: 'Gaertner', label: 'Gaertner' },
+          { value: 'Maler', label: 'Maler' },
+          { value: 'Dachdecker', label: 'Dachdecker' },
+          { value: 'Allrounder', label: 'Allrounder' },
+          { value: 'Sonstiges', label: 'Sonstiges' },
+        ]},
+        { field: 'email', label: 'Email', type: 'email' },
+        { field: 'phone', label: 'Telefon', type: 'text' },
+        { field: 'rating', label: 'Bewertung', type: 'number', width: 'w-24' },
+        { field: 'notes', label: 'Notizen', type: 'textarea' },
+        { field: 'verified', label: 'Verifiziert', type: 'boolean' },
+      ] as ColumnDef<any>[]}
+      apiBase="/api/service-providers"
+      token={token!}
+      onDataChange={setServiceProviders}
+      canAdd={true}
+      canDelete={true}
+      newRowDefaults={{ name: '', category: 'Sonstiges' }}
+      emptyMessage="Keine Dienstleister vorhanden"
+    />
+  );
+
+  // Kosten Tab
+  const KostenTab = () => (
+    <div className="space-y-6">
+      {costsSummary && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-blue-50 rounded-xl p-4">
+            <div className="text-2xl font-bold text-blue-600">{costsSummary.monthly?.toFixed(0) || 0}EUR</div>
+            <div className="text-sm text-blue-700">Monatlich</div>
+          </div>
+          <div className="bg-purple-50 rounded-xl p-4">
+            <div className="text-2xl font-bold text-purple-600">{costsSummary.yearly?.toFixed(0) || 0}EUR</div>
+            <div className="text-sm text-purple-700">Jaehrlich</div>
+          </div>
+          <div className="bg-amber-50 rounded-xl p-4">
+            <div className="text-2xl font-bold text-amber-600">{costsSummary.once?.toFixed(0) || 0}EUR</div>
+            <div className="text-sm text-amber-700">Einmalig</div>
+          </div>
+          <div className="bg-green-50 rounded-xl p-4">
+            <div className="text-2xl font-bold text-green-600">{costsSummary.total_yearly?.toFixed(0) || 0}EUR</div>
+            <div className="text-sm text-green-700">Gesamt/Jahr</div>
+          </div>
+        </div>
+      )}
+      <EditableTable
+        data={costs}
+        columns={[
+          { field: 'id', label: 'ID', type: 'readonly', width: 'w-16' },
+          { field: 'title', label: 'Titel', type: 'text' },
+          { field: 'description', label: 'Beschreibung', type: 'textarea' },
+          { field: 'amount', label: 'Betrag (EUR)', type: 'number', width: 'w-24' },
+          { field: 'frequency', label: 'Frequenz', type: 'select', options: [
+            { value: 'einmalig', label: 'Einmalig' },
+            { value: 'monatlich', label: 'Monatlich', color: 'bg-blue-100 text-blue-800' },
+            { value: 'jaehrlich', label: 'Jaehrlich', color: 'bg-purple-100 text-purple-800' },
+          ]},
+          { field: 'category', label: 'Kategorie', type: 'text' },
+          { field: 'date', label: 'Datum', type: 'date' },
+          { field: 'is_active', label: 'Aktiv', type: 'boolean' },
+        ] as ColumnDef<any>[]}
+        apiBase="/api/costs"
+        token={token!}
+        onDataChange={(newData) => { setCosts(newData); fetchCostsSummary(); }}
+        canAdd={true}
+        canDelete={true}
+        newRowDefaults={{ title: '', amount: 0, frequency: 'einmalig', is_active: true }}
+        emptyMessage="Keine Kosten vorhanden"
+      />
+    </div>
+  );
+
+  // Karte Tab
+  const KarteTab = () => {
+    const [descriptions, setDescriptions] = useState<Record<string, { description: string; updated_at?: string; updated_by?: string }>>({});
+    const [galleryItems, setGalleryItems] = useState<any[]>([]);
+    const [areaFilter, setAreaFilter] = useState('all');
+    const [saving, setSaving] = useState<string | null>(null);
+
+    useEffect(() => {
+      // Fetch descriptions
+      fetch(`${API_BASE}/api/map/area-descriptions`)
+        .then(r => r.json())
+        .then(data => setDescriptions(data))
+        .catch(() => {});
+
+      // Fetch gallery items
+      fetch(`${API_BASE}/api/gallery?include_pending=true`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(r => r.json())
+        .then(data => setGalleryItems(data.items || []))
+        .catch(() => {});
+    }, []);
+
+    const saveDescription = async (areaId: string, description: string) => {
+      setSaving(areaId);
+      try {
+        await fetch(`${API_BASE}/api/admin/map/area-descriptions`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ area_id: areaId, description })
+        });
+        setDescriptions(prev => ({ ...prev, [areaId]: { ...prev[areaId], description } }));
+      } catch (err) {
+        console.error('Failed to save description:', err);
+      }
+      setSaving(null);
+    };
+
+    const assignMapArea = async (itemId: string, mapArea: string) => {
+      try {
+        await fetch(`${API_BASE}/api/admin/gallery/${itemId}/map-area`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ map_area: mapArea || null })
+        });
+        setGalleryItems(prev => prev.map(i => i.id === itemId ? { ...i, map_area: mapArea || null } : i));
+      } catch (err) {
+        console.error('Failed to assign map area:', err);
+      }
+    };
+
+    const filteredGallery = areaFilter === 'all'
+      ? galleryItems
+      : areaFilter === 'none'
+        ? galleryItems.filter(i => !i.map_area)
+        : galleryItems.filter(i => i.map_area === areaFilter);
+
+    return (
+      <div className="space-y-8">
+        {/* Section A: Area Descriptions */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="font-bold text-xl text-gray-800 mb-6">Bereichsbeschreibungen</h3>
+          <div className="space-y-4">
+            {MAP_AREAS.map(area => {
+              const desc = descriptions[area.id]?.description || '';
+              return (
+                <DescriptionEditor
+                  key={area.id}
+                  areaId={area.id}
+                  label={area.label}
+                  initialDescription={desc}
+                  isSaving={saving === area.id}
+                  onSave={saveDescription}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Section B: Photo Assignment */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="font-bold text-xl text-gray-800 mb-4">Fotos zuordnen</h3>
+
+          {/* Filter */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => setAreaFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${areaFilter === 'all' ? 'bg-garden-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              Alle ({galleryItems.length})
+            </button>
+            <button
+              onClick={() => setAreaFilter('none')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${areaFilter === 'none' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              Nicht zugeordnet ({galleryItems.filter(i => !i.map_area).length})
+            </button>
+            {MAP_AREAS.map(area => {
+              const count = galleryItems.filter(i => i.map_area === area.id).length;
+              if (count === 0) return null;
+              return (
+                <button
+                  key={area.id}
+                  onClick={() => setAreaFilter(area.id)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${areaFilter === area.id ? 'bg-garden-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  {area.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Photo Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {filteredGallery.map(item => (
+              <div key={item.id} className="space-y-2">
+                <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                  {item.type === 'video' ? (
+                    <video src={item.url} className="w-full h-full object-cover" />
+                  ) : (
+                    <img
+                      src={item.thumbnailUrl || item.url}
+                      alt={item.name || 'Bild'}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                </div>
+                <select
+                  value={item.map_area || ''}
+                  onChange={e => assignMapArea(item.id, e.target.value)}
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-white"
+                >
+                  <option value="">Kein Bereich</option>
+                  {MAP_AREAS.map(area => (
+                    <option key={area.id} value={area.id}>{area.label}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          {filteredGallery.length === 0 && (
+            <div className="text-center py-8 text-gray-500">Keine Fotos in dieser Kategorie</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Helper component for description editing
+  const DescriptionEditor = ({ areaId, label, initialDescription, isSaving, onSave }: {
+    areaId: string;
+    label: string;
+    initialDescription: string;
+    isSaving: boolean;
+    onSave: (id: string, desc: string) => void;
+  }) => {
+    const [text, setText] = useState(initialDescription);
+    const changed = text !== initialDescription;
+
+    useEffect(() => {
+      setText(initialDescription);
+    }, [initialDescription]);
+
+    return (
+      <div className="flex flex-col sm:flex-row gap-3 items-start p-4 bg-gray-50 rounded-lg">
+        <div className="sm:w-40 font-medium text-gray-700 pt-2">{label}</div>
+        <div className="flex-1 w-full">
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-garden-500 focus:border-transparent"
+            placeholder="Beschreibung eingeben..."
+          />
+        </div>
+        <button
+          onClick={() => onSave(areaId, text)}
+          disabled={!changed || isSaving}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+            changed
+              ? 'bg-garden-600 text-white hover:bg-garden-700'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {isSaving ? 'Speichert...' : 'Speichern'}
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -938,7 +1209,11 @@ export default function AdminDashboard() {
           { key: 'issues', label: `Mängel${pendingIssuesCount > 0 ? ` (${pendingIssuesCount})` : ''}`, badge: pendingIssuesCount > 0 },
           { key: 'bookings', label: 'Buchungen' },
           { key: 'projects', label: 'Projekte' },
-          { key: 'recurring', label: 'Wartung' },
+          { key: 'galerie', label: 'Galerie' },
+          { key: 'credits', label: 'Credits' },
+          { key: 'dienstleister', label: 'Dienstleister' },
+          { key: 'kosten', label: 'Kosten' },
+          { key: 'karte', label: 'Karte' },
           { key: 'users', label: 'User' },
         ].map(tab => (
           <button
@@ -963,7 +1238,11 @@ export default function AdminDashboard() {
       {activeTab === 'issues' && <IssuesTab />}
       {activeTab === 'bookings' && <BookingsTab />}
       {activeTab === 'projects' && <ProjectsTab />}
-      {activeTab === 'recurring' && <RecurringTab />}
+      {activeTab === 'galerie' && <GalerieTab />}
+      {activeTab === 'credits' && <CreditsTab />}
+      {activeTab === 'dienstleister' && <DienstleisterTab />}
+      {activeTab === 'kosten' && <KostenTab />}
+      {activeTab === 'karte' && <KarteTab />}
       {activeTab === 'users' && <UsersTab />}
     </div>
   );

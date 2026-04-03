@@ -26,6 +26,9 @@ from storage import LocalStorage
 JWT_SECRET = os.environ.get('JWT_SECRET', 'voigt-garten-secret-key-change-in-production-2026')
 JWT_EXPIRY_HOURS = 24
 
+if JWT_SECRET == 'voigt-garten-secret-key-change-in-production-2026':
+    print("WARNING: Using default JWT secret! Set JWT_SECRET environment variable in production.")
+
 # Image processing
 try:
     from PIL import Image
@@ -45,7 +48,7 @@ CORS(app, origins=[
 DATA_DIR = os.environ.get('DATA_DIR', '/app/data')
 STATIC_DIR = os.environ.get('STATIC_DIR', '/app/static')
 GALLERY_DIR = os.environ.get('GALLERY_DIR', '/app/public/images/gallery')
-DB_PATH = os.path.join(DATA_DIR, 'gallery.db')
+DB_PATH = os.path.join(DATA_DIR, 'garten.db')
 
 # Ensure directories exist
 os.makedirs(GALLERY_DIR, exist_ok=True)
@@ -65,6 +68,47 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def generic_patch(table, record_id, data, allowed_fields, id_column='id',
+                  json_fields=None, timestamp_field='updated_at'):
+    """Generic PATCH helper for updating database records."""
+    json_fields = json_fields or set()
+    conn = get_db()
+    record = conn.execute(f'SELECT 1 FROM {table} WHERE {id_column} = ?', (record_id,)).fetchone()
+    if not record:
+        conn.close()
+        return jsonify({'error': 'Nicht gefunden'}), 404
+    updates, params = [], []
+    for field in allowed_fields:
+        if field in data:
+            value = data[field]
+            if field in json_fields and not isinstance(value, str):
+                value = json.dumps(value)
+            updates.append(f'{field} = ?')
+            params.append(value)
+    if not updates:
+        conn.close()
+        return jsonify({'error': 'Keine Felder'}), 400
+    if timestamp_field:
+        updates.append(f'{timestamp_field} = ?')
+        params.append(datetime.now().isoformat())
+    params.append(record_id)
+    conn.execute(f'UPDATE {table} SET {", ".join(updates)} WHERE {id_column} = ?', params)
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+def parse_json_fields(row_dict, fields=('assigned_to_list', 'dependencies')):
+    """Parse JSON string fields in a database row dict."""
+    for f in fields:
+        if row_dict.get(f) and isinstance(row_dict[f], str):
+            try:
+                row_dict[f] = json.loads(row_dict[f])
+            except (json.JSONDecodeError, TypeError):
+                row_dict[f] = []
+    return row_dict
 
 
 def init_db():
@@ -213,7 +257,7 @@ def init_db():
     # Create main admin if not exists
     cursor = conn.execute("SELECT id FROM users WHERE email = 'moritzvoigt42@gmail.com'")
     if not cursor.fetchone():
-        admin_password_hash = generate_password_hash('Garten42PasswortFürMoritz')
+        admin_password_hash = generate_password_hash(os.environ.get('ADMIN_PASSWORD_MORITZ', 'changeme'))
         conn.execute('''
             INSERT INTO users (email, username, password_hash, name, role)
             VALUES (?, ?, ?, ?, ?)
@@ -224,7 +268,7 @@ def init_db():
     # Create Konny Voigt admin if not exists
     cursor = conn.execute("SELECT id FROM users WHERE email = 'konny.voigt@web.de'")
     if not cursor.fetchone():
-        konny_password_hash = generate_password_hash('darnok47')
+        konny_password_hash = generate_password_hash(os.environ.get('ADMIN_PASSWORD_KONNY', 'changeme'))
         conn.execute('''
             INSERT INTO users (email, username, password_hash, name, role)
             VALUES (?, ?, ?, ?, ?)
@@ -397,6 +441,43 @@ def migrate_db():
         except Exception:
             pass  # Column already exists
 
+    # -- Phase 2: Merge recurring_tasks into projects --
+    for col_stmt in [
+        "ALTER TABLE projects ADD COLUMN is_recurring BOOLEAN DEFAULT 0",
+        "ALTER TABLE projects ADD COLUMN cycle_days INTEGER",
+        "ALTER TABLE projects ADD COLUMN credit_value REAL DEFAULT 0",
+    ]:
+        try:
+            conn.execute(col_stmt)
+            conn.commit()
+            print(f"Migration: {col_stmt}")
+        except Exception:
+            pass  # Column already exists
+
+    # Migrate recurring_tasks data into projects (one-time)
+    try:
+        existing = conn.execute("SELECT COUNT(*) as c FROM projects WHERE is_recurring = 1").fetchone()['c']
+        if existing == 0:
+            recurring = conn.execute("SELECT * FROM recurring_tasks").fetchall()
+            for rt in recurring:
+                rt = dict(rt)
+                conn.execute('''
+                    INSERT INTO projects (title, description, category, status, priority, effort,
+                        is_recurring, cycle_days, credit_value, due_date, assigned_to, map_area, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 'system-migration')
+                ''', (
+                    rt['title'], rt.get('description'), rt['category'],
+                    'offen' if rt.get('is_active', 1) else 'done',
+                    'mittel', rt.get('effort', 'mittel'),
+                    rt.get('cycle_days', 30), rt.get('credit_value', 0),
+                    rt.get('next_due'), rt.get('assigned_to'), rt.get('map_area')
+                ))
+            conn.commit()
+            if recurring:
+                print(f"Migration: Migrated {len(recurring)} recurring tasks to projects")
+    except Exception as e:
+        print(f"Migration recurring→projects: {e}")
+
     # Seed inventory if empty
     seed_inventory(conn)
 
@@ -409,7 +490,7 @@ def migrate_db():
         ''', (
             'Starlink bestellen, anbringen & einrichten',
             'Komplettpaket Starlink-Internet für den Garten:\n'
-            '1. Starlink Standard Kit bestellen (~300€ Hardware + 50€/Monat)\n'
+            '1. Starlink Standard Kit bestellen (200€ Setup + 49€/Monat)\n'
             '2. Schüssel auf Dach/Mast montieren (Südausrichtung, freie Sicht)\n'
             '3. Stromversorgung sicherstellen (Solar-Erweiterung oder Steckdose im Haus)\n'
             '4. WLAN-Repeater aufstellen für Gartenabdeckung (z.B. TP-Link Outdoor)\n'
@@ -418,21 +499,222 @@ def migrate_db():
             '7. Kamera mit WLAN verbinden & App-Setup (Reolink/Tapo App)\n'
             '8. Fernsteuerung einrichten: Starlink-App + Kamera-App + ggf. Home Assistant\n\n'
             'Geschätzte Gesamtkosten:\n'
-            '- Starlink Kit: ~300€\n'
+            '- Starlink Kit: 200€ Setup\n'
             '- WLAN-Repeater Outdoor: ~50€\n'
             '- Solar-Kamera: ~100€\n'
             '- Montagematerial (Mast, Kabel, Kabelbinder): ~50€\n'
-            '- Gesamt: ~500€ einmalig + 50€/Monat',
+            '- Gesamt: ~400€ einmalig + 49€/Monat',
             'elektrik',
             'offen',
             'hoch',
-            '~500€ einmalig + 50€/Monat',
+            '~400€ einmalig + 49€/Monat',
             'schwer',
             '1-2 Wochenenden',
             'moritzvoigt42@gmail.com'
         ))
         conn.commit()
         print("Seeded Starlink project")
+
+    # Seed tasks from Garten-Brainstorming (April 2026)
+    brainstorming_tasks = [
+        {
+            'title': 'Pachtvertrag mit Opa abschließen',
+            'description': 'Gespräch mit Opa führen und den rechtlichen Rahmen sichern. '
+                '100€/Jahr Pachtvertrag unterschreiben. Du übernimmst Kosten/Aufwand, '
+                'Opa/Oma haben Besuchsrecht, Weingarten und Keller bleiben exklusiv bei ihm.\n\n'
+                'Schritte:\n'
+                '1. Vertragsentwurf (Muster) ausdrucken\n'
+                '2. Gespräch bei einem Glas Wein führen\n'
+                '3. Vertrag beidseitig unterschreiben\n\n'
+                'Wichtigster Schritt - schützt Investitionen vor späteren Erbstreitigkeiten.',
+            'category': 'sonstiges',
+            'status': 'next',
+            'priority': 'kritisch',
+            'estimated_cost': '100€/Jahr Pacht',
+            'effort': 'leicht',
+            'timeframe': '1-2 Stunden',
+            'assigned_to': 'moritzvoigt42@gmail.com',
+        },
+        {
+            'title': 'Oster-Planung & Währungs-Definition mit Familie',
+            'description': 'Familienmeeting über Ostern. Den Plan an die Familie verteilen, '
+                'das "Infinity Space"-Konzept transparent machen und das Mini-Bank-System erklären.\n\n'
+                'Schritte:\n'
+                '1. Aufgabenkatalog für den Garten erstellen\n'
+                '2. Werte festlegen (Wie viel € Aufenthaltsguthaben bringt z.B. Rasenmähen?)\n'
+                '3. Plan an Familie verteilen\n\n'
+                'Verhindert Neid und klärt, dass das System auf Tauschhandel '
+                '(Arbeit gegen Urlaubsguthaben) ohne Geldfluss basiert.',
+            'category': 'sonstiges',
+            'status': 'next',
+            'priority': 'hoch',
+            'estimated_cost': '0€',
+            'effort': 'mittel',
+            'timeframe': 'Halber Tag',
+            'assigned_to': 'moritzvoigt42@gmail.com',
+        },
+        {
+            'title': 'Baumarkt-Besorgungen für Ostern',
+            'description': 'Einkäufe erledigen für alle Reparaturen und Aufgaben, '
+                'die über die Ostertage im Garten mit der Familie abgearbeitet werden sollen.\n\n'
+                'Schritte:\n'
+                '1. Inventar prüfen\n'
+                '2. Einkaufsliste schreiben\n'
+                '3. Baumarkt-Einkauf erledigen',
+            'category': 'sonstiges',
+            'status': 'offen',
+            'priority': 'mittel',
+            'estimated_cost': '100-300€',
+            'effort': 'leicht',
+            'timeframe': '2-3 Stunden',
+            'assigned_to': 'moritzvoigt42@gmail.com',
+        },
+        {
+            'title': 'Hardware-Setup: Starlink & Kameras',
+            'description': 'Internet und Sicherheitsinfrastruktur installieren. '
+                'Starlink aufbauen, Kameras installieren und DSGVO-konforme Warnschilder anbringen.\n\n'
+                'Schritte:\n'
+                '1. Hardware bestellen\n'
+                '2. Starlink installieren\n'
+                '3. Kameras an Außenkanten anbringen\n'
+                '4. Physischen "AUS"-Schalter für Kameras installieren (für Gäste-Vertrauen)\n'
+                '5. Schild "Videoüberwachung" aufhängen\n\n'
+                'Der physische Aus-Schalter ist essenziell für Vertrauen und rechtliche Absicherung bei Vermietung.',
+            'category': 'elektrik',
+            'status': 'offen',
+            'priority': 'hoch',
+            'estimated_cost': '500-1000€',
+            'effort': 'schwer',
+            'timeframe': '1-2 Tage',
+            'assigned_to': 'moritzvoigt42@gmail.com',
+        },
+        {
+            'title': 'Software-Features & Website-Updates',
+            'description': 'Fehlende Funktionen in der Infinity Space42 Software einbauen.\n\n'
+                'Schritte:\n'
+                '1. "Opa-Ansicht" (simples Dashboard) bauen\n'
+                '2. Digitale Checkliste (automatische Inventar-Prüfung für Gäste) codieren\n'
+                '3. Text zu Sicherheit/Kameras auf Website einpflegen\n'
+                '4. Mini-Bank/Guthaben-System finalisieren\n\n'
+                'Macht das System fully-automated und sichert über digitale Inventar-Checkliste ab.',
+            'category': 'sonstiges',
+            'status': 'in_progress',
+            'priority': 'hoch',
+            'estimated_cost': '0€',
+            'effort': 'schwer',
+            'timeframe': 'Mehrere Tage',
+            'assigned_to': 'moritzvoigt42@gmail.com',
+        },
+        {
+            'title': 'Rechtliches Backend & Versicherung',
+            'description': 'Offizielle geschäftliche Seite absichern, damit Vermietung und '
+                'Automatisierung rechtlich sauber unter "Infinity Space" laufen.\n\n'
+                'Schritte:\n'
+                '1. Gewerbeanmeldung auf Vermietung/Tourismus prüfen/erweitern\n'
+                '2. Betriebs-/Grundstückshaftpflichtversicherung abschließen\n'
+                '3. AGBs für Website aufsetzen (inkl. Kautionsregelung als Diebstahlschutz)\n\n'
+                'Schützt vor Schadensersatzforderungen und regelt die Kaution bei Diebstahl.',
+            'category': 'sonstiges',
+            'status': 'offen',
+            'priority': 'mittel',
+            'estimated_cost': '150-300€',
+            'effort': 'mittel',
+            'timeframe': 'Recherche + Telefonate',
+            'assigned_to': 'moritzvoigt42@gmail.com',
+        },
+    ]
+    for task in brainstorming_tasks:
+        existing = conn.execute("SELECT id FROM projects WHERE title = ?", (task['title'],)).fetchone()
+        if not existing:
+            conn.execute('''
+                INSERT INTO projects (title, description, category, status, priority, estimated_cost, effort, timeframe, assigned_to, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                task['title'], task['description'], task['category'], task['status'],
+                task['priority'], task['estimated_cost'], task['effort'], task['timeframe'],
+                task['assigned_to'], 'moritzvoigt42@gmail.com'
+            ))
+    conn.commit()
+    print("Seeded brainstorming tasks")
+
+    # Map area descriptions table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS map_area_descriptions (
+            area_id TEXT PRIMARY KEY,
+            description TEXT NOT NULL DEFAULT '',
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_by TEXT
+        )
+    ''')
+    conn.commit()
+
+    # Seed default area descriptions
+    default_areas = [
+        ('haus', 'Gartenhaus mit Wohnbereich, Küche und Bad'),
+        ('wintergarten', 'Verglaster Wintergarten am Haus'),
+        ('terrasse', 'Terrasse mit Sitzbereich'),
+        ('carport', 'Überdachter Stellplatz'),
+        ('schuppen-1', 'Geräteschuppen'),
+        ('schuppen-2', 'Zweiter Schuppen'),
+        ('schuppen-3', 'Dritter Schuppen'),
+        ('schuppen-4', 'Vierter Schuppen'),
+        ('brunnen', 'Brunnen (50m tief)'),
+        ('beete-ost', 'Beete im östlichen Bereich'),
+        ('beete-west', 'Beete im westlichen Bereich'),
+        ('wiese-oben', 'Obere Wiesenfläche'),
+        ('wiese-unten', 'Untere Wiesenfläche'),
+        ('obstbaeume', 'Obstbaumbestand'),
+        ('hecke-nord', 'Hecke Nordseite'),
+        ('einfahrt', 'Einfahrt und Zufahrtsweg'),
+        ('kompost', 'Kompostbereich'),
+    ]
+    for area_id, desc in default_areas:
+        conn.execute(
+            'INSERT OR IGNORE INTO map_area_descriptions (area_id, description) VALUES (?, ?)',
+            (area_id, desc)
+        )
+    conn.commit()
+
+    # Add map_area column to gallery_images
+    try:
+        conn.execute("ALTER TABLE gallery_images ADD COLUMN map_area TEXT")
+        conn.commit()
+        print("Migration: Added map_area column to gallery_images")
+    except Exception:
+        pass  # Column already exists
+
+    # Garden costs table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS garden_costs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            amount REAL NOT NULL,
+            frequency TEXT DEFAULT 'einmalig',
+            category TEXT,
+            date TEXT,
+            end_date TEXT,
+            is_active BOOLEAN DEFAULT 1,
+            related_project_id INTEGER,
+            created_by TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+
+    # Seed costs if empty
+    costs_count = conn.execute("SELECT COUNT(*) as c FROM garden_costs").fetchone()['c']
+    if costs_count == 0:
+        conn.execute('''
+            INSERT INTO garden_costs (title, description, amount, frequency, category, is_active, created_by)
+            VALUES (?, ?, ?, ?, ?, 1, 'system')
+        ''', ('Starlink Internet', 'Monatliche Starlink-Gebühr', 49.0, 'monatlich', 'Internet'))
+        conn.execute('''
+            INSERT INTO garden_costs (title, description, amount, frequency, category, is_active, created_by)
+            VALUES (?, ?, ?, ?, ?, 1, 'system')
+        ''', ('Grundstückspacht', 'Jährliche Pacht an Opa', 100.0, 'jährlich', 'Pacht'))
+        conn.commit()
+        print("Seeded garden costs")
 
     conn.close()
     print("Database migrations complete")
@@ -833,6 +1115,7 @@ def get_gallery():
     """Get all gallery images with proper URLs."""
     category = request.args.get('category')
     include_pending = request.args.get('include_pending', 'false') == 'true'
+    map_area_filter = request.args.get('map_area')
     # Check if current user is admin for pending access
     user = get_current_user()
     is_admin = user and user.get('role') == 'admin'
@@ -894,6 +1177,10 @@ def get_gallery():
             else:
                 item['originalUrl'] = f"/images/gallery/{cat}/{orig_path}"
         formatted_items.append(item)
+
+    # Filter by map_area if specified
+    if map_area_filter:
+        formatted_items = [i for i in formatted_items if i.get('map_area') == map_area_filter]
 
     return jsonify({
         'items': formatted_items,
@@ -1312,6 +1599,52 @@ def get_credits():
     })
 
 
+@app.route('/api/admin/credits', methods=['GET'])
+@require_admin
+def get_all_credits(user):
+    """Admin: Get all credits."""
+    conn = get_db()
+    credits = conn.execute('SELECT * FROM credits ORDER BY created_at DESC').fetchall()
+    conn.close()
+    return jsonify({'credits': [dict(c) for c in credits]})
+
+
+@app.route('/api/admin/credits', methods=['POST'])
+@require_admin
+def create_credit(user):
+    """Admin: Create a credit entry."""
+    data = request.json
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO credits (guest_email, amount, reason, type, created_at)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (data['guest_email'], data['amount'], data['reason'],
+          data.get('type', 'earned'), datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/credits/<int:credit_id>', methods=['PATCH'])
+@require_admin
+def update_credit(credit_id, user):
+    """Admin: Update a credit entry."""
+    return generic_patch('credits', credit_id, request.json,
+        ['guest_email', 'amount', 'reason', 'type'],
+        timestamp_field=None)
+
+
+@app.route('/api/admin/credits/<int:credit_id>', methods=['DELETE'])
+@require_admin
+def delete_credit(credit_id, user):
+    """Admin: Delete a credit entry."""
+    conn = get_db()
+    conn.execute('DELETE FROM credits WHERE id = ?', (credit_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
 @app.route('/api/maintenance/complete', methods=['POST'])
 def complete_maintenance():
     """Mark a maintenance task as complete."""
@@ -1723,16 +2056,11 @@ def get_projects():
 
     result = []
     for p in projects:
-        proj = dict(p)
-        # Parse JSON fields stored as text
-        for field in ('assigned_to_list', 'dependencies'):
-            if proj.get(field) and isinstance(proj[field], str):
-                try:
-                    proj[field] = json.loads(proj[field])
-                except (json.JSONDecodeError, TypeError):
-                    proj[field] = []
-            elif not proj.get(field):
-                proj[field] = []
+        proj = parse_json_fields(dict(p))
+        if not proj.get('assigned_to_list'):
+            proj['assigned_to_list'] = []
+        if not proj.get('dependencies'):
+            proj['dependencies'] = []
         result.append(proj)
 
     return jsonify({
@@ -1788,15 +2116,11 @@ def get_project(project_id):
     if not project:
         return jsonify({'error': 'Projekt nicht gefunden'}), 404
 
-    proj = dict(project)
-    for field in ('assigned_to_list', 'dependencies'):
-        if proj.get(field) and isinstance(proj[field], str):
-            try:
-                proj[field] = json.loads(proj[field])
-            except (json.JSONDecodeError, TypeError):
-                proj[field] = []
-        elif not proj.get(field):
-            proj[field] = []
+    proj = parse_json_fields(dict(project))
+    if not proj.get('assigned_to_list'):
+        proj['assigned_to_list'] = []
+    if not proj.get('dependencies'):
+        proj['dependencies'] = []
 
     return jsonify({'project': proj})
 
@@ -1929,6 +2253,32 @@ def complete_project(project_id, user):
                 updated_at = ?
             WHERE parent_task_id = ? AND status != 'done'
         ''', (now_iso, user['email'], now_iso, project_id))
+
+    # Auto-recreate recurring tasks
+    project_dict = dict(project)
+    if project_dict.get('is_recurring') and project_dict.get('cycle_days'):
+        from datetime import date
+        next_due = (date.today() + timedelta(days=project_dict['cycle_days'])).isoformat()
+        conn.execute('''
+            INSERT INTO projects (title, description, category, status, priority, effort,
+                is_recurring, cycle_days, credit_value, due_date, assigned_to, map_area, created_by)
+            VALUES (?, ?, ?, 'offen', ?, ?, 1, ?, ?, ?, ?, ?, ?)
+        ''', (
+            project_dict['title'], project_dict.get('description'), project_dict['category'],
+            project_dict.get('priority', 'mittel'), project_dict.get('effort', 'mittel'),
+            project_dict['cycle_days'], project_dict.get('credit_value', 0),
+            next_due, project_dict.get('assigned_to'), project_dict.get('map_area'),
+            project_dict.get('created_by', 'system')
+        ))
+        # Auto-award credit
+        if project_dict.get('credit_value') and project_dict['credit_value'] > 0:
+            conn.execute('''
+                INSERT INTO credits (guest_email, amount, reason, type, created_at)
+                VALUES (?, ?, ?, 'earned', ?)
+            ''', (
+                user['email'], project_dict['credit_value'],
+                f"Wiederkehrend: {project_dict['title']}", now_iso
+            ))
 
     conn.commit()
     conn.close()
@@ -2178,24 +2528,12 @@ def admin_bookings(user):
 @app.route('/api/admin/bookings/<int:booking_id>', methods=['PATCH'])
 @require_admin
 def update_booking(booking_id, user):
-    """Update booking status."""
+    """Update booking details."""
     data = request.json
-
-    conn = get_db()
-    booking = conn.execute('SELECT * FROM bookings WHERE id = ?', (booking_id,)).fetchone()
-
-    if not booking:
-        conn.close()
-        return jsonify({'error': 'Buchung nicht gefunden'}), 404
-
-    status = data.get('status')
-    if status and status in ['pending', 'confirmed', 'cancelled']:
-        conn.execute('UPDATE bookings SET status = ? WHERE id = ?', (status, booking_id))
-        conn.commit()
-
-    conn.close()
-
-    return jsonify({'success': True, 'message': 'Buchung aktualisiert'})
+    return generic_patch('bookings', booking_id, data,
+        ['guest_name', 'guest_email', 'guest_phone', 'check_in', 'check_out',
+         'guests', 'has_pets', 'total_price', 'discount_code', 'notes', 'status'],
+        timestamp_field=None)
 
 
 # ============ Recurring Tasks Routes ============
@@ -2753,20 +3091,10 @@ def get_unified_tasks():
                 p['due_status'] = 'ok'
 
             # Parse JSON fields stored as text
-            if p.get('assigned_to_list'):
-                try:
-                    p['assigned_to_list'] = json.loads(p['assigned_to_list'])
-                except (json.JSONDecodeError, TypeError):
-                    p['assigned_to_list'] = []
-            else:
+            parse_json_fields(p)
+            if not p.get('assigned_to_list'):
                 p['assigned_to_list'] = []
-
-            if p.get('dependencies'):
-                try:
-                    p['dependencies'] = json.loads(p['dependencies'])
-                except (json.JSONDecodeError, TypeError):
-                    p['dependencies'] = []
-            else:
+            if not p.get('dependencies'):
                 p['dependencies'] = []
 
             # Computed fields
@@ -2831,13 +3159,20 @@ def get_map_areas():
     today = datetime.now().date()
     areas = {}
 
+    # Load descriptions
+    for row in conn.execute('SELECT area_id, description FROM map_area_descriptions').fetchall():
+        areas[row['area_id']] = {
+            'task_count': 0, 'status': 'ok', 'inventory_count': 0,
+            'description': row['description'] or '', 'photo_count': 0
+        }
+
     # Count open projects per area
     for row in conn.execute(
         "SELECT map_area, COUNT(*) as cnt FROM projects WHERE map_area IS NOT NULL AND status NOT IN ('erledigt', 'abgeschlossen') GROUP BY map_area"
     ).fetchall():
         area = row['map_area']
         if area not in areas:
-            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0}
+            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0, 'description': '', 'photo_count': 0}
         areas[area]['task_count'] += row['cnt']
 
     # Count and check recurring tasks per area
@@ -2846,7 +3181,7 @@ def get_map_areas():
     ).fetchall():
         area = row['map_area']
         if area not in areas:
-            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0}
+            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0, 'description': '', 'photo_count': 0}
         areas[area]['task_count'] += 1
 
         if row['next_due']:
@@ -2868,11 +3203,85 @@ def get_map_areas():
     """).fetchall():
         area = row['map_area']
         if area not in areas:
-            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0}
+            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0, 'description': '', 'photo_count': 0}
         areas[area]['inventory_count'] = row['cnt']
+
+    # Count gallery photos per area
+    for row in conn.execute(
+        "SELECT map_area, COUNT(*) as cnt FROM gallery_images WHERE map_area IS NOT NULL AND status = 'approved' GROUP BY map_area"
+    ).fetchall():
+        area = row['map_area']
+        if area not in areas:
+            areas[area] = {'task_count': 0, 'status': 'ok', 'inventory_count': 0, 'description': '', 'photo_count': 0}
+        areas[area]['photo_count'] = row['cnt']
 
     conn.close()
     return jsonify({'areas': areas})
+
+
+@app.route('/api/map/area-descriptions', methods=['GET'])
+def get_area_descriptions():
+    """Get all map area descriptions."""
+    conn = get_db()
+    rows = conn.execute('SELECT area_id, description, updated_at, updated_by FROM map_area_descriptions').fetchall()
+    conn.close()
+    return jsonify({row['area_id']: {'description': row['description'], 'updated_at': row['updated_at'], 'updated_by': row['updated_by']} for row in rows})
+
+
+@app.route('/api/admin/map/area-descriptions', methods=['PUT'])
+@require_admin
+def update_area_description(user):
+    """Admin: Update a map area description."""
+    data = request.get_json()
+    area_id = data.get('area_id')
+    description = data.get('description', '')
+
+    if not area_id:
+        return jsonify({'error': 'area_id erforderlich'}), 400
+
+    conn = get_db()
+    conn.execute(
+        '''INSERT INTO map_area_descriptions (area_id, description, updated_at, updated_by)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(area_id) DO UPDATE SET description = ?, updated_at = ?, updated_by = ?''',
+        (area_id, description, datetime.now().isoformat(), user.get('email'),
+         description, datetime.now().isoformat(), user.get('email'))
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/gallery/<item_id>/map-area', methods=['PATCH'])
+@require_admin
+def update_gallery_map_area(item_id, user):
+    """Admin: Assign a gallery item to a map area."""
+    data = request.get_json()
+    map_area = data.get('map_area')  # None or '' to remove
+
+    conn = get_db()
+    item = conn.execute('SELECT id FROM gallery_images WHERE id = ?', (item_id,)).fetchone()
+    if not item:
+        conn.close()
+        return jsonify({'error': 'Bild nicht gefunden'}), 404
+
+    conn.execute(
+        'UPDATE gallery_images SET map_area = ? WHERE id = ?',
+        (map_area if map_area else None, item_id)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/gallery/<item_id>', methods=['PATCH'])
+@require_admin
+def update_gallery_item(item_id, user):
+    """Admin: Update gallery item metadata."""
+    data = request.json
+    return generic_patch('gallery_images', item_id, data,
+        ['name', 'description', 'category', 'status'],
+        timestamp_field=None)
 
 
 @app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
@@ -3072,6 +3481,45 @@ def create_inventory_room(user):
         return jsonify({'error': 'Raum existiert bereits'}), 409
     conn.close()
     return jsonify({'success': True, 'id': rid}), 201
+
+
+@app.route('/api/inventory/floors/<floor_id>', methods=['PATCH'])
+@require_auth
+def update_floor(floor_id, user):
+    """Update a floor."""
+    return generic_patch('inventory_floors', floor_id, request.json,
+        ['name', 'icon', 'sort_order'], timestamp_field=None)
+
+
+@app.route('/api/inventory/rooms/<room_id>', methods=['DELETE'])
+@require_auth
+def delete_room(room_id, user):
+    """Delete a room (only if empty)."""
+    conn = get_db()
+    items = conn.execute('SELECT COUNT(*) as c FROM inventory_items WHERE room_id = ?', (room_id,)).fetchone()['c']
+    if items > 0:
+        conn.close()
+        return jsonify({'error': f'Raum enthält noch {items} Gegenstände'}), 400
+    conn.execute('DELETE FROM inventory_rooms WHERE id = ?', (room_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/inventory/buildings/<building_id>', methods=['DELETE'])
+@require_admin
+def delete_building(building_id, user):
+    """Admin: Delete a building (only if no rooms)."""
+    conn = get_db()
+    rooms = conn.execute('SELECT COUNT(*) as c FROM inventory_rooms WHERE building_id = ?', (building_id,)).fetchone()['c']
+    if rooms > 0:
+        conn.close()
+        return jsonify({'error': f'Gebäude enthält noch {rooms} Räume'}), 400
+    conn.execute('DELETE FROM inventory_floors WHERE building_id = ?', (building_id,))
+    conn.execute('DELETE FROM inventory_buildings WHERE id = ?', (building_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 
 @app.route('/api/inventory/items', methods=['GET'])
@@ -3463,12 +3911,8 @@ def get_blockers(id):
         conn.close()
         return jsonify({'error': 'Projekt nicht gefunden'}), 404
 
-    dep_ids = []
-    if project['dependencies']:
-        try:
-            dep_ids = json.loads(project['dependencies'])
-        except (json.JSONDecodeError, TypeError):
-            pass
+    proj_dict = parse_json_fields(dict(project))
+    dep_ids = proj_dict.get('dependencies') or []
 
     blockers = []
     for dep_id in dep_ids:
@@ -3541,6 +3985,77 @@ def delete_comment(comment_id, user):
     conn.close()
 
     return jsonify({'success': True, 'message': 'Kommentar gelöscht'})
+
+
+# ============ Garden Costs Routes ============
+
+@app.route('/api/costs', methods=['GET'])
+@require_auth
+def get_costs(user):
+    """Get all garden costs."""
+    conn = get_db()
+    costs = conn.execute('SELECT * FROM garden_costs ORDER BY is_active DESC, created_at DESC').fetchall()
+    conn.close()
+    return jsonify({'costs': [dict(c) for c in costs]})
+
+
+@app.route('/api/costs', methods=['POST'])
+@require_admin
+def create_cost(user):
+    """Admin: Create a garden cost entry."""
+    data = request.json
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO garden_costs (title, description, amount, frequency, category, date, end_date, is_active, related_project_id, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (data['title'], data.get('description'), data['amount'],
+          data.get('frequency', 'einmalig'), data.get('category'),
+          data.get('date'), data.get('end_date'),
+          data.get('is_active', 1), data.get('related_project_id'),
+          user['email']))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/costs/<int:cost_id>', methods=['PATCH'])
+@require_admin
+def update_cost(cost_id, user):
+    """Admin: Update a garden cost entry."""
+    return generic_patch('garden_costs', cost_id, request.json,
+        ['title', 'description', 'amount', 'frequency', 'category',
+         'date', 'end_date', 'is_active', 'related_project_id'],
+        timestamp_field=None)
+
+
+@app.route('/api/costs/<int:cost_id>', methods=['DELETE'])
+@require_admin
+def delete_cost(cost_id, user):
+    """Admin: Delete a garden cost entry."""
+    conn = get_db()
+    conn.execute('DELETE FROM garden_costs WHERE id = ?', (cost_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/costs/summary', methods=['GET'])
+@require_auth
+def costs_summary(user):
+    """Get cost summary with monthly/yearly totals."""
+    conn = get_db()
+    costs = conn.execute('SELECT * FROM garden_costs WHERE is_active = 1').fetchall()
+    conn.close()
+    monthly = sum(c['amount'] for c in costs if c['frequency'] == 'monatlich')
+    yearly = sum(c['amount'] for c in costs if c['frequency'] == 'jährlich')
+    once = sum(c['amount'] for c in costs if c['frequency'] == 'einmalig')
+    total_yearly = monthly * 12 + yearly + once
+    return jsonify({
+        'monthly': monthly,
+        'yearly': yearly,
+        'once': once,
+        'total_yearly': total_yearly
+    })
 
 
 # Initialize database on startup

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import TaskDetailModal from './TaskDetailModal';
 import IssueReportModal from './IssueReportModal';
-import GanttTimeline from './GanttTimeline';
+
 
 interface User {
   id: number;
@@ -41,8 +41,8 @@ interface Task {
   last_completed_at?: string;
   last_completed_by?: string;
   // New fields
+  is_recurring?: boolean;
   parent_task_id?: number;
-  start_date?: string;
   due_date?: string;
   dependencies?: number[];
   assigned_to_list?: Assignee[];
@@ -88,9 +88,9 @@ const STATUS_COLUMNS = [
   { id: 'done', label: 'Erledigt', color: 'bg-green-100' },
 ];
 
-type SortField = 'title' | 'category' | 'task_type' | 'status' | 'credit_value' | 'start_date' | 'due_date' | 'priority' | 'created_at';
+type SortField = 'title' | 'category' | 'task_type' | 'status' | 'credit_value' | 'due_date' | 'priority' | 'created_at';
 type SortOrder = 'asc' | 'desc';
-type ViewMode = 'kanban' | 'list' | 'timeline' | 'split';
+type ViewMode = 'kanban' | 'list';
 
 const PROVIDER_CATEGORY_ICONS: Record<string, string> = {
   'Elektriker': '⚡',
@@ -330,10 +330,6 @@ export default function UnifiedKanban() {
 
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent, task: Task) => {
-    if (task.task_type !== 'project') {
-      e.preventDefault();
-      return;
-    }
     setDraggedTask(task);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', task.id.toString());
@@ -353,7 +349,7 @@ export default function UnifiedKanban() {
     e.preventDefault();
     setDragOverColumn(null);
 
-    if (!draggedTask || draggedTask.task_type !== 'project') {
+    if (!draggedTask) {
       setDraggedTask(null);
       return;
     }
@@ -411,7 +407,7 @@ export default function UnifiedKanban() {
       }
 
       if (filterStatuses.length > 0) {
-        const status = task.task_type === 'recurring' ? task.due_status : task.status;
+        const status = task.status;
         if (status && !filterStatuses.includes(status)) return false;
       }
       return true;
@@ -426,8 +422,8 @@ export default function UnifiedKanban() {
       let bVal: any = b[sortField as keyof Task];
 
       if (sortField === 'status') {
-        aVal = a.task_type === 'recurring' ? a.due_status : a.status;
-        bVal = b.task_type === 'recurring' ? b.due_status : b.status;
+        aVal = a.status;
+        bVal = b.status;
       }
 
       if (sortField === 'priority') {
@@ -458,13 +454,7 @@ export default function UnifiedKanban() {
 
   const getTasksByStatus = (status: string) => {
     const filtered = getFilteredTasks();
-    return filtered.filter(t => {
-      if (t.task_type === 'recurring') {
-        if (status === 'offen' && (t.due_status === 'overdue' || t.due_status === 'due-soon')) return true;
-        return false;
-      }
-      return (t.status || 'offen') === status;
-    });
+    return filtered.filter(t => (t.status || 'offen') === status);
   };
 
   // Multi-select filter component
@@ -612,13 +602,13 @@ export default function UnifiedKanban() {
     return (
       <div
         key={`${task.task_type}-${task.id}`}
-        draggable={draggable && task.task_type === 'project'}
+        draggable={draggable}
         onDragStart={(e) => handleDragStart(e, task)}
         onDragEnd={handleDragEnd}
         onClick={() => handleTaskClick(task)}
         className={`p-4 rounded-lg border-l-4 ${priorityClass} shadow-sm hover:shadow-md transition cursor-pointer mb-3 ${
           isDragging ? 'opacity-50' : ''
-        } ${draggable && task.task_type === 'project' ? 'cursor-grab active:cursor-grabbing' : ''} ${
+        } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${
           isBlocked ? 'ring-2 ring-red-300' : ''
         }`}
       >
@@ -634,8 +624,8 @@ export default function UnifiedKanban() {
                 💬{task.comment_count}
               </span>
             )}
-            {task.task_type === 'recurring' && (
-              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full whitespace-nowrap">
+            {task.is_recurring && task.cycle_days && (
+              <span className="text-xs text-blue-600" title={`Alle ${task.cycle_days} Tage`}>
                 🔄 {task.cycle_days}d
               </span>
             )}
@@ -658,7 +648,7 @@ export default function UnifiedKanban() {
         )}
 
         {/* Due Status for Recurring */}
-        {task.task_type === 'recurring' && task.due_status && (
+        {task.is_recurring && task.due_status && (
           <div className={`mt-2 text-xs font-medium ${
             task.due_status === 'overdue' ? 'text-red-600' :
             task.due_status === 'due-soon' ? 'text-amber-600' : 'text-green-600'
@@ -668,8 +658,8 @@ export default function UnifiedKanban() {
           </div>
         )}
 
-        {/* Due Date for Projects */}
-        {task.task_type === 'project' && task.due_date && (
+        {/* Due Date */}
+        {!task.is_recurring && task.due_date && (
           <div className="mt-2 text-xs text-gray-500">
             📅 {new Date(task.due_date).toLocaleDateString('de-DE')}
           </div>
@@ -835,8 +825,8 @@ export default function UnifiedKanban() {
                       <div>
                         <div className="font-medium text-gray-900">{task.title}</div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          {task.task_type === 'recurring' && (
-                            <span className="text-xs text-purple-600">🔄 {task.cycle_days}d</span>
+                          {task.is_recurring && task.cycle_days && (
+                            <span className="text-xs text-blue-600">🔄 {task.cycle_days}d</span>
                           )}
                           {task.comment_count && task.comment_count > 0 && (
                             <span className="text-xs text-gray-400">💬{task.comment_count}</span>
@@ -865,17 +855,7 @@ export default function UnifiedKanban() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {task.task_type === 'recurring' ? (
-                      <span className={`text-sm font-medium ${
-                        task.due_status === 'overdue' ? 'text-red-600' :
-                        task.due_status === 'due-soon' ? 'text-amber-600' : 'text-green-600'
-                      }`}>
-                        {task.due_status === 'overdue' ? 'Überfällig' :
-                         task.due_status === 'due-soon' ? 'Bald fällig' : 'OK'}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-gray-600">{task.status || 'offen'}</span>
-                    )}
+                    <span className="text-sm text-gray-600">{task.status || 'offen'}</span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">
                     {task.due_date ? new Date(task.due_date).toLocaleDateString('de-DE') :
@@ -895,21 +875,6 @@ export default function UnifiedKanban() {
       </div>
     );
   };
-
-  const renderTimelineView = () => (
-    <GanttTimeline
-      tasks={getFilteredTasks()}
-      onTaskUpdate={handleTaskUpdate}
-      onTaskClick={handleTaskClick}
-    />
-  );
-
-  const renderSplitView = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div>{renderKanbanView()}</div>
-      <div>{renderTimelineView()}</div>
-    </div>
-  );
 
   // Stats
   const filteredTasks = getFilteredTasks();
@@ -1140,24 +1105,6 @@ export default function UnifiedKanban() {
             >
               📝 Liste
             </button>
-            <button
-              onClick={() => setViewMode('timeline')}
-              className={`px-3 py-1 rounded text-sm font-medium transition ${
-                viewMode === 'timeline' ? 'bg-white shadow text-garden-600' : 'text-gray-600'
-              }`}
-              title="Timeline"
-            >
-              📊 Timeline
-            </button>
-            <button
-              onClick={() => setViewMode('split')}
-              className={`px-3 py-1 rounded text-sm font-medium transition hidden lg:block ${
-                viewMode === 'split' ? 'bg-white shadow text-garden-600' : 'text-gray-600'
-              }`}
-              title="Split"
-            >
-              ⬜ Split
-            </button>
           </div>
         </div>
       </div>
@@ -1174,12 +1121,8 @@ export default function UnifiedKanban() {
         </div>
       ) : viewMode === 'kanban' ? (
         renderKanbanView()
-      ) : viewMode === 'list' ? (
-        renderListView()
-      ) : viewMode === 'timeline' ? (
-        renderTimelineView()
       ) : (
-        renderSplitView()
+        renderListView()
       )}
 
       {/* FAB for mobile - New Task */}

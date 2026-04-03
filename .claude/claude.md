@@ -13,7 +13,7 @@ Cloudflare Tunnel (garten.infinityspace42.de)
     |
 Docker Container (voigt-garten-app:5055)
     |-- Flask/Gunicorn (API + Static Files)
-    |-- SQLite DB (/app/data/gallery.db)
+    |-- SQLite DB (/app/data/garten.db)
     |-- Bilder (/app/public/images/gallery/)
     |
 Volume Mounts -> Server Filesystem
@@ -48,6 +48,8 @@ Volume Mounts -> Server Filesystem
 |   |-- components/
 |       |-- InventarPage.tsx    # Inventar Frontend (Gebäude/Räume/Gegenstände)
 |       |-- VerifyPage.tsx      # Magic Link Verify Frontend
+|       |-- EditableTable.tsx   # Wiederverwendbare inline-editierbare Tabelle
+|       |-- AdminDashboard.tsx  # Admin-Dashboard (nutzt EditableTable für alle Tabs)
 |-- public/                 # Static Assets
 |   |-- images/gallery/     # Hochgeladene Bilder (Volume)
 |-- docs/                   # Dokumentation zum Garten
@@ -60,7 +62,7 @@ Volume Mounts -> Server Filesystem
 |   |-- telegram_service.py # Telegram Bot Moderation
 |   |-- telegram_agent.py   # Autonomer Telegram Bot Agent (@Garten_Bot)
 |   |-- storage.py          # Storage-Interface (Local + erweiterbar)
-|   |-- gallery.db          # SQLite (Volume)
+|   |-- garten.db           # SQLite (Volume)
 |   |-- requirements.txt
 |   |-- start.sh            # Init + Migration + Gunicorn Start
 |-- .claude/
@@ -197,6 +199,52 @@ Response: { "success": true }
 
 DELETE /api/inventory/items/{item_id}
 Response: { "success": true }
+
+PATCH /api/inventory/floors/{floor_id}
+Body: { "name", "icon", "sort_order" }
+
+DELETE /api/inventory/rooms/{room_id}
+Response: { "success": true } (fails if room has items)
+
+DELETE /api/inventory/buildings/{building_id}
+Response: { "success": true } (fails if building has rooms)
+```
+
+### Admin Galerie
+```
+PATCH /api/admin/gallery/{item_id}  (Admin only)
+Body: { "name", "description", "category", "status" }
+```
+
+### Admin Credits
+```
+GET /api/admin/credits  (Admin only)
+Response: { "credits": [...] }
+
+POST /api/admin/credits  (Admin only)
+Body: { "guest_email", "amount", "reason", "type" }
+
+PATCH /api/admin/credits/{credit_id}  (Admin only)
+Body: { "guest_email", "amount", "reason", "type" }
+
+DELETE /api/admin/credits/{credit_id}  (Admin only)
+```
+
+### Kosten (Kostensystem)
+```
+GET /api/costs
+Response: { "costs": [...] }
+
+POST /api/costs  (Admin only)
+Body: { "title", "amount", "frequency", "category", "date", "is_active" }
+
+PATCH /api/costs/{cost_id}  (Admin only)
+Body: { "title", "amount", "frequency", "category", ... }
+
+DELETE /api/costs/{cost_id}  (Admin only)
+
+GET /api/costs/summary
+Response: { "monthly": 49.0, "yearly": 100.0, "once": 0, "total_yearly": 688.0 }
 ```
 
 ---
@@ -412,6 +460,34 @@ CREATE TABLE inventory_furniture_meta (
 );
 ```
 
+### garden_costs
+```sql
+CREATE TABLE garden_costs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    amount REAL NOT NULL,
+    frequency TEXT DEFAULT 'einmalig',  -- 'einmalig', 'monatlich', 'jährlich'
+    category TEXT,
+    date TEXT,
+    end_date TEXT,
+    is_active BOOLEAN DEFAULT 1,
+    related_project_id INTEGER,
+    created_by TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### projects (erweiterte Felder)
+```sql
+-- Recurring Tasks sind jetzt in projects integriert:
+ALTER TABLE projects ADD COLUMN is_recurring BOOLEAN DEFAULT 0;
+ALTER TABLE projects ADD COLUMN cycle_days INTEGER;
+ALTER TABLE projects ADD COLUMN credit_value REAL DEFAULT 0;
+-- Wenn is_recurring=1 und ein Task abgeschlossen wird, erstellt complete_project
+-- automatisch einen neuen Task mit due_date = heute + cycle_days
+```
+
 ---
 
 ## Bekannte Pitfalls
@@ -553,8 +629,8 @@ Keyword-basierter Bot (kein LLM), verarbeitet Nachrichten im konfigurierten Chat
 
 ---
 
-**Version:** 1.3
+**Version:** 2.0
 **Erstellt:** 2026-01-26
-**Aktualisiert:** 2026-04-01
+**Aktualisiert:** 2026-04-03
 **Hosting:** Hetzner CX32 Cloud Server (4 vCPU, 8GB RAM, 80GB SSD, Debian 13, Falkenstein) via Cloudflare Tunnel
 **SSH:** `ssh is42` (moritz@49.12.244.18)
