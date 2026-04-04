@@ -20,7 +20,7 @@ import json
 import functools
 import secrets
 from collections import deque
-from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification, send_magic_link_email, send_welcome_email
+from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification, send_magic_link_email, send_welcome_email, send_feedback_request, send_google_review_followup, send_payment_reminder
 from telegram_service import send_moderation_request, answer_callback_query, notify_admin, notify_booking, notify_feedback, notify_email_sent
 from storage import LocalStorage
 
@@ -691,6 +691,280 @@ def migrate_db():
             ))
     conn.commit()
     print("Seeded brainstorming tasks")
+
+    # Seed legal/regulatory tasks from Gemini analysis (April 2026)
+    legal_tasks = [
+        # Cluster 1: Gewerbeanmeldung
+        {
+            'title': 'Einzelunternehmen "Natur Refugium Etzdorf" anmelden',
+            'description': 'Gewerbeanmeldung beim zuständigen Gewerbeamt.\n\n'
+                'Schritte:\n'
+                '1. Gewerbeamt der Gemeinde identifizieren\n'
+                '2. Gewerbeanmeldung ausfüllen: "Vermietung von Ferienunterkünften"\n'
+                '3. Anmeldung einreichen (Kosten ca. 20-65€)\n'
+                '4. Bestätigung abwarten',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'hoch',
+            'estimated_cost': '20-65€',
+            'effort': 'leicht',
+            'timeframe': '1-2 Stunden + Bearbeitungszeit',
+        },
+        {
+            'title': 'Kleinunternehmerregelung (§19 UStG) prüfen & beantragen',
+            'description': 'Steuerliche Einordnung für Ferienvermietung klären.\n\n'
+                'Schritte:\n'
+                '1. Erwarteten Jahresumsatz kalkulieren (Grenze: 22.000€)\n'
+                '2. Fragebogen zur steuerlichen Erfassung ausfüllen\n'
+                '3. Beim Finanzamt einreichen\n'
+                '4. Steuernummer erhalten → in site_config eintragen',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'hoch',
+            'estimated_cost': '0€',
+            'effort': 'mittel',
+            'timeframe': '2-4 Wochen Bearbeitungszeit',
+        },
+        # Cluster 2: Sanitär & Wasser
+        {
+            'title': 'Trockentrenntoilette einbauen',
+            'description': 'Aktuelle Plumpsklo-Lösung ist für Vermietung nicht zulässig. '
+                'Trockentrenntoilette als legale, autarke Alternative.\n\n'
+                'Schritte:\n'
+                '1. Modell auswählen (z.B. Separett, Kildwick)\n'
+                '2. Einbauort vorbereiten\n'
+                '3. Installation\n'
+                '4. Entsorgungskonzept für Feststoffe erstellen',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'hoch',
+            'estimated_cost': '500-1500€',
+            'effort': 'schwer',
+            'timeframe': '1-2 Tage Installation',
+        },
+        {
+            'title': '"Kein Trinkwasser" Beschilderung anbringen',
+            'description': 'Brunnen ist kein geprüftes Trinkwasser. Rechtliche Pflicht zur Kennzeichnung.\n\n'
+                'Schritte:\n'
+                '1. Schilder bestellen/drucken\n'
+                '2. An allen Wasserhähnen und Brunnen anbringen\n'
+                '3. In Hausordnung und Gäste-Info aufnehmen',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'hoch',
+            'estimated_cost': '10-30€',
+            'effort': 'leicht',
+            'timeframe': '1 Stunde',
+        },
+        {
+            'title': 'Brunnengenehmigung prüfen',
+            'description': 'Brunnen ist 50m tief — Wasserrechtliche Erlaubnis prüfen.\n\n'
+                'Schritte:\n'
+                '1. Untere Wasserbehörde des Landkreises kontaktieren\n'
+                '2. Bestandsschutz oder Genehmigungspflicht klären\n'
+                '3. Ggf. Wasserrechtliche Erlaubnis beantragen\n'
+                '4. Wasserprobe einreichen lassen',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'mittel',
+            'estimated_cost': '50-200€',
+            'effort': 'mittel',
+            'timeframe': 'Recherche + Behördengang',
+            'map_area': 'brunnen',
+        },
+        # Cluster 3: Sicherheit (kritisch)
+        {
+            'title': 'Schornsteinfeger-Abnahme Holzofen (Feuerstättenbescheid)',
+            'description': 'Holzofen im Gartenhaus braucht Feuerstättenbescheid vom Bezirksschornsteinfeger.\n\n'
+                'Schritte:\n'
+                '1. Zuständigen Bezirksschornsteinfeger ermitteln\n'
+                '2. Termin zur Feuerstättenschau vereinbaren\n'
+                '3. Abnahme durchführen lassen\n'
+                '4. Feuerstättenbescheid archivieren\n\n'
+                'ACHTUNG: Ohne Bescheid ist Betrieb des Ofens illegal und Versicherung zahlt bei Brand nicht!',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'kritisch',
+            'estimated_cost': '50-100€',
+            'effort': 'leicht',
+            'timeframe': 'Termin + 1-2 Stunden vor Ort',
+            'map_area': 'haus',
+        },
+        {
+            'title': 'E-Check Solar/Akku-System durch Elektriker',
+            'description': 'Elektrische Sicherheitsprüfung der 700W Solaranlage + 1,4kWh Akku.\n\n'
+                'Schritte:\n'
+                '1. Elektriker mit Solar-Erfahrung finden\n'
+                '2. E-Check durchführen lassen\n'
+                '3. Protokoll/Zertifikat aufbewahren\n\n'
+                'Wichtig für Versicherungsschutz und Gästesicherheit.',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'kritisch',
+            'estimated_cost': '100-300€',
+            'effort': 'leicht',
+            'timeframe': 'Termin + 2-3 Stunden',
+            'map_area': 'solaranlage',
+        },
+        {
+            'title': 'Verkehrssicherungspflicht dokumentieren (Bäume, Wege)',
+            'description': 'Als Vermieter besteht Verkehrssicherungspflicht für das gesamte Grundstück.\n\n'
+                'Schritte:\n'
+                '1. Baumkontrolle durchführen (2 Eichen >1m Durchmesser, alte Kirschen)\n'
+                '2. Wege auf Stolperfallen prüfen\n'
+                '3. Gefahrenstellen markieren oder sichern\n'
+                '4. Dokumentation mit Fotos und Datum erstellen\n'
+                '5. Jährlich wiederholen\n\n'
+                'Bei Unfall ohne Dokumentation haftet der Grundstücksbetreiber!',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'kritisch',
+            'estimated_cost': '0-500€',
+            'effort': 'mittel',
+            'timeframe': 'Halber Tag + ggf. Baumpfleger',
+        },
+        # Cluster 4: Baurecht
+        {
+            'title': 'Grundstücksstatus klären (Außenbereich/Innenbereich)',
+            'description': 'Baurechtliche Einordnung des Grundstücks bestimmt, was erlaubt ist.\n\n'
+                'Schritte:\n'
+                '1. Flächennutzungsplan der Gemeinde einsehen\n'
+                '2. Bauamt kontaktieren: Ist das Grundstück im Außen- oder Innenbereich?\n'
+                '3. Ggf. Bebauungsplan prüfen\n'
+                '4. Ergebnis dokumentieren für weitere Planungen',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'mittel',
+            'estimated_cost': '0€',
+            'effort': 'leicht',
+            'timeframe': 'Behördengang + Recherche',
+        },
+        {
+            'title': 'Bestandsschutz bestehende Gebäude prüfen',
+            'description': 'Gartenhaus, Wintergarten, Schuppen und Carport auf Bestandsschutz prüfen.\n\n'
+                'Schritte:\n'
+                '1. Alte Baugenehmigungen bei Opa/Bauamt nachfragen\n'
+                '2. Bestandsschutz für jedes Gebäude klären\n'
+                '3. Ggf. nachträgliche Genehmigung beantragen\n\n'
+                'Relevant für Versicherung und Vermietungs-Erlaubnis.',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'mittel',
+            'estimated_cost': '0-200€',
+            'effort': 'mittel',
+            'timeframe': 'Mehrere Telefonate/Behördengänge',
+        },
+        # Cluster 5: Versicherungen
+        {
+            'title': 'Betriebshaftpflichtversicherung abschließen',
+            'description': 'Pflicht bei gewerblicher Vermietung — deckt Personenschäden auf dem Grundstück.\n\n'
+                'Schritte:\n'
+                '1. Angebote einholen (Hiscox, Allianz, VHV)\n'
+                '2. Deckungssumme: mind. 3 Mio € Personenschäden\n'
+                '3. Ferienvermietung explizit einschließen\n'
+                '4. Police abschließen\n\n'
+                'Geschätzte Kosten: 150-250€/Jahr. MUSS vor erster Vermietung stehen!',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'hoch',
+            'estimated_cost': '150-250€/Jahr',
+            'effort': 'mittel',
+            'timeframe': '1-2 Wochen (Angebote vergleichen)',
+        },
+        {
+            'title': 'Gebäudeversicherung auf gewerbliche Vermietung prüfen',
+            'description': 'Bestehende Gebäudeversicherung muss gewerbliche Nutzung abdecken.\n\n'
+                'Schritte:\n'
+                '1. Aktuelle Police bei Opa/Eigentümer einsehen\n'
+                '2. Versicherer kontaktieren: Ferienvermietung melden\n'
+                '3. Ggf. Anpassung oder Zusatzversicherung\n\n'
+                'Ohne Meldung kann Versicherung im Schadensfall die Leistung verweigern!',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'hoch',
+            'estimated_cost': '50-150€/Jahr Aufpreis',
+            'effort': 'leicht',
+            'timeframe': 'Telefonate + Papierkram',
+        },
+        # Cluster 6: Plattform
+        {
+            'title': 'Airbnb-Inserat vorbereiten',
+            'description': 'Inserat für Airbnb erstellen, sobald rechtliche Grundlagen stehen.\n\n'
+                'Schritte:\n'
+                '1. Professionelle Fotos aus Galerie auswählen\n'
+                '2. Beschreibungstext schreiben (DE + EN)\n'
+                '3. Preise synchron mit eigenem Pricing halten\n'
+                '4. Hausordnung/House Rules eintragen\n'
+                '5. Kalendersynchronisation mit eigenem Buchungssystem',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'mittel',
+            'estimated_cost': '3% Gastgebergebühr pro Buchung',
+            'effort': 'mittel',
+            'timeframe': '2-3 Stunden Ersteinrichtung',
+        },
+        {
+            'title': 'Google Business Account erstellen',
+            'description': 'Google Business Profil für "Natur Refugium Etzdorf" anlegen.\n\n'
+                'Schritte:\n'
+                '1. Google Business Account erstellen\n'
+                '2. Standort verifizieren (Postkarte)\n'
+                '3. Fotos, Öffnungszeiten, Beschreibung eintragen\n'
+                '4. Bewertungen sammeln (Link in Feedback-Email)\n\n'
+                'Wichtig für Google Maps Sichtbarkeit und Bewertungen.',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'mittel',
+            'estimated_cost': '0€',
+            'effort': 'leicht',
+            'timeframe': '1-2 Stunden + Verifizierung',
+        },
+        {
+            'title': 'Eigene Domain registrieren',
+            'description': 'Eigene Domain für professionellen Auftritt.\n\n'
+                'Optionen: natur-refugium-etzdorf.de, gartenparadies-etzdorf.de, o.ä.\n\n'
+                'Schritte:\n'
+                '1. Domain-Verfügbarkeit prüfen\n'
+                '2. Domain registrieren\n'
+                '3. DNS auf Cloudflare Tunnel umleiten\n'
+                '4. SSL-Zertifikat (automatisch via Cloudflare)',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'mittel',
+            'estimated_cost': '10-15€/Jahr',
+            'effort': 'leicht',
+            'timeframe': '30 Minuten',
+        },
+        {
+            'title': 'Resend Domain für professionelle Emails einrichten',
+            'description': 'Eigene Domain für Email-Versand statt @infinityspace42.de.\n\n'
+                'Schritte:\n'
+                '1. Domain bei Resend verifizieren (DNS-Records)\n'
+                '2. SPF, DKIM, DMARC Records setzen\n'
+                '3. Absender-Adresse aktualisieren (z.B. buchung@natur-refugium.de)\n'
+                '4. Email-Templates anpassen',
+            'category': 'rechtliches',
+            'status': 'offen',
+            'priority': 'niedrig',
+            'estimated_cost': '0€ (in Resend-Plan enthalten)',
+            'effort': 'leicht',
+            'timeframe': '1 Stunde',
+        },
+    ]
+    for task in legal_tasks:
+        existing = conn.execute("SELECT id FROM projects WHERE title = ?", (task['title'],)).fetchone()
+        if not existing:
+            conn.execute('''
+                INSERT INTO projects (title, description, category, status, priority,
+                                     estimated_cost, effort, timeframe, map_area, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                task['title'], task['description'], task['category'], task['status'],
+                task['priority'], task['estimated_cost'], task['effort'], task['timeframe'],
+                task.get('map_area'), 'moritzvoigt42@gmail.com'
+            ))
+    conn.commit()
+    print("Seeded legal/regulatory tasks")
 
     # Map area descriptions table
     conn.execute('''
@@ -2186,6 +2460,40 @@ def get_all_feedback(user):
     feedback = conn.execute('SELECT * FROM feedback ORDER BY created_at DESC').fetchall()
     conn.close()
     return jsonify({'feedback': [dict(f) for f in feedback], 'total': len(feedback)})
+
+
+@app.route('/api/reviews', methods=['GET'])
+def get_public_reviews():
+    """Get public reviews (4-5 stars with comments)."""
+    conn = get_db()
+    reviews = conn.execute('''
+        SELECT f.rating, f.comment, f.created_at, b.guest_name
+        FROM feedback f
+        LEFT JOIN bookings b ON f.booking_id = b.id
+        WHERE f.rating >= 4 AND f.comment IS NOT NULL AND f.comment != ''
+        ORDER BY f.created_at DESC
+        LIMIT 10
+    ''').fetchall()
+    conn.close()
+
+    return jsonify({
+        'reviews': [{
+            'rating': r['rating'],
+            'comment': r['comment'],
+            'name': _anonymize_name(r['guest_name']) if r['guest_name'] else 'Gast',
+            'date': r['created_at'][:10] if r['created_at'] else None,
+        } for r in reviews]
+    })
+
+
+def _anonymize_name(name: str) -> str:
+    """Convert 'Max Mustermann' to 'Max M.'"""
+    if not name:
+        return 'Gast'
+    parts = name.strip().split()
+    if len(parts) >= 2:
+        return f"{parts[0]} {parts[-1][0]}."
+    return parts[0]
 
 
 # ============ Site Config Routes ============
@@ -4702,6 +5010,113 @@ def costs_summary(user):
         'yearly': yearly,
         'once': once,
         'total_yearly': total_yearly
+    })
+
+
+# ==================== Translation / i18n ====================
+
+@app.route('/api/translate', methods=['POST'])
+@limiter.limit("30/minute")
+def translate_texts():
+    """Translate texts using DeepL Free API with DB caching."""
+    data = request.json
+    if not data or not data.get('texts'):
+        return jsonify({'error': 'texts array required'}), 400
+
+    texts = data['texts']
+    target_lang = data.get('target_lang', 'en')
+
+    if not isinstance(texts, list) or len(texts) > 100:
+        return jsonify({'error': 'texts must be an array with max 100 items'}), 400
+
+    if target_lang not in ('en', 'de'):
+        return jsonify({'error': 'target_lang must be "en" or "de"'}), 400
+
+    # If target is German, return original texts (source language)
+    if target_lang == 'de':
+        return jsonify({'translations': {t: t for t in texts}})
+
+    conn = get_db()
+    result = {}
+    missing = []
+
+    # Check DB cache first
+    for text in texts:
+        cached = conn.execute(
+            'SELECT translated_text FROM translations WHERE source_text = ? AND target_lang = ?',
+            (text.strip(), target_lang)
+        ).fetchone()
+        if cached:
+            result[text] = cached['translated_text']
+        else:
+            missing.append(text)
+
+    # Call DeepL for cache misses
+    if missing:
+        deepl_key = os.environ.get('DEEPL_API_KEY')
+        if deepl_key:
+            try:
+                import urllib.request
+                import urllib.parse
+
+                # DeepL Free API
+                api_url = 'https://api-free.deepl.com/v2/translate'
+                post_data = urllib.parse.urlencode({
+                    'auth_key': deepl_key,
+                    'target_lang': target_lang.upper(),
+                    'source_lang': 'DE',
+                }, doseq=False)
+
+                # Add each text as separate 'text' parameter
+                for t in missing:
+                    post_data += '&' + urllib.parse.urlencode({'text': t.strip()})
+
+                req = urllib.request.Request(api_url, data=post_data.encode('utf-8'))
+                req.add_header('Content-Type', 'application/x-www-form-urlencoded')
+
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    deepl_result = json.loads(resp.read().decode('utf-8'))
+
+                for i, translation in enumerate(deepl_result.get('translations', [])):
+                    translated = translation['text']
+                    original = missing[i]
+                    result[original] = translated
+
+                    # Cache in DB
+                    conn.execute(
+                        'INSERT OR REPLACE INTO translations (source_text, target_lang, translated_text, updated_at) VALUES (?, ?, ?, ?)',
+                        (original.strip(), target_lang, translated, datetime.now().isoformat())
+                    )
+                conn.commit()
+
+            except Exception as e:
+                print(f"DeepL API error: {e}")
+                # Fallback: return originals for missing
+                for t in missing:
+                    if t not in result:
+                        result[t] = t
+        else:
+            # No API key: return originals
+            for t in missing:
+                result[t] = t
+
+    conn.close()
+    return jsonify({'translations': result})
+
+
+@app.route('/api/translations/preload', methods=['GET'])
+def get_preloaded_translations():
+    """Get all cached translations for a target language."""
+    target_lang = request.args.get('lang', 'en')
+    conn = get_db()
+    rows = conn.execute(
+        'SELECT source_text, translated_text FROM translations WHERE target_lang = ?',
+        (target_lang,)
+    ).fetchall()
+    conn.close()
+    return jsonify({
+        'translations': {r['source_text']: r['translated_text'] for r in rows},
+        'lang': target_lang
     })
 
 

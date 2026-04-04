@@ -12,6 +12,10 @@ test.describe('Seitenladung - Alle Seiten erreichbar', () => {
     { path: '/dienstleister', title: 'Dienstleister' },
     { path: '/gartenkarte', title: 'Gartenkarte' },
     { path: '/admin', title: 'Admin' },
+    { path: '/impressum', title: 'Impressum' },
+    { path: '/datenschutz', title: 'Datenschutz' },
+    { path: '/agb', title: 'AGB' },
+    { path: '/hausordnung', title: 'Hausordnung' },
   ];
 
   for (const p of pages) {
@@ -43,6 +47,18 @@ test.describe('Navigation - Links vorhanden', () => {
     await expect(nav.locator('a[href="/wartung"]').first()).toBeVisible();
     await expect(nav.locator('a[href="/inventar"]').first()).toBeVisible();
     await expect(nav.locator('a[href="/umgebung"]').first()).toBeVisible();
+  });
+});
+
+test.describe('Footer - Legal Links', () => {
+  test('Footer enthält Impressum, Datenschutz, AGB, Hausordnung Links', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    const footer = page.locator('footer');
+    await expect(footer.locator('a[href="/impressum"]')).toBeVisible();
+    await expect(footer.locator('a[href="/datenschutz"]')).toBeVisible();
+    await expect(footer.locator('a[href="/agb"]')).toBeVisible();
+    await expect(footer.locator('a[href="/hausordnung"]')).toBeVisible();
   });
 });
 

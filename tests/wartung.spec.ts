@@ -38,10 +38,9 @@ test.describe('Wartungsseite - Grundstruktur', () => {
     await expect(search).toBeVisible();
   });
 
-  test('View-Toggle Buttons vorhanden (Kanban, Liste, Timeline)', async ({ page }) => {
+  test('View-Toggle Buttons vorhanden (Kanban, Liste)', async ({ page }) => {
     await expect(page.locator('button:has-text("Kanban")')).toBeAttached();
     await expect(page.locator('button:has-text("Liste")')).toBeAttached();
-    await expect(page.locator('button:has-text("Timeline")')).toBeAttached();
   });
 });
 
@@ -189,16 +188,7 @@ test.describe('Wartungsseite - Listen View', () => {
   });
 });
 
-test.describe('Wartungsseite - Timeline View', () => {
-  test('Timeline View wechseln', async ({ page }) => {
-    await waitForKanban(page);
-    await page.locator('button:has-text("Timeline")').click();
-    await page.waitForTimeout(500);
-    // The timeline button should be active (selected state)
-    const btn = page.locator('button:has-text("Timeline")');
-    await expect(btn).toBeVisible();
-  });
-});
+// Timeline view was removed in the refactor
 
 test.describe('Wartungsseite - TaskDetailModal', () => {
   test.beforeEach(async ({ page }) => {

@@ -64,7 +64,7 @@ interface Issue {
   created_at: string;
 }
 
-type Tab = 'dashboard' | 'bookings' | 'projects' | 'users' | 'issues' | 'galerie' | 'credits' | 'dienstleister' | 'kosten' | 'karte';
+type Tab = 'dashboard' | 'bookings' | 'projects' | 'users' | 'issues' | 'galerie' | 'credits' | 'dienstleister' | 'kosten' | 'karte' | 'invoices';
 
 const API_BASE = import.meta.env.PUBLIC_API_URL || 'https://garten.infinityspace42.de';
 
@@ -84,6 +84,7 @@ export default function AdminDashboard() {
   const [serviceProviders, setServiceProviders] = useState<any[]>([]);
   const [costs, setCosts] = useState<any[]>([]);
   const [costsSummary, setCostsSummary] = useState<any>(null);
+  const [invoices, setInvoices] = useState<any[]>([]);
 
   // Fetch data when user is admin
   useEffect(() => {
@@ -107,6 +108,7 @@ export default function AdminDashboard() {
       fetchServiceProviders(),
       fetchCosts(),
       fetchCostsSummary(),
+      fetchInvoices(),
     ]);
     setIsLoading(false);
   };
@@ -248,6 +250,20 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Failed to fetch costs summary:', error);
+    }
+  };
+
+  const fetchInvoices = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/invoices`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setInvoices(data.invoices || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch invoices:', error);
     }
   };
 
@@ -996,6 +1012,172 @@ export default function AdminDashboard() {
   );
 
   // Karte Tab
+  // Invoices Tab
+  const InvoicesTab = () => {
+    const [actionLoading, setActionLoading] = useState<number | null>(null);
+
+    const handleInvoiceAction = async (invoiceId: number, action: 'generate-pdf' | 'send' | 'mark-paid') => {
+      setActionLoading(invoiceId);
+      try {
+        const url = `${API_BASE}/api/admin/invoices/${invoiceId}/${action}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        if (response.ok) {
+          await fetchInvoices();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Aktion fehlgeschlagen');
+        }
+      } catch {
+        alert('Netzwerkfehler');
+      } finally {
+        setActionLoading(null);
+      }
+    };
+
+    const viewPdf = (invoiceId: number) => {
+      window.open(`${API_BASE}/api/admin/invoices/${invoiceId}/pdf?token=${token}`, '_blank');
+    };
+
+    const statusColors: Record<string, string> = {
+      draft: 'bg-gray-100 text-gray-800',
+      pending: 'bg-amber-100 text-amber-800',
+      sent: 'bg-blue-100 text-blue-800',
+      paid: 'bg-green-100 text-green-800',
+      overdue: 'bg-red-100 text-red-800',
+      cancelled: 'bg-red-100 text-red-800',
+    };
+
+    const statusLabels: Record<string, string> = {
+      draft: 'Entwurf',
+      pending: 'Offen',
+      sent: 'Versendet',
+      paid: 'Bezahlt',
+      overdue: 'Überfällig',
+      cancelled: 'Storniert',
+    };
+
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+
+    const filteredInvoices = statusFilter === 'all'
+      ? invoices
+      : invoices.filter((inv: any) => inv.status === statusFilter);
+
+    return (
+      <div className="space-y-4">
+        {/* Filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {['all', 'draft', 'pending', 'sent', 'paid', 'overdue'].map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                statusFilter === s
+                  ? 'bg-garden-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {s === 'all' ? 'Alle' : statusLabels[s] || s}
+              {s !== 'all' && (
+                <span className="ml-1">({invoices.filter((inv: any) => inv.status === s).length})</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Table */}
+        {filteredInvoices.length === 0 ? (
+          <div className="bg-gray-50 rounded-xl p-8 text-center">
+            <div className="text-4xl mb-4">📄</div>
+            <h3 className="font-bold text-gray-600">Keine Rechnungen</h3>
+            <p className="text-gray-500 text-sm">Rechnungen werden automatisch bei Buchungsbestätigung erstellt.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-3 font-medium text-gray-600">Nr.</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-600">Gast</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-600">Betrag</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-600">Credits</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-600">Status</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-600">Datum</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-600">Aktionen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInvoices.map((inv: any) => (
+                  <tr key={inv.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-3 font-mono text-xs">{inv.invoice_number}</td>
+                    <td className="py-2 px-3">
+                      <div className="font-medium">{inv.guest_name}</div>
+                      <div className="text-xs text-gray-500">{inv.guest_email}</div>
+                    </td>
+                    <td className="py-2 px-3 font-medium">{inv.total?.toFixed(2)} €</td>
+                    <td className="py-2 px-3 text-green-600">
+                      {inv.credits_applied > 0 ? `-${inv.credits_applied.toFixed(2)} €` : '-'}
+                    </td>
+                    <td className="py-2 px-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[inv.status] || 'bg-gray-100'}`}>
+                        {statusLabels[inv.status] || inv.status}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-gray-500 text-xs">
+                      {inv.created_at ? new Date(inv.created_at).toLocaleDateString('de-DE') : '-'}
+                    </td>
+                    <td className="py-2 px-3">
+                      <div className="flex items-center gap-1">
+                        {inv.pdf_path && (
+                          <button
+                            onClick={() => viewPdf(inv.id)}
+                            className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                            title="PDF ansehen"
+                          >
+                            PDF
+                          </button>
+                        )}
+                        {!inv.pdf_path && inv.status === 'draft' && (
+                          <button
+                            onClick={() => handleInvoiceAction(inv.id, 'generate-pdf')}
+                            disabled={actionLoading === inv.id}
+                            className="text-xs px-2 py-1 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 disabled:opacity-50"
+                          >
+                            {actionLoading === inv.id ? '...' : 'PDF erzeugen'}
+                          </button>
+                        )}
+                        {inv.pdf_path && inv.status !== 'paid' && inv.status !== 'sent' && (
+                          <button
+                            onClick={() => handleInvoiceAction(inv.id, 'send')}
+                            disabled={actionLoading === inv.id}
+                            className="text-xs px-2 py-1 bg-garden-50 text-garden-600 rounded hover:bg-garden-100 disabled:opacity-50"
+                          >
+                            {actionLoading === inv.id ? '...' : 'Senden'}
+                          </button>
+                        )}
+                        {inv.status !== 'paid' && inv.status !== 'cancelled' && (
+                          <button
+                            onClick={() => handleInvoiceAction(inv.id, 'mark-paid')}
+                            disabled={actionLoading === inv.id}
+                            className="text-xs px-2 py-1 bg-green-50 text-green-600 rounded hover:bg-green-100 disabled:opacity-50"
+                          >
+                            {actionLoading === inv.id ? '...' : 'Bezahlt'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const KarteTab = () => {
     const [descriptions, setDescriptions] = useState<Record<string, { description: string; updated_at?: string; updated_by?: string }>>({});
     const [galleryItems, setGalleryItems] = useState<any[]>([]);
@@ -1212,6 +1394,7 @@ export default function AdminDashboard() {
           { key: 'galerie', label: 'Galerie' },
           { key: 'credits', label: 'Credits' },
           { key: 'dienstleister', label: 'Dienstleister' },
+          { key: 'invoices', label: 'Rechnungen' },
           { key: 'kosten', label: 'Kosten' },
           { key: 'karte', label: 'Karte' },
           { key: 'users', label: 'User' },
@@ -1242,6 +1425,7 @@ export default function AdminDashboard() {
       {activeTab === 'credits' && <CreditsTab />}
       {activeTab === 'dienstleister' && <DienstleisterTab />}
       {activeTab === 'kosten' && <KostenTab />}
+      {activeTab === 'invoices' && <InvoicesTab />}
       {activeTab === 'karte' && <KarteTab />}
       {activeTab === 'users' && <UsersTab />}
     </div>

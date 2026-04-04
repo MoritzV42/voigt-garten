@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import VideoBackground from '../components/VideoBackground';
+import ReviewsWidget from '../components/ReviewsWidget';
 
 // Der Garten wurde ca. 1975 gegründet
 const gartenGruendung = 1975;
@@ -93,6 +94,16 @@ const jahreGartenTradition = aktuellesJahr - gartenGruendung;
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- Reviews Section -->
+  <section class="py-16 bg-garden-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="font-display text-3xl font-bold text-center text-garden-900 mb-12">
+        Was unsere Gäste sagen
+      </h2>
+      <ReviewsWidget client:load />
     </div>
   </section>
 

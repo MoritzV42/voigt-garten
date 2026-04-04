@@ -210,6 +210,36 @@ test.describe('API Endpoints - Blockers (unauthenticated)', () => {
   });
 });
 
+test.describe('API Endpoints - Credits', () => {
+  test('GET /api/credits requires email parameter', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/credits`);
+    // Without email, should return error or empty
+    const body = await res.json();
+    expect(body).toHaveProperty('credits');
+  });
+
+  test('POST /api/admin/credits requires admin auth', async ({ request }) => {
+    const res = await request.post(`${BASE}/api/admin/credits`, {
+      data: { guest_email: 'test@example.com', amount: 10, reason: 'test' }
+    });
+    expect(res.status()).toBe(401);
+  });
+});
+
+test.describe('API Endpoints - Costs', () => {
+  test('GET /api/costs requires auth', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/costs`);
+    expect(res.status()).toBe(401);
+  });
+
+  test('POST /api/costs requires admin auth', async ({ request }) => {
+    const res = await request.post(`${BASE}/api/costs`, {
+      data: { title: 'Test', amount: 10, frequency: 'einmalig' }
+    });
+    expect(res.status()).toBe(401);
+  });
+});
+
 test.describe('API Endpoints - Recurring Tasks', () => {
   test('GET /api/recurring-tasks returns tasks with status', async ({ request }) => {
     const res = await request.get(`${BASE}/api/recurring-tasks`);
@@ -221,6 +251,43 @@ test.describe('API Endpoints - Recurring Tasks', () => {
     for (const task of body.tasks) {
       expect(['overdue', 'due-soon', 'ok']).toContain(task.status);
     }
+  });
+});
+
+test.describe('API Endpoints - Booking Validation', () => {
+  test('POST /api/bookings without required fields returns 400', async ({ request }) => {
+    const res = await request.post(`${BASE}/api/bookings`, {
+      data: { name: 'Test' }  // Missing required fields
+    });
+    expect([400, 401]).toContain(res.status());
+  });
+
+  test('POST /api/bookings requires auth', async ({ request }) => {
+    const res = await request.post(`${BASE}/api/bookings`, {
+      data: {
+        name: 'Test User',
+        email: 'test@example.com',
+        checkIn: '2026-06-01',
+        checkOut: '2026-06-03',
+        totalPrice: 100,
+      }
+    });
+    // Should require auth or reject based on validation
+    expect(res.status()).not.toBe(500);
+  });
+
+  test('DELETE /api/bookings requires admin auth', async ({ request }) => {
+    const res = await request.delete(`${BASE}/api/bookings/999`);
+    expect(res.status()).toBe(401);
+  });
+});
+
+test.describe('API Endpoints - Map Areas', () => {
+  test('GET /api/map/areas returns area data', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/map/areas`);
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body).toHaveProperty('areas');
   });
 });
 

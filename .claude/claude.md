@@ -629,8 +629,53 @@ Keyword-basierter Bot (kein LLM), verarbeitet Nachrichten im konfigurierten Chat
 
 ---
 
-**Version:** 2.0
+## Neue Features (Phase 2 - April 2026)
+
+### i18n-System
+- `/api/translate` — POST mit `{texts: [...], target_lang: 'en'}`, DeepL Free API + DB-Cache
+- `/api/translations/preload` — GET alle gecachten Übersetzungen
+- `useTranslation()` Hook in `src/hooks/useTranslation.ts`
+- `LanguageToggle` Komponente in Navbar (DE/EN)
+- Env: `DEEPL_API_KEY` (optional, ohne Key werden Originaltexte zurückgegeben)
+
+### Pricing & Booking
+- `/api/pricing/calculate` — POST mit check_in, check_out, guests, isDayOnly
+- `/api/availability?month=YYYY-MM` — gebuchte Tage
+- `/api/bookings/<id>/cancel` — Stornierung mit Erstattungsberechnung
+- BookingForm: Live-Preisberechnung, AGB/Datenschutz/Hausordnung-Checkboxen, Verfügbarkeitsanzeige, Tagesnutzung-Toggle
+
+### Rechnungen (Admin)
+- `/api/admin/invoices` — GET alle Rechnungen
+- `/api/admin/invoices/<id>` — PATCH (bearbeiten)
+- `/api/admin/invoices/<id>/generate-pdf` — POST PDF erzeugen
+- `/api/admin/invoices/<id>/pdf` — GET PDF download
+- `/api/admin/invoices/<id>/send` — POST per Email senden
+- `/api/admin/invoices/<id>/mark-paid` — POST als bezahlt markieren
+- `/api/bookings/<id>/create-invoice` — POST Rechnung aus Buchung erstellen
+- Admin-Dashboard hat neuen "Rechnungen" Tab mit Filter und Aktions-Buttons
+
+### Reviews
+- `/api/reviews` — GET öffentliche Bewertungen (4-5 Sterne mit Kommentar)
+- `ReviewsWidget` auf Startseite ("Was unsere Gäste sagen")
+
+### Email-Templates
+- Buchungsbestätigung: Zahlungsinfo aus site_config, Stornierungsbedingungen, Anfahrtshinweis
+- `send_feedback_request()` — 1 Tag nach Check-out
+- `send_google_review_followup()` — bei 4-5 Sternen
+- `send_payment_reminder()` — nach 7 Tagen ohne Zahlung
+
+### Legal Tasks (Seed)
+- 16 rechtliche/bürokratische Tasks als `category='rechtliches'` in projects
+- Cluster: Gewerbeanmeldung, Sanitär/Wasser, Sicherheit, Baurecht, Versicherungen, Plattform
+
+### SVG-Karte
+- `public/images/gartenplan-shapes.svg` — bereinigte SVG (5KB statt 4MB), nur Shapes mit normalisierten IDs
+- 27 benannte Areas passend zu den map_area_descriptions in der DB
+
+---
+
+**Version:** 2.1
 **Erstellt:** 2026-01-26
-**Aktualisiert:** 2026-04-03
+**Aktualisiert:** 2026-04-04
 **Hosting:** Hetzner CX32 Cloud Server (4 vCPU, 8GB RAM, 80GB SSD, Debian 13, Falkenstein) via Cloudflare Tunnel
 **SSH:** `ssh is42` (moritz@49.12.244.18)
