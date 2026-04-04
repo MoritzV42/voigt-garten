@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { CATEGORY_COLORS, CATEGORY_LABELS, CATEGORY_ICONS, getAreaCategory, type MapCategory } from './mapAreas';
+import { CATEGORY_COLORS, CATEGORY_LABELS, CATEGORY_ICONS, getAreaCategory, getAreaLabel, type MapCategory } from './mapAreas';
 
 const API_BASE = import.meta.env.DEV ? 'http://localhost:5055' : '';
 
@@ -43,10 +43,11 @@ function parseSvgShapes(svgText: string): SvgShape[] {
 
   const allElements = doc.querySelectorAll(tagNames.join(','));
   allElements.forEach((el) => {
-    const label = el.getAttribute('inkscape:label');
-    if (!label) return;
-
+    // Support both old SVG (inkscape:label) and new cleaned SVG (id-based)
     const id = el.getAttribute('id') || '';
+    if (!id || id === 'shapes') return;
+
+    const label = el.getAttribute('inkscape:label') || getAreaLabel(id);
     const tagName = el.tagName.toLowerCase();
     const style = el.getAttribute('style') || undefined;
     const originalFill = parseFillFromStyle(style);
@@ -269,7 +270,7 @@ export default function GardenMap({
   // Fetch and parse SVG
   useEffect(() => {
     setLoading(true);
-    fetch('/images/gartenplan.svg')
+    fetch('/images/gartenplan-shapes.svg')
       .then((res) => res.text())
       .then((text) => {
         setShapes(parseSvgShapes(text));
@@ -686,8 +687,13 @@ export default function GardenMap({
               preserveAspectRatio="xMidYMid meet"
             >
               {shapes.map(renderShape)}
-              {/* Labels with leader lines */}
-              {labelPositions.map(({ id, label, cx, cy, lx, ly }) => (
+              {/* Labels with leader lines — only show labels matching current view */}
+              {labelPositions
+                .filter(({ id }) => {
+                  if (mode === 'alle') return true;
+                  return getAreaCategory(id) === mode;
+                })
+                .map(({ id, label, cx, cy, lx, ly }) => (
                 <g key={`label-${id}`} className="pointer-events-none">
                   <line
                     x1={cx} y1={cy} x2={lx} y2={ly + 7}

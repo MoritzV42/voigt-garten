@@ -72,6 +72,8 @@ const CATEGORY_CONFIG: Record<string, { emoji: string; label: string; color: str
   wasser: { emoji: '💧', label: 'Wasser', color: 'bg-cyan-100 text-cyan-800' },
   haus: { emoji: '🏠', label: 'Haus', color: 'bg-orange-100 text-orange-800' },
   garten: { emoji: '🌱', label: 'Garten', color: 'bg-lime-100 text-lime-800' },
+  rechtliches: { emoji: '⚖️', label: 'Rechtliches', color: 'bg-rose-100 text-rose-800' },
+  it: { emoji: '💻', label: 'IT & Bugs', color: 'bg-indigo-100 text-indigo-800' },
 };
 
 const PRIORITY_COLORS: Record<string, string> = {

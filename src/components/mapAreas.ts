@@ -37,6 +37,7 @@ export const MAP_AREAS: readonly MapArea[] = [
   { id: 'hecke-mittig', label: 'Hecke', category: 'natur' },
   { id: 'rechter-teil', label: 'Rechter Grundstücksteil', category: 'natur' },
   { id: 'agrar-zukauf', label: 'Agrarfläche (Zukauf)', category: 'natur' },
+  { id: 'obere-hecke', label: 'Obere Hecke', category: 'natur' },
 ] as const;
 
 export type MapAreaId = typeof MAP_AREAS[number]['id'];
