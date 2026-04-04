@@ -45,7 +45,7 @@ RUN chmod +x start.sh
 COPY --from=frontend-builder /build/dist /app/static
 
 # Create data directories
-RUN mkdir -p /app/data /app/public/images/gallery
+RUN mkdir -p /app/data /app/data/invoices /app/public/images/gallery
 
 # Environment variables (defaults)
 ENV FLASK_ENV=production

@@ -5,6 +5,8 @@ Flask API + Static File Serving for Hetzner Cloud deployment.
 
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import sqlite3
 from datetime import datetime, timedelta
@@ -19,8 +21,22 @@ import functools
 import secrets
 from collections import deque
 from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification, send_magic_link_email, send_welcome_email
-from telegram_service import send_moderation_request, answer_callback_query
+from telegram_service import send_moderation_request, answer_callback_query, notify_admin, notify_booking, notify_feedback, notify_email_sent
 from storage import LocalStorage
+
+try:
+    from pricing_service import calculate_booking_price, calculate_cancellation_refund, get_availability, validate_booking
+    PRICING_AVAILABLE = True
+except ImportError:
+    PRICING_AVAILABLE = False
+    print("Warning: pricing_service not available")
+
+try:
+    from invoice_service import create_invoice_from_booking, generate_invoice_pdf, get_site_config
+    INVOICE_AVAILABLE = True
+except ImportError:
+    INVOICE_AVAILABLE = False
+    print("Warning: invoice_service not available")
 
 # JWT Secret Key (use env var in production)
 JWT_SECRET = os.environ.get('JWT_SECRET', 'voigt-garten-secret-key-change-in-production-2026')
@@ -44,6 +60,17 @@ CORS(app, origins=[
     'http://localhost:5055'
 ])
 
+# Rate limiting
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per hour"],
+    storage_uri="memory://",
+)
+
+# Allowed gallery categories (path traversal protection)
+ALLOWED_CATEGORIES = {'garten', 'haus', 'umgebung', 'sonstiges', 'luftaufnahmen', 'events', 'projekte', 'tiere'}
+
 # Paths (Docker environment)
 DATA_DIR = os.environ.get('DATA_DIR', '/app/data')
 STATIC_DIR = os.environ.get('STATIC_DIR', '/app/static')
@@ -56,6 +83,26 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 # Storage backend
 storage = LocalStorage(GALLERY_DIR)
+
+
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    if not request.path.startswith('/api/'):
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-src 'none'"
+        )
+    return response
 
 # Allowed file types
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'}
@@ -257,24 +304,32 @@ def init_db():
     # Create main admin if not exists
     cursor = conn.execute("SELECT id FROM users WHERE email = 'moritzvoigt42@gmail.com'")
     if not cursor.fetchone():
-        admin_password_hash = generate_password_hash(os.environ.get('ADMIN_PASSWORD_MORITZ', 'changeme'))
-        conn.execute('''
-            INSERT INTO users (email, username, password_hash, name, role)
-            VALUES (?, ?, ?, ?, ?)
-        ''', ('moritzvoigt42@gmail.com', 'MoritzVoigt42', admin_password_hash, 'Moritz Voigt', 'admin'))
-        conn.commit()
-        print("Main admin user created: moritzvoigt42@gmail.com")
+        admin_password = os.environ.get('ADMIN_PASSWORD_MORITZ')
+        if admin_password:
+            admin_password_hash = generate_password_hash(admin_password)
+            conn.execute('''
+                INSERT INTO users (email, username, password_hash, name, role)
+                VALUES (?, ?, ?, ?, ?)
+            ''', ('moritzvoigt42@gmail.com', 'MoritzVoigt42', admin_password_hash, 'Moritz Voigt', 'admin'))
+            conn.commit()
+            print("Main admin user created: moritzvoigt42@gmail.com")
+        else:
+            print("WARNING: ADMIN_PASSWORD_MORITZ not set, skipping admin user creation")
 
     # Create Konny Voigt admin if not exists
     cursor = conn.execute("SELECT id FROM users WHERE email = 'konny.voigt@web.de'")
     if not cursor.fetchone():
-        konny_password_hash = generate_password_hash(os.environ.get('ADMIN_PASSWORD_KONNY', 'changeme'))
-        conn.execute('''
-            INSERT INTO users (email, username, password_hash, name, role)
-            VALUES (?, ?, ?, ?, ?)
-        ''', ('konny.voigt@web.de', 'KonnyVoigt', konny_password_hash, 'Konny Voigt', 'admin'))
-        conn.commit()
-        print("Admin user created: konny.voigt@web.de")
+        konny_password = os.environ.get('ADMIN_PASSWORD_KONNY')
+        if konny_password:
+            konny_password_hash = generate_password_hash(konny_password)
+            conn.execute('''
+                INSERT INTO users (email, username, password_hash, name, role)
+                VALUES (?, ?, ?, ?, ?)
+            ''', ('konny.voigt@web.de', 'KonnyVoigt', konny_password_hash, 'Konny Voigt', 'admin'))
+            conn.commit()
+            print("Admin user created: konny.voigt@web.de")
+        else:
+            print("WARNING: ADMIN_PASSWORD_KONNY not set, skipping admin user creation")
 
     # Seed recurring tasks if empty
     cursor = conn.execute("SELECT COUNT(*) as count FROM recurring_tasks")
@@ -653,20 +708,29 @@ def migrate_db():
         ('haus', 'Gartenhaus mit Wohnbereich, Küche und Bad'),
         ('wintergarten', 'Verglaster Wintergarten am Haus'),
         ('terrasse', 'Terrasse mit Sitzbereich'),
-        ('carport', 'Überdachter Stellplatz'),
-        ('schuppen-1', 'Geräteschuppen'),
-        ('schuppen-2', 'Zweiter Schuppen'),
-        ('schuppen-3', 'Dritter Schuppen'),
-        ('schuppen-4', 'Vierter Schuppen'),
+        ('geraeteschuppen', 'Geräteschuppen mit Gartengeräten'),
+        ('offener-schuppen', 'Offener Schuppen'),
+        ('holzschuppen', 'Holzschuppen für Brennholzlagerung'),
+        ('baumhaus', 'Baumhaus im alten Baumbestand'),
+        ('klo', 'Außentoilette'),
+        ('werkstatt', 'Werkstatt mit Werkzeug und Maschinen'),
+        ('zufahrt', 'Zufahrt zum Grundstück'),
+        ('unterer-eingang', 'Unterer Eingang zum Grundstück'),
+        ('teich', 'Gartenteich'),
+        ('pool', 'Aufstellpool'),
         ('brunnen', 'Brunnen (50m tief)'),
-        ('beete-ost', 'Beete im östlichen Bereich'),
-        ('beete-west', 'Beete im westlichen Bereich'),
-        ('wiese-oben', 'Obere Wiesenfläche'),
-        ('wiese-unten', 'Untere Wiesenfläche'),
-        ('obstbaeume', 'Obstbaumbestand'),
-        ('hecke-nord', 'Hecke Nordseite'),
-        ('einfahrt', 'Einfahrt und Zufahrtsweg'),
+        ('wasserbehaelter-mauer', 'Wasserbehälter an der Mauer'),
+        ('baum-wassertank', 'Wassertank am Baum'),
+        ('solaranlage', 'Solaranlage 700W + 1,4kWh Akku'),
+        ('weinberg', 'Weinberg am Südhang'),
+        ('eiche-1', 'Große Eiche (Stammdurchmesser >1m)'),
+        ('eiche-2', 'Zweite große Eiche'),
+        ('terrassen-beet', 'Terrassenbeet'),
         ('kompost', 'Kompostbereich'),
+        ('oberer-kompost', 'Oberer Kompostbereich'),
+        ('hecke-mittig', 'Hecke in der Mitte des Grundstücks'),
+        ('rechter-teil', 'Rechter Grundstücksteil'),
+        ('agrar-zukauf', 'Agrarfläche (Zukauf-Option)'),
     ]
     for area_id, desc in default_areas:
         conn.execute(
@@ -715,6 +779,186 @@ def migrate_db():
         ''', ('Grundstückspacht', 'Jährliche Pacht an Opa', 100.0, 'jährlich', 'Pacht'))
         conn.commit()
         print("Seeded garden costs")
+
+
+    # -- Phase 2: New tables --
+
+    # invoices table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS invoices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            booking_id INTEGER REFERENCES bookings(id),
+            invoice_number TEXT UNIQUE NOT NULL,
+            status TEXT DEFAULT 'draft',
+            guest_name TEXT NOT NULL,
+            guest_email TEXT NOT NULL,
+            guest_address TEXT,
+            line_items TEXT,
+            subtotal REAL NOT NULL,
+            credits_applied REAL DEFAULT 0,
+            total REAL NOT NULL,
+            tax_note TEXT DEFAULT 'Gem\u00e4\u00df \u00a7 19 UStG wird keine Umsatzsteuer berechnet.',
+            pdf_path TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            sent_at TEXT,
+            due_date TEXT
+        )
+    ''')
+
+    # pricing_rules table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS pricing_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            season_start_month INTEGER NOT NULL,
+            season_end_month INTEGER NOT NULL,
+            nightly_rate REAL NOT NULL,
+            weekend_surcharge REAL DEFAULT 5.0,
+            per_person_base REAL DEFAULT 0,
+            person_discount_factor REAL DEFAULT 0.85,
+            min_nights INTEGER DEFAULT 1,
+            is_active BOOLEAN DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # cancellations table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS cancellations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            booking_id INTEGER NOT NULL REFERENCES bookings(id),
+            cancelled_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            cancelled_by TEXT,
+            policy_applied TEXT,
+            refund_percent REAL,
+            refund_amount REAL,
+            reason TEXT
+        )
+    ''')
+
+    # feedback table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            booking_id INTEGER REFERENCES bookings(id),
+            guest_email TEXT NOT NULL,
+            rating INTEGER CHECK(rating BETWEEN 1 AND 5),
+            cleanliness INTEGER CHECK(cleanliness BETWEEN 1 AND 5),
+            communication INTEGER CHECK(communication BETWEEN 1 AND 5),
+            location INTEGER CHECK(location BETWEEN 1 AND 5),
+            accuracy INTEGER CHECK(accuracy BETWEEN 1 AND 5),
+            comment TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            google_review_sent BOOLEAN DEFAULT 0
+        )
+    ''')
+
+    # site_config table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS site_config (
+            key TEXT PRIMARY KEY,
+            value TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # translations table (i18n cache)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS translations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_text TEXT NOT NULL,
+            target_lang TEXT NOT NULL DEFAULT 'en',
+            translated_text TEXT NOT NULL,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(source_text, target_lang)
+        )
+    ''')
+
+    conn.commit()
+
+    # -- Phase 2: ALTER TABLE migrations for bookings --
+    for col_stmt in [
+        "ALTER TABLE bookings ADD COLUMN terms_accepted BOOLEAN DEFAULT 0",
+        "ALTER TABLE bookings ADD COLUMN privacy_accepted BOOLEAN DEFAULT 0",
+        "ALTER TABLE bookings ADD COLUMN cancellation_policy TEXT",
+        "ALTER TABLE bookings ADD COLUMN invoice_id INTEGER",
+        "ALTER TABLE bookings ADD COLUMN season_rate REAL",
+        "ALTER TABLE bookings ADD COLUMN weekend_nights INTEGER DEFAULT 0",
+        "ALTER TABLE bookings ADD COLUMN person_price REAL",
+    ]:
+        try:
+            conn.execute(col_stmt)
+            conn.commit()
+        except Exception:
+            pass
+
+    # -- Phase 2: ALTER TABLE for map_area_descriptions --
+    try:
+        conn.execute("ALTER TABLE map_area_descriptions ADD COLUMN category TEXT DEFAULT 'natur'")
+        conn.commit()
+        print("Migration: Added category column to map_area_descriptions")
+    except Exception:
+        pass
+
+    # -- Phase 2: Indices --
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bookings_checkin ON bookings(check_in)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bookings_checkout ON bookings(check_out)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bookings_email ON bookings(guest_email)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_inventory_items_room ON inventory_items(room_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_invoices_booking ON invoices(booking_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_feedback_booking ON feedback(booking_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_translations_lookup ON translations(source_text, target_lang)")
+    conn.commit()
+
+    # Seed pricing rules if empty
+    try:
+        count = conn.execute("SELECT COUNT(*) as c FROM pricing_rules").fetchone()['c']
+        if count == 0:
+            pricing_seeds = [
+                ('Hochsaison', 5, 9, 60.0, 5.0, 0, 0.85, 1),
+                ('Standardsaison Fr\u00fchling', 4, 4, 45.0, 5.0, 0, 0.85, 1),
+                ('Standardsaison Herbst', 10, 10, 45.0, 5.0, 0, 0.85, 1),
+                ('Nebensaison', 11, 3, 30.0, 5.0, 0, 0.85, 2),
+            ]
+            for name, start, end, rate, surcharge, person_base, discount, min_n in pricing_seeds:
+                conn.execute('''
+                    INSERT INTO pricing_rules (name, season_start_month, season_end_month,
+                        nightly_rate, weekend_surcharge, per_person_base, person_discount_factor, min_nights)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (name, start, end, rate, surcharge, person_base, discount, min_n))
+            conn.commit()
+            print("Seeded pricing rules")
+    except Exception as e:
+        print(f"Pricing rules seed: {e}")
+
+    # Seed site_config defaults
+    try:
+        count = conn.execute("SELECT COUNT(*) as c FROM site_config").fetchone()['c']
+        if count == 0:
+            defaults = [
+                ('company_name', 'Natur Refugium Etzdorf'),
+                ('account_holder', '[PLACEHOLDER]'),
+                ('iban', '[PLACEHOLDER]'),
+                ('bic', '[PLACEHOLDER]'),
+                ('address', 'Etzdorf im Rosental, Sachsen'),
+                ('tax_number', '[PLACEHOLDER]'),
+                ('email', 'garten@infinityspace42.de'),
+                ('phone', '01652593763'),
+                ('first_year_discount', '42'),
+                ('week_discount', '10'),
+                ('repeat_discount', '15'),
+                ('max_overnight_guests', '6'),
+                ('max_day_guests', '20'),
+            ]
+            for key, value in defaults:
+                conn.execute('INSERT INTO site_config (key, value) VALUES (?, ?)', (key, value))
+            conn.commit()
+            print("Seeded site_config")
+    except Exception as e:
+        print(f"Site config seed: {e}")
+
 
     conn.close()
     print("Database migrations complete")
@@ -1189,6 +1433,7 @@ def get_gallery():
 
 
 @app.route('/api/gallery/upload', methods=['POST'])
+@limiter.limit("10 per minute")
 @require_auth
 def upload_file(user):
     """Handle file upload with automatic WebP conversion and thumbnail generation."""
@@ -1202,8 +1447,17 @@ def upload_file(user):
     if not allowed_file(file.filename):
         return jsonify({'error': 'Dateityp nicht erlaubt'}), 400
 
+    # Check file size (max 50MB)
+    file.seek(0, 2)
+    file_size = file.tell()
+    file.seek(0)
+    if file_size > 50 * 1024 * 1024:
+        return jsonify({'error': 'Datei zu groß (max. 50MB)'}), 400
+
     # Get metadata
     category = request.form.get('category', 'sonstiges')
+    if category not in ALLOWED_CATEGORIES:
+        category = 'sonstiges'
     name = request.form.get('name', '')
     description = request.form.get('description', '')
     # Get uploader from authenticated user
@@ -1323,8 +1577,9 @@ def upload_file(user):
 
 
 @app.route('/api/gallery/<item_id>', methods=['DELETE'])
-def delete_image(item_id):
-    """Delete a gallery image and all associated files."""
+@require_admin
+def delete_image(item_id, user):
+    """Delete a gallery image and all associated files (admin only)."""
     conn = get_db()
     row = conn.execute('SELECT * FROM gallery_images WHERE id = ?', (item_id,)).fetchone()
 
@@ -1437,6 +1692,8 @@ def upload_panorama(user):
     name = request.form.get('name', '')
     description = request.form.get('description', '')
     category = request.form.get('category', 'luftaufnahmen')
+    if category not in ALLOWED_CATEGORIES:
+        category = 'sonstiges'
     uploaded_by = user.get('name') or user.get('email', 'admin')
 
     original_name = secure_filename(file.filename)
@@ -1537,21 +1794,59 @@ def get_livestream_cameras():
 
 
 @app.route('/api/bookings', methods=['GET', 'POST'])
+@limiter.limit("3 per minute", methods=["POST"])
 def bookings():
     """Handle bookings."""
     conn = get_db()
 
     if request.method == 'POST':
         data = request.json
+
+        # Validate required fields
+        check_in = data.get('checkIn') or data.get('check_in')
+        check_out = data.get('checkOut') or data.get('check_out')
+        email = data.get('email', '')
+        guests = data.get('guests', 2)
+
+        if not data.get('name') or not email or not check_in or not check_out:
+            conn.close()
+            return jsonify({'error': 'Name, Email, Anreise und Abreise sind erforderlich'}), 400
+
+        # Use pricing engine if available, otherwise fall back to client price
+        total_price = data.get('totalPrice', 0)
+        price_result = None
+
+        if PRICING_AVAILABLE:
+            # Validate booking
+            error = validate_booking(check_in, check_out, int(guests), email, DB_PATH)
+            if error:
+                conn.close()
+                return jsonify({'error': error}), 400
+
+            # Calculate price server-side
+            price_result = calculate_booking_price(
+                check_in=check_in,
+                check_out=check_out,
+                guests=int(guests),
+                db_path=DB_PATH,
+                is_first_year=True,
+            )
+
+            if 'error' in price_result:
+                conn.close()
+                return jsonify({'error': price_result['error']}), 400
+
+            total_price = price_result['total']
+
         conn.execute('''
             INSERT INTO bookings (guest_name, guest_email, guest_phone, check_in, check_out,
                                  guests, has_pets, total_price, discount_code, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            data['name'], data['email'], data.get('phone'),
-            data['checkIn'], data['checkOut'], data.get('guests', 2),
-            data.get('pets', False), data['totalPrice'],
-            data.get('discountCode'), data.get('notes')
+            data['name'], email, data.get('phone'),
+            check_in, check_out, int(guests),
+            data.get('pets', False), total_price,
+            data.get('discountCode'), data.get('notes'),
         ))
         booking_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
         conn.commit()
@@ -1561,7 +1856,20 @@ def bookings():
         send_booking_confirmation(data)
         send_booking_notification_to_admin(data)
 
-        return jsonify({'success': True, 'bookingId': booking_id})
+        # Telegram notification
+        notify_booking({
+            'guest_name': data['name'],
+            'guest_email': email,
+            'check_in': check_in,
+            'check_out': check_out,
+            'guests': guests,
+            'total_price': total_price,
+        })
+
+        result = {'success': True, 'bookingId': booking_id}
+        if price_result:
+            result['price'] = price_result
+        return jsonify(result)
 
     # GET: Return booked dates for calendar
     bookings_list = conn.execute('''
@@ -1573,6 +1881,341 @@ def bookings():
     return jsonify({
         'bookings': [{'checkIn': b['check_in'], 'checkOut': b['check_out']} for b in bookings_list]
     })
+
+
+# ============ Pricing & Availability Routes ============
+
+@app.route('/api/pricing/calculate', methods=['POST'])
+def calculate_price():
+    """Calculate booking price with full breakdown."""
+    if not PRICING_AVAILABLE:
+        return jsonify({'error': 'Preisberechnung nicht verfügbar'}), 503
+
+    data = request.json or {}
+
+    check_in = data.get('checkIn') or data.get('check_in')
+    check_out = data.get('checkOut') or data.get('check_out')
+    guests = data.get('guests', 2)
+    is_day_only = data.get('isDayOnly', False)
+
+    if not check_in or not check_out:
+        return jsonify({'error': 'Anreise und Abreise erforderlich'}), 400
+
+    result = calculate_booking_price(
+        check_in=check_in,
+        check_out=check_out,
+        guests=int(guests),
+        db_path=DB_PATH,
+        is_day_only=is_day_only,
+        is_first_year=True,
+    )
+
+    if 'error' in result:
+        return jsonify({'error': result['error']}), 400
+
+    return jsonify(result)
+
+
+@app.route('/api/availability', methods=['GET'])
+def get_availability_api():
+    """Get booked dates for a month."""
+    if not PRICING_AVAILABLE:
+        return jsonify({'error': 'Verfügbarkeitsprüfung nicht verfügbar'}), 503
+
+    month = request.args.get('month')  # YYYY-MM
+    if not month:
+        return jsonify({'error': 'month Parameter erforderlich (YYYY-MM)'}), 400
+
+    booked_dates = get_availability(month, DB_PATH)
+    return jsonify({'booked_dates': booked_dates, 'month': month})
+
+
+# ============ Cancellation Route ============
+
+@app.route('/api/bookings/<int:booking_id>/cancel', methods=['POST'])
+@require_auth
+def cancel_booking(booking_id, user):
+    """Cancel a booking with refund calculation."""
+    if not PRICING_AVAILABLE:
+        return jsonify({'error': 'Stornierung nicht verfügbar'}), 503
+
+    data = request.json or {}
+
+    conn = get_db()
+    booking = conn.execute('SELECT * FROM bookings WHERE id = ?', (booking_id,)).fetchone()
+
+    if not booking:
+        conn.close()
+        return jsonify({'error': 'Buchung nicht gefunden'}), 404
+
+    if booking['status'] == 'cancelled':
+        conn.close()
+        return jsonify({'error': 'Buchung ist bereits storniert'}), 400
+
+    # Check authorization (user can cancel own booking, admin can cancel any)
+    if user.get('role') != 'admin' and user.get('email') != booking['guest_email']:
+        conn.close()
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+
+    # Calculate refund
+    refund = calculate_cancellation_refund(
+        booking_total=booking['total_price'],
+        check_in=booking['check_in'],
+        is_first_year=True,
+    )
+
+    # Update booking status
+    conn.execute("UPDATE bookings SET status = 'cancelled' WHERE id = ?", (booking_id,))
+
+    # Record cancellation
+    conn.execute('''
+        INSERT INTO cancellations (booking_id, cancelled_by, policy_applied,
+            refund_percent, refund_amount, reason)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (
+        booking_id, user['email'], refund['policy'],
+        refund['refund_percent'], refund['refund_amount'],
+        data.get('reason', ''),
+    ))
+
+    conn.commit()
+    conn.close()
+
+    # Notify admin
+    notify_admin('booking_cancelled', {
+        'Gast': booking['guest_name'],
+        'Zeitraum': f"{booking['check_in']} - {booking['check_out']}",
+        'Erstattung': f"{refund['refund_amount']:.2f}€ ({refund['refund_percent']}%)",
+        'Grund': data.get('reason', 'Nicht angegeben'),
+    })
+
+    return jsonify({
+        'success': True,
+        'refund': refund,
+        'message': 'Buchung storniert',
+    })
+
+
+# ============ Invoice Routes ============
+
+@app.route('/api/admin/invoices', methods=['GET'])
+@require_admin
+def get_invoices(user):
+    """Admin: Get all invoices."""
+    if not INVOICE_AVAILABLE:
+        return jsonify({'error': 'Rechnungssystem nicht verfügbar'}), 503
+
+    status = request.args.get('status')
+    conn = get_db()
+
+    if status:
+        invoices = conn.execute(
+            'SELECT * FROM invoices WHERE status = ? ORDER BY created_at DESC', (status,)
+        ).fetchall()
+    else:
+        invoices = conn.execute(
+            'SELECT * FROM invoices ORDER BY created_at DESC'
+        ).fetchall()
+    conn.close()
+
+    return jsonify({'invoices': [dict(i) for i in invoices], 'total': len(invoices)})
+
+
+@app.route('/api/admin/invoices/<int:invoice_id>', methods=['PATCH'])
+@require_admin
+def update_invoice(invoice_id, user):
+    """Admin: Update invoice (edit draft)."""
+    return generic_patch('invoices', invoice_id, request.json,
+        ['guest_name', 'guest_email', 'guest_address', 'line_items',
+         'subtotal', 'credits_applied', 'total', 'tax_note', 'status', 'due_date'],
+        timestamp_field=None)
+
+
+@app.route('/api/admin/invoices/<int:invoice_id>/generate-pdf', methods=['POST'])
+@require_admin
+def generate_invoice_pdf_route(invoice_id, user):
+    """Admin: Generate PDF for an invoice."""
+    if not INVOICE_AVAILABLE:
+        return jsonify({'error': 'PDF-Generierung nicht verfügbar'}), 503
+
+    invoice_dir = os.path.join(DATA_DIR, 'invoices')
+    pdf_path = generate_invoice_pdf(DB_PATH, invoice_id, invoice_dir)
+
+    if not pdf_path:
+        return jsonify({'error': 'PDF-Generierung fehlgeschlagen'}), 500
+
+    return jsonify({'success': True, 'pdf_path': pdf_path})
+
+
+@app.route('/api/admin/invoices/<int:invoice_id>/pdf', methods=['GET'])
+@require_admin
+def download_invoice_pdf(invoice_id, user):
+    """Admin: Download invoice PDF."""
+    conn = get_db()
+    invoice = conn.execute('SELECT pdf_path FROM invoices WHERE id = ?', (invoice_id,)).fetchone()
+    conn.close()
+
+    if not invoice or not invoice['pdf_path']:
+        return jsonify({'error': 'PDF nicht gefunden'}), 404
+
+    pdf_full_path = os.path.join(DATA_DIR, invoice['pdf_path'])
+    if not os.path.exists(pdf_full_path):
+        return jsonify({'error': 'PDF-Datei nicht gefunden'}), 404
+
+    return send_file(pdf_full_path, mimetype='application/pdf')
+
+
+@app.route('/api/admin/invoices/<int:invoice_id>/send', methods=['POST'])
+@require_admin
+def send_invoice(invoice_id, user):
+    """Admin: Send invoice via email."""
+    if not INVOICE_AVAILABLE:
+        return jsonify({'error': 'Rechnungsversand nicht verfügbar'}), 503
+
+    conn = get_db()
+    invoice = conn.execute('SELECT * FROM invoices WHERE id = ?', (invoice_id,)).fetchone()
+
+    if not invoice:
+        conn.close()
+        return jsonify({'error': 'Rechnung nicht gefunden'}), 404
+
+    # Generate PDF if not exists
+    if not invoice['pdf_path']:
+        invoice_dir = os.path.join(DATA_DIR, 'invoices')
+        pdf_path = generate_invoice_pdf(DB_PATH, invoice_id, invoice_dir)
+        if not pdf_path:
+            conn.close()
+            return jsonify({'error': 'PDF-Generierung fehlgeschlagen'}), 500
+
+    # Update status to sent
+    conn.execute('''
+        UPDATE invoices SET status = 'sent', sent_at = ? WHERE id = ?
+    ''', (datetime.now().isoformat(), invoice_id))
+    conn.commit()
+    conn.close()
+
+    # Notify admin via Telegram
+    notify_admin('invoice_sent', {
+        'Rechnung': invoice['invoice_number'],
+        'Gast': invoice['guest_name'],
+        'Betrag': f"{invoice['total']:.2f}€",
+    })
+
+    return jsonify({'success': True, 'message': 'Rechnung gesendet'})
+
+
+@app.route('/api/admin/invoices/<int:invoice_id>/mark-paid', methods=['POST'])
+@require_admin
+def mark_invoice_paid(invoice_id, user):
+    """Admin: Mark invoice as paid."""
+    conn = get_db()
+    conn.execute(
+        "UPDATE invoices SET status = 'paid' WHERE id = ?", (invoice_id,)
+    )
+    conn.commit()
+
+    invoice = conn.execute('SELECT * FROM invoices WHERE id = ?', (invoice_id,)).fetchone()
+    conn.close()
+
+    if invoice:
+        notify_admin('invoice_paid', {
+            'Rechnung': invoice['invoice_number'],
+            'Gast': invoice['guest_name'],
+            'Betrag': f"{invoice['total']:.2f}€",
+        })
+
+    return jsonify({'success': True, 'message': 'Rechnung als bezahlt markiert'})
+
+
+@app.route('/api/bookings/<int:booking_id>/create-invoice', methods=['POST'])
+@require_admin
+def create_invoice_route(booking_id, user):
+    """Admin: Create invoice for a booking."""
+    if not INVOICE_AVAILABLE:
+        return jsonify({'error': 'Rechnungserstellung nicht verfügbar'}), 503
+
+    invoice_id = create_invoice_from_booking(DB_PATH, booking_id)
+
+    if not invoice_id:
+        return jsonify({'error': 'Rechnungserstellung fehlgeschlagen'}), 500
+
+    return jsonify({'success': True, 'invoiceId': invoice_id})
+
+
+# ============ Feedback Routes ============
+
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    """Submit guest feedback."""
+    data = request.json or {}
+
+    email = data.get('email', '').strip()
+    rating = data.get('rating')
+
+    if not email or not rating:
+        return jsonify({'error': 'Email und Bewertung erforderlich'}), 400
+
+    if not (1 <= int(rating) <= 5):
+        return jsonify({'error': 'Bewertung muss zwischen 1 und 5 liegen'}), 400
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO feedback (booking_id, guest_email, rating, cleanliness, communication,
+            location, accuracy, comment)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data.get('bookingId'), email, int(rating),
+        data.get('cleanliness'), data.get('communication'),
+        data.get('location'), data.get('accuracy'),
+        data.get('comment'),
+    ))
+    conn.commit()
+    conn.close()
+
+    # Notify admin
+    notify_feedback(data)
+
+    return jsonify({'success': True, 'message': 'Danke für dein Feedback!'})
+
+
+@app.route('/api/admin/feedback', methods=['GET'])
+@require_admin
+def get_all_feedback(user):
+    """Admin: Get all feedback."""
+    conn = get_db()
+    feedback = conn.execute('SELECT * FROM feedback ORDER BY created_at DESC').fetchall()
+    conn.close()
+    return jsonify({'feedback': [dict(f) for f in feedback], 'total': len(feedback)})
+
+
+# ============ Site Config Routes ============
+
+@app.route('/api/admin/site-config', methods=['GET'])
+@require_admin
+def get_site_config_api(user):
+    """Admin: Get all site configuration."""
+    if not INVOICE_AVAILABLE:
+        return jsonify({'error': 'Site-Config nicht verfügbar'}), 503
+
+    config = get_site_config(DB_PATH)
+    return jsonify({'config': config})
+
+
+@app.route('/api/admin/site-config', methods=['PATCH'])
+@require_admin
+def update_site_config(user):
+    """Admin: Update site configuration."""
+    data = request.json or {}
+    conn = get_db()
+    for key, value in data.items():
+        conn.execute('''
+            INSERT INTO site_config (key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = ?
+        ''', (key, value, datetime.now().isoformat(), value, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 
 @app.route('/api/credits', methods=['GET'])
@@ -1672,6 +2315,7 @@ def complete_maintenance():
 # ============ Auth Routes ============
 
 @app.route('/api/auth/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     """User login with email/username and password."""
     data = request.json
@@ -1747,6 +2391,7 @@ def verify_auth():
 
 
 @app.route('/api/auth/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register_user():
     """Self-registration for guests (creates user role)."""
     data = request.json
@@ -1811,6 +2456,7 @@ def register_user():
 # ============ Magic Link Auth ============
 
 @app.route('/api/auth/request-magic-link', methods=['POST'])
+@limiter.limit("5 per minute")
 def request_magic_link():
     """Send magic link email for registration/login."""
     data = request.json
@@ -1909,6 +2555,7 @@ def verify_email_token():
 
 
 @app.route('/api/auth/complete-registration', methods=['POST'])
+@limiter.limit("5 per minute")
 def complete_registration():
     """Complete registration after magic link verification."""
     data = request.json
@@ -3492,9 +4139,9 @@ def update_floor(floor_id, user):
 
 
 @app.route('/api/inventory/rooms/<room_id>', methods=['DELETE'])
-@require_auth
+@require_admin
 def delete_room(room_id, user):
-    """Delete a room (only if empty)."""
+    """Admin: Delete a room (only if empty)."""
     conn = get_db()
     items = conn.execute('SELECT COUNT(*) as c FROM inventory_items WHERE room_id = ?', (room_id,)).fetchone()['c']
     if items > 0:

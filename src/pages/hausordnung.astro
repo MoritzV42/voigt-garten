@@ -1,0 +1,180 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Hausordnung" description="Hausordnung für Gäste des Natur Refugium Etzdorf">
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <div class="flex justify-between items-start mb-8">
+      <h1 class="font-display text-4xl font-bold text-garden-900">Hausordnung</h1>
+      <button
+        onclick="window.print()"
+        class="hidden sm:flex items-center gap-2 bg-garden-100 hover:bg-garden-200 text-garden-800 px-4 py-2 rounded-lg transition text-sm font-medium print:hidden"
+      >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+        </svg>
+        Drucken
+      </button>
+    </div>
+
+    <div class="prose prose-garden max-w-none text-gray-700 space-y-8">
+
+      <div class="bg-garden-50 border border-garden-200 rounded-xl p-6">
+        <p class="text-lg text-garden-800">
+          Liebe Gäste, herzlich willkommen im Natur Refugium Etzdorf! Damit sich alle wohlfühlen
+          und der Garten in gutem Zustand bleibt, bitten wir euch, die folgenden Regeln zu beachten.
+        </p>
+      </div>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Ruhezeiten</h2>
+        <p>
+          Bitte respektiert die Ruhezeiten von <strong>22:00 bis 7:00 Uhr</strong>.
+          In dieser Zeit ist laute Musik und übermäßiger Lärm zu vermeiden -- aus Rücksicht
+          auf Nachbarn und Natur.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Wasser</h2>
+        <p>
+          Das Wasser kommt aus einem <strong>50 Meter tiefen Brunnen</strong> und ist
+          <strong>kein Trinkwasser</strong>. Bitte bringt eigenes Trinkwasser mit oder nutzt
+          abgekochtes Wasser. Hinweisschilder in der Küche und im Bad beachten.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Feuer und Grillen</h2>
+        <p>
+          Die Feuerstelle darf genutzt werden. Bitte beachtet:
+        </p>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Bei Trockenheit und Waldbrandgefahr ist offenes Feuer <strong>strikt verboten</strong>.</li>
+          <li>Feuer niemals unbeaufsichtigt lassen.</li>
+          <li>Grillkohle vollständig ablöschen lassen, bevor ihr sie entsorgt.</li>
+          <li>Asche nur in die dafür vorgesehene Aschetonne.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Rauchen</h2>
+        <p>
+          Rauchen ist <strong>nur im Freien</strong> gestattet. Bitte Kippen nicht auf den Boden
+          werfen, sondern einen Aschenbecher nutzen.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Müll</h2>
+        <p>Bitte trennt den Müll:</p>
+        <ul class="list-disc pl-6 space-y-1">
+          <li><strong>Gelber Sack:</strong> Verpackungen, Plastik, Dosen</li>
+          <li><strong>Restmüll:</strong> Nicht-recyclebarer Abfall</li>
+          <li><strong>Bio:</strong> Kompostierbare Küchenabfälle (Komposthaufen im Garten)</li>
+          <li><strong>Papier:</strong> Altpapier und Kartonagen</li>
+          <li><strong>Glas:</strong> Bitte selbst mitnehmen (kein Glascontainer vor Ort)</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Küche</h2>
+        <p>
+          Bitte hinterlasst die Küche so, wie ihr sie vorgefunden habt. Geschirr nach Benutzung
+          spülen und wegräumen. Kühlschrank bei Abreise leeren und sauber wischen.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Bäume und Pflanzen</h2>
+        <p>
+          Die alten Obstbäume und Eichen sind das Herzstück des Gartens -- bitte nicht beschädigen.
+          Keine Äste abbrechen oder Rinde verletzen. Früchte dürfen gerne geerntet und
+          gegessen werden.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Werkzeug und Geräte</h2>
+        <p>
+          Gartengeräte und Werkzeug dürfen genutzt werden. Bitte nach Gebrauch reinigen und
+          an den ursprünglichen Platz zurückstellen. Defekte bitte melden.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Solar und Strom</h2>
+        <p>
+          Der Garten ist autark mit <strong>Solaranlage (700W)</strong> und
+          <strong>Batterie (1,4 kWh)</strong>. Bitte geht sparsam mit Strom um:
+        </p>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Licht ausschalten wenn nicht benötigt</li>
+          <li>Keine energieintensiven Geräte (Föhn, Heizlüfter) verwenden</li>
+          <li>Bei bewölktem Wetter besonders auf den Akkustand achten</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Tiere</h2>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Wildtiere bitte <strong>nicht füttern</strong>.</li>
+          <li>Hunde bitte auf den Wegen <strong>an der Leine</strong> führen.</li>
+          <li>Hundekot bitte aufsammeln und im Restmüll entsorgen.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Kinder</h2>
+        <p>
+          Kinder sind herzlich willkommen! Bitte beachtet:
+        </p>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Die <strong>Aufsichtspflicht</strong> liegt bei den Erziehungsberechtigten.</li>
+          <li><strong>Achtung am Teich/Pool</strong> -- Kinder niemals unbeaufsichtigt in der Nähe von Wasser!</li>
+          <li>Werkzeug und Geräte außerhalb der Reichweite von Kindern aufbewahren.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Abreise-Checkliste</h2>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Inventar-Checkliste prüfen (liegt im Gartenhaus aus)</li>
+          <li>Müll mitnehmen oder korrekt entsorgen</li>
+          <li>Alle Fenster und Türen schließen</li>
+          <li>Wasser abstellen</li>
+          <li>Licht ausschalten</li>
+          <li>Schlüssel an vereinbarter Stelle hinterlegen</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">Notrufnummern</h2>
+        <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+          <ul class="list-none space-y-2 text-base">
+            <li><strong>Polizei:</strong> 110</li>
+            <li><strong>Feuerwehr / Rettungsdienst:</strong> 112</li>
+            <li><strong>Giftnotruf Sachsen:</strong> 0361 730 730</li>
+            <li><strong>Vermieter:</strong> [PLACEHOLDER - Telefonnummer]</li>
+          </ul>
+        </div>
+      </section>
+
+      <p class="text-sm text-gray-400 mt-12">Zuletzt aktualisiert: April 2026</p>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  @media print {
+    nav, footer, .print\\:hidden {
+      display: none !important;
+    }
+    body {
+      font-size: 12pt;
+    }
+    .max-w-4xl {
+      max-width: 100%;
+    }
+  }
+</style>

@@ -6,7 +6,8 @@ interface Props {
   description?: string;
 }
 
-const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.props;
+const { title, description = "Natur Refugium Etzdorf – Familiengeführter Naturgarten mit Übernachtungsmöglichkeit in Sachsen. 5.300m² Südhang, Solar-Autarkie, eigener Brunnen." } = Astro.props;
+const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
 ---
 
 <!doctype html>
@@ -15,6 +16,12 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:title" content={`${title} | Natur Refugium Etzdorf`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:locale" content="de_DE" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,7 +29,34 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
     <!-- Pannellum 360° Panorama Viewer -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js" is:inline></script>
-    <title>{title} | Voigt-Garten</title>
+    <title>{title} | Natur Refugium Etzdorf</title>
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "LodgingBusiness",
+      "name": "Natur Refugium Etzdorf",
+      "description": "Familiengeführter Naturgarten mit Übernachtungsmöglichkeit in Etzdorf im Rosental, Sachsen. 5.300m² Südhang mit Solar-Autarkie.",
+      "url": "https://garten.infinityspace42.de",
+      "telephone": "+4901652593763",
+      "email": "garten@infinityspace42.de",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Etzdorf im Rosental",
+        "addressRegion": "Sachsen",
+        "addressCountry": "DE"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 51.15,
+        "longitude": 12.45
+      },
+      "priceRange": "30€ - 60€ pro Nacht",
+      "amenityFeature": [
+        {"@type": "LocationFeatureSpecification", "name": "Solarstrom", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Eigener Brunnen", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Gartenhaus", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Wintergarten", "value": true}
+      ]
+    })} />
   </head>
   <body class="min-h-screen bg-garden-50 font-sans text-gray-800">
     <nav class="bg-white shadow-sm border-b border-garden-100">
@@ -105,6 +139,12 @@ const { title, description = "Familien-Garten - Urlaub im Grünen" } = Astro.pro
           </div>
         </div>
         <div class="border-t border-garden-800 mt-8 pt-8 text-center text-garden-300 text-sm">
+          <div class="flex flex-wrap justify-center gap-x-4 gap-y-1 mb-3">
+            <a href="/impressum" class="hover:text-white transition">Impressum</a>
+            <a href="/datenschutz" class="hover:text-white transition">Datenschutz</a>
+            <a href="/agb" class="hover:text-white transition">AGB</a>
+            <a href="/hausordnung" class="hover:text-white transition">Hausordnung</a>
+          </div>
           &copy; {new Date().getFullYear()} Familie Voigt. Mit Liebe gepflegt.
           <span class="mx-2">|</span>
           <a href="/admin" class="hover:text-white transition">Admin</a>

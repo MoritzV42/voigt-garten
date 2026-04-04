@@ -1,0 +1,25 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Seite nicht gefunden" description="Die angeforderte Seite wurde nicht gefunden.">
+  <div class="max-w-4xl mx-auto px-4 py-24 text-center">
+    <div class="text-8xl mb-6">
+      <span role="img" aria-label="Baum">🌿</span>
+    </div>
+    <h1 class="font-display text-5xl font-bold text-garden-900 mb-4">404</h1>
+    <h2 class="font-display text-2xl font-semibold text-garden-700 mb-6">
+      Seite nicht gefunden
+    </h2>
+    <p class="text-lg text-gray-600 mb-8 max-w-md mx-auto">
+      Diese Seite scheint sich im Garten verlaufen zu haben.
+      Vielleicht findest du auf der Startseite, was du suchst.
+    </p>
+    <a
+      href="/"
+      class="inline-block bg-garden-600 hover:bg-garden-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition shadow-lg hover:shadow-xl"
+    >
+      Zur Startseite
+    </a>
+  </div>
+</Layout>

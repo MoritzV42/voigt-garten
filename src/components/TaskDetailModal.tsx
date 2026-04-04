@@ -93,6 +93,7 @@ const PROVIDER_CATEGORY_ICONS: Record<string, string> = {
 };
 
 const TOKEN_KEY = 'voigt-garten-token';
+const USER_KEY = 'voigt-garten-user';
 
 export default function TaskDetailModal({
   task,

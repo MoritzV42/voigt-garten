@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import LoginModal from './LoginModal';
-import EditableTable, { ColumnDef } from './EditableTable';
+import EditableTable, { type ColumnDef } from './EditableTable';
 import { MAP_AREAS, getAreaLabel } from './mapAreas';
 
 interface Stats {

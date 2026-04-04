@@ -1,0 +1,200 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Datenschutzerklärung" description="Datenschutzerklärung gemäß DSGVO">
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <h1 class="font-display text-4xl font-bold text-garden-900 mb-8">Datenschutzerklärung</h1>
+
+    <div class="prose prose-garden max-w-none text-gray-700 space-y-8">
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">1. Verantwortlicher</h2>
+        <p>
+          Natur Refugium Etzdorf<br />
+          Inhaber: [PLACEHOLDER - Name des Inhabers]<br />
+          [PLACEHOLDER - Adresse]<br />
+          E-Mail: <a href="mailto:garten@infinityspace42.de" class="text-garden-600 hover:text-garden-700">garten@infinityspace42.de</a>
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">2. Ihre Rechte als Betroffener</h2>
+        <p>Sie haben gemäß DSGVO folgende Rechte:</p>
+        <ul class="list-disc pl-6 space-y-1">
+          <li><strong>Auskunftsrecht (Art. 15 DSGVO)</strong> - Sie können Auskunft über Ihre verarbeiteten personenbezogenen Daten verlangen.</li>
+          <li><strong>Recht auf Berichtigung (Art. 16 DSGVO)</strong> - Sie können die Berichtigung unrichtiger Daten verlangen.</li>
+          <li><strong>Recht auf Löschung (Art. 17 DSGVO)</strong> - Sie können die Löschung Ihrer Daten verlangen, sofern keine gesetzlichen Aufbewahrungspflichten entgegenstehen.</li>
+          <li><strong>Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)</strong></li>
+          <li><strong>Recht auf Datenübertragbarkeit (Art. 20 DSGVO)</strong></li>
+          <li><strong>Widerspruchsrecht (Art. 21 DSGVO)</strong> - Sie können der Verarbeitung Ihrer Daten jederzeit widersprechen.</li>
+        </ul>
+        <p>
+          Zur Ausübung Ihrer Rechte wenden Sie sich bitte an die oben genannte E-Mail-Adresse.
+          Sie haben zudem das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">3. Datenerfassung auf der Website</h2>
+
+        <h3 class="font-display text-xl font-semibold text-garden-700 mt-4">Server-Log-Dateien</h3>
+        <p>
+          Der Hosting-Provider erhebt und speichert automatisch Informationen in Server-Log-Dateien,
+          die Ihr Browser automatisch übermittelt. Dies sind:
+        </p>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Browsertyp und Browserversion</li>
+          <li>Verwendetes Betriebssystem</li>
+          <li>Referrer URL</li>
+          <li>IP-Adresse des zugreifenden Rechners</li>
+          <li>Uhrzeit der Serveranfrage</li>
+        </ul>
+        <p>
+          Die Daten werden nicht mit anderen Datenquellen zusammengeführt.
+          Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der technischen Bereitstellung der Website).
+        </p>
+
+        <h3 class="font-display text-xl font-semibold text-garden-700 mt-4">Cookies</h3>
+        <p>
+          Diese Website verwendet keine Cookies von Drittanbietern und keine Tracking-Tools.
+          Es werden lediglich technisch notwendige Session-Daten im Browser gespeichert
+          (localStorage / sessionStorage), um die Authentifizierung und Nutzerpräferenzen zu ermöglichen.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">4. Buchungssystem</h2>
+        <p>
+          Bei einer Buchung erheben wir folgende Daten:
+        </p>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Name, E-Mail-Adresse, ggf. Telefonnummer</li>
+          <li>Buchungszeitraum und Personenanzahl</li>
+          <li>Angabe zu Haustieren</li>
+          <li>Anmerkungen zur Buchung</li>
+        </ul>
+        <p>
+          <strong>Zweck:</strong> Durchführung des Mietvertrags.<br />
+          <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).<br />
+          <strong>Speicherdauer:</strong> Buchungsdaten werden für die Dauer der gesetzlichen Aufbewahrungsfrist (10 Jahre) gespeichert.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">5. Magic-Link-Authentifizierung</h2>
+        <p>
+          Zur Anmeldung nutzen wir ein Magic-Link-Verfahren. Dabei wird Ihre E-Mail-Adresse
+          verwendet, um Ihnen einen einmaligen Anmelde-Link zu senden.
+        </p>
+        <p>
+          <strong>Verarbeitete Daten:</strong> E-Mail-Adresse, Verifizierungstoken (zeitlich begrenzt gültig), Name (bei Erstregistrierung).<br />
+          <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) und Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an sicherer Authentifizierung).
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">6. E-Mail-Versand via Resend</h2>
+        <p>
+          Für den Versand von E-Mails (Magic Links, Buchungsbestätigungen) nutzen wir den
+          Dienst <strong>Resend</strong> (Resend, Inc., USA).
+        </p>
+        <p>
+          Dabei wird Ihre E-Mail-Adresse an Resend übermittelt. Resend verarbeitet die Daten
+          in unserem Auftrag gemäß Art. 28 DSGVO. Die Datenübertragung in die USA erfolgt auf
+          Grundlage von Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO).
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">7. Telegram-Bot (Moderation)</h2>
+        <p>
+          Hochgeladene Bilder werden zur Moderation über einen Telegram-Bot an einen
+          Administrationskanal gesendet. Dabei werden der Dateiname und ggf. der Name des
+          Hochladenden übermittelt.
+        </p>
+        <p>
+          <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Qualitätssicherung der Galerie).
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">8. Bildergalerie</h2>
+        <p>
+          Nutzer können Bilder in die Galerie hochladen. Die Bilder werden auf unserem Server
+          gespeichert und nach Freigabe öffentlich angezeigt. Nicht freigegebene Bilder werden
+          nach 90 Tagen automatisch gelöscht.
+        </p>
+        <p>
+          <strong>Verarbeitete Daten:</strong> Bilddatei, Dateiname, Kategorie, Beschreibung, Upload-Zeitpunkt.<br />
+          <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO (Einwilligung durch aktives Hochladen).
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">9. localStorage / sessionStorage</h2>
+        <p>
+          Wir nutzen den lokalen Speicher Ihres Browsers (localStorage und sessionStorage) für:
+        </p>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Authentifizierungsstatus (Login-Session)</li>
+          <li>Benutzerrolle und -name</li>
+          <li>Nutzerpräferenzen</li>
+        </ul>
+        <p>
+          Diese Daten verlassen Ihren Browser nicht und werden nicht an Dritte übermittelt.
+          Sie können diese Daten jederzeit über die Browsereinstellungen löschen.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">10. Hosting</h2>
+        <p>
+          Diese Website wird bei <strong>Hetzner Online GmbH</strong> (Industriestr. 25,
+          91710 Gunzenhausen, Deutschland) gehostet. Hetzner verarbeitet Daten in unserem
+          Auftrag gemäß Art. 28 DSGVO. Die Daten werden ausschließlich in deutschen
+          Rechenzentren verarbeitet.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">11. Cloudflare Tunnel</h2>
+        <p>
+          Zur sicheren Bereitstellung der Website nutzen wir <strong>Cloudflare Tunnel</strong>
+          (Cloudflare, Inc., USA). Dabei werden Verbindungsdaten (IP-Adresse, Browserinformationen)
+          über Cloudflare-Server geleitet.
+        </p>
+        <p>
+          Die Datenübertragung in die USA erfolgt auf Grundlage von Standardvertragsklauseln
+          (Art. 46 Abs. 2 lit. c DSGVO). Cloudflare ist zudem nach dem EU-US Data Privacy
+          Framework zertifiziert.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">12. SSL-Verschlüsselung</h2>
+        <p>
+          Diese Seite nutzt aus Sicherheitsgründen eine SSL- bzw. TLS-Verschlüsselung.
+          Eine verschlüsselte Verbindung erkennen Sie daran, dass die Adresszeile des Browsers
+          von "http://" auf "https://" wechselt und an dem Schloss-Symbol in der Browserzeile.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display text-2xl font-semibold text-garden-800">13. Aufbewahrungsfristen</h2>
+        <p>
+          Personenbezogene Daten werden gelöscht, sobald der Zweck der Speicherung entfällt,
+          es sei denn, gesetzliche Aufbewahrungspflichten stehen dem entgegen:
+        </p>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Buchungsdaten: 10 Jahre (steuer- und handelsrechtliche Aufbewahrungspflicht)</li>
+          <li>Server-Logs: 30 Tage</li>
+          <li>Verifizierungstoken: 24 Stunden nach Erstellung</li>
+          <li>Nicht freigegebene Galerie-Uploads: 90 Tage</li>
+        </ul>
+      </section>
+
+      <p class="text-sm text-gray-400 mt-12">Zuletzt aktualisiert: April 2026</p>
+    </div>
+  </div>
+</Layout>

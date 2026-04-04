@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { CATEGORY_COLORS, CATEGORY_LABELS, CATEGORY_ICONS, getAreaCategory, type MapCategory } from './mapAreas';
 
 const API_BASE = import.meta.env.DEV ? 'http://localhost:5055' : '';
 
@@ -12,10 +13,14 @@ interface SvgShape {
 
 interface AreaStatus {
   status: 'ok' | 'due-soon' | 'overdue' | 'no-data';
+  description?: string;
+  photo_count?: number;
 }
 
+export type MapMode = 'gebaeude' | 'natur' | 'technik' | 'wasser' | 'alle';
+
 interface GardenMapProps {
-  mode?: 'kategorie' | 'wartung' | 'neutral';
+  mode?: MapMode;
   onAreaClick?: (areaId: string) => void;
   highlightedAreas?: string[];
   activeArea?: string;
@@ -23,13 +28,6 @@ interface GardenMapProps {
   compact?: boolean;
   showModeSwitch?: boolean;
 }
-
-const WARTUNG_COLORS: Record<string, string> = {
-  'ok': '34, 197, 94',
-  'due-soon': '245, 158, 11',
-  'overdue': '239, 68, 68',
-  'no-data': '156, 163, 175',
-};
 
 function parseFillFromStyle(style: string | undefined): string {
   if (!style) return '#cccccc';
@@ -238,7 +236,7 @@ function computeLabelPositions(shapes: SvgShape[]): { id: string; label: string;
 }
 
 export default function GardenMap({
-  mode: initialMode = 'kategorie',
+  mode: initialMode = 'alle',
   onAreaClick,
   highlightedAreas = [],
   activeArea,
@@ -282,14 +280,18 @@ export default function GardenMap({
 
   // Fetch area statuses in wartung mode
   useEffect(() => {
-    if (mode !== 'wartung') return;
     fetch(`${API_BASE}/api/map/areas`)
       .then((res) => res.json())
       .then((data) => {
         const statuses: Record<string, AreaStatus> = {};
         if (data.areas) {
-          for (const area of data.areas) {
-            statuses[area.id] = { status: area.status || 'no-data' };
+          for (const [areaId, areaData] of Object.entries(data.areas)) {
+            const d = areaData as any;
+            statuses[areaId] = {
+              status: d.status || 'no-data',
+              description: d.description || '',
+              photo_count: d.photo_count || 0,
+            };
           }
         }
         setAreaStatuses(statuses);
@@ -311,48 +313,48 @@ export default function GardenMap({
     (shape: SvgShape, hovered: boolean) => {
       const active = isActive(shape.id);
       const highlighted = isHighlighted(shape.id);
+      const shapeCategory = getAreaCategory(shape.id);
 
-      if (mode === 'kategorie') {
+      if (mode === 'alle') {
+        // Show all areas with original colors
         let opacity = 0.55;
         if (active || (selectable && selectedId === shape.id)) opacity = 0.85;
         else if (hovered || highlighted) opacity = 0.75;
-        // Use original fill with adjusted opacity
         return { fill: shape.originalFill, opacity };
       }
 
-      if (mode === 'wartung') {
-        const status = areaStatuses[shape.id]?.status || 'no-data';
-        const rgb = WARTUNG_COLORS[status];
-        let opacity = 0.55;
-        if (active || (selectable && selectedId === shape.id)) opacity = 0.85;
-        else if (hovered || highlighted) opacity = 0.75;
-        return { fill: `rgb(${rgb})`, opacity };
-      }
+      // Category filter mode
+      const isInCategory = shapeCategory === mode;
 
-      // neutral
-      if (active || (selectable && selectedId === shape.id)) {
-        return { fill: 'rgba(255,255,255,0.5)', opacity: 1 };
+      if (isInCategory) {
+        const rgb = CATEGORY_COLORS[mode as MapCategory];
+        let opacity = 0.65;
+        if (active || (selectable && selectedId === shape.id)) opacity = 0.9;
+        else if (hovered || highlighted) opacity = 0.8;
+        return { fill: `rgb(${rgb})`, opacity };
+      } else {
+        // Dimmed areas not in this category
+        let opacity = 0.15;
+        if (hovered) opacity = 0.3;
+        return { fill: shape.originalFill, opacity };
       }
-      if (hovered) {
-        return { fill: 'rgba(255,255,255,0.3)', opacity: 1 };
-      }
-      return { fill: 'transparent', opacity: 1 };
     },
-    [mode, areaStatuses, isActive, isHighlighted, selectable, selectedId]
+    [mode, isActive, isHighlighted, selectable, selectedId]
   );
 
   const getStroke = useCallback(
     (shape: SvgShape, hovered: boolean) => {
       const active = isActive(shape.id);
-      if (mode === 'neutral') {
-        if (active || (selectable && selectedId === shape.id)) return { stroke: 'white', strokeWidth: 1 };
-        if (hovered) return { stroke: 'white', strokeWidth: 1 };
+      const shapeCategory = getAreaCategory(shape.id);
+      const isInCategory = mode === 'alle' || shapeCategory === mode;
+
+      if (!isInCategory) {
         return { stroke: 'none', strokeWidth: 0 };
       }
       if (hovered || active) return { stroke: 'white', strokeWidth: 2 };
-      return { stroke: 'none', strokeWidth: 0 };
+      return { stroke: 'rgba(255,255,255,0.3)', strokeWidth: 0.5 };
     },
-    [mode, isActive, selectable, selectedId]
+    [mode, isActive]
   );
 
   const handleShapeClick = useCallback(
@@ -551,28 +553,33 @@ export default function GardenMap({
 
   const hoveredShape = shapes.find((s) => s.id === hoveredId);
 
-  const tooltipContent = hoveredShape ? (
-    <div
-      className="absolute bg-white/95 backdrop-blur rounded-lg shadow-lg px-3 py-2 pointer-events-none z-30"
-      style={{
-        left: mousePos.x + 16,
-        top: mousePos.y - 10,
-      }}
-    >
-      <div className="font-semibold text-gray-800 text-sm">{hoveredShape.label}</div>
-      {mode === 'wartung' && (
-        <div className="text-xs mt-0.5" style={{ color: `rgb(${WARTUNG_COLORS[areaStatuses[hoveredShape.id]?.status || 'no-data']})` }}>
-          {(() => {
-            const s = areaStatuses[hoveredShape.id]?.status || 'no-data';
-            if (s === 'ok') return 'OK';
-            if (s === 'due-soon') return 'Bald faellig';
-            if (s === 'overdue') return 'Ueberfaellig';
-            return 'Keine Daten';
-          })()}
-        </div>
-      )}
-    </div>
-  ) : null;
+  const tooltipContent = hoveredShape ? (() => {
+    const shapeCategory = getAreaCategory(hoveredShape.id);
+    return (
+      <div
+        className="absolute bg-white/95 backdrop-blur rounded-lg shadow-lg px-3 py-2 pointer-events-none z-30 max-w-xs"
+        style={{
+          left: mousePos.x + 16,
+          top: mousePos.y - 10,
+        }}
+      >
+        <div className="font-semibold text-gray-800 text-sm">{hoveredShape.label}</div>
+        {shapeCategory && (
+          <div className="text-xs mt-0.5 flex items-center gap-1" style={{ color: `rgb(${CATEGORY_COLORS[shapeCategory]})` }}>
+            {CATEGORY_ICONS[shapeCategory]} {CATEGORY_LABELS[shapeCategory]}
+          </div>
+        )}
+        {areaStatuses[hoveredShape.id]?.description && (
+          <div className="text-xs text-gray-600 mt-0.5">{areaStatuses[hoveredShape.id].description}</div>
+        )}
+        {(areaStatuses[hoveredShape.id]?.photo_count || 0) > 0 && (
+          <div className="text-xs text-gray-500 mt-0.5">
+            {areaStatuses[hoveredShape.id]?.photo_count} Foto{(areaStatuses[hoveredShape.id]?.photo_count || 0) > 1 ? 's' : ''}
+          </div>
+        )}
+      </div>
+    );
+  })() : null;
 
   return (
     <>
@@ -598,17 +605,29 @@ export default function GardenMap({
         {/* Mode Switch */}
         {showModeSwitch && !compact && (
           <div className="absolute top-3 left-3 z-20 flex bg-white/90 backdrop-blur rounded-full shadow-lg overflow-hidden text-xs">
-            {(['kategorie', 'wartung', 'neutral'] as const).map((m) => (
+            <button
+              key="alle"
+              onClick={() => setMode('alle')}
+              className={`px-3 py-1.5 font-medium transition ${
+                mode === 'alle'
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Alle
+            </button>
+            {(['gebaeude', 'natur', 'technik', 'wasser'] as const).map((cat) => (
               <button
-                key={m}
-                onClick={() => setMode(m)}
+                key={cat}
+                onClick={() => setMode(cat)}
                 className={`px-3 py-1.5 font-medium transition ${
-                  mode === m
-                    ? 'bg-garden-600 text-white'
+                  mode === cat
+                    ? 'text-white'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
+                style={mode === cat ? { backgroundColor: `rgb(${CATEGORY_COLORS[cat]})` } : {}}
               >
-                {m === 'kategorie' ? 'Kategorie' : m === 'wartung' ? 'Wartung' : 'Neutral'}
+                {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
               </button>
             ))}
           </div>
@@ -707,25 +726,21 @@ export default function GardenMap({
         {tooltipContent}
       </div>
 
-      {/* Legend (Wartung mode only) */}
-      {mode === 'wartung' && !compact && (
+      {/* Category Legend */}
+      {mode !== 'alle' && !compact && (
         <div className="flex gap-4 mt-2 text-sm text-gray-600">
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm" style={{ background: `rgb(${WARTUNG_COLORS['ok']})` }}></span>
-            OK
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm" style={{ background: `rgb(${WARTUNG_COLORS['due-soon']})` }}></span>
-            Bald faellig
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm" style={{ background: `rgb(${WARTUNG_COLORS['overdue']})` }}></span>
-            Ueberfaellig
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm" style={{ background: `rgb(${WARTUNG_COLORS['no-data']})` }}></span>
-            Keine Daten
-          </div>
+          {(['gebaeude', 'natur', 'technik', 'wasser'] as const).map((cat) => (
+            <div key={cat} className="flex items-center gap-1.5">
+              <span
+                className="w-3 h-3 rounded-sm"
+                style={{
+                  background: `rgb(${CATEGORY_COLORS[cat]})`,
+                  opacity: mode === cat ? 1 : 0.3,
+                }}
+              />
+              {CATEGORY_LABELS[cat]}
+            </div>
+          ))}
         </div>
       )}
     </>
