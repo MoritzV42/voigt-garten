@@ -620,15 +620,16 @@ export default function UnifiedKanban() {
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 min-w-0">
             {isBlocked && <span className="text-red-500 text-xs shrink-0" title="Blockiert">🔒</span>}
+            <span className="text-xs text-gray-400 shrink-0">#{task.id}</span>
             <h4 className="font-medium text-gray-900 text-sm truncate">{task.title}</h4>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {task.comment_count && task.comment_count > 0 && (
+            {(task.comment_count ?? 0) > 0 && (
               <span className="text-xs text-gray-500 flex items-center gap-0.5" title={`${task.comment_count} Kommentare`}>
                 💬{task.comment_count}
               </span>
             )}
-            {task.is_recurring && task.cycle_days && (
+            {!!task.is_recurring && !!task.cycle_days && (
               <span className="text-xs text-blue-600" title={`Alle ${task.cycle_days} Tage`}>
                 🔄 {task.cycle_days}d
               </span>
@@ -642,7 +643,7 @@ export default function UnifiedKanban() {
         </span>
 
         {/* Subtask Progress */}
-        {task.children_count && task.children_count > 0 && (
+        {(task.children_count ?? 0) > 0 && (
           <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -652,7 +653,7 @@ export default function UnifiedKanban() {
         )}
 
         {/* Due Status for Recurring */}
-        {task.is_recurring && task.due_status && (
+        {!!task.is_recurring && task.due_status && (
           <div className={`mt-2 text-xs font-medium ${
             task.due_status === 'overdue' ? 'text-red-600' :
             task.due_status === 'due-soon' ? 'text-amber-600' : 'text-green-600'
@@ -663,14 +664,14 @@ export default function UnifiedKanban() {
         )}
 
         {/* Due Date */}
-        {!task.is_recurring && task.due_date && (
+        {!Number(task.is_recurring) && task.due_date && (
           <div className="mt-2 text-xs text-gray-500">
             📅 {new Date(task.due_date).toLocaleDateString('de-DE')}
           </div>
         )}
 
         {/* Credits */}
-        {task.credit_value && task.credit_value > 0 && (
+        {(task.credit_value ?? 0) > 0 && (
           <div className="mt-2 text-xs text-garden-600 font-medium">
             💰 {task.credit_value}€ Guthaben
           </div>
@@ -829,13 +830,13 @@ export default function UnifiedKanban() {
                       <div>
                         <div className="font-medium text-gray-900">{task.title}</div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          {task.is_recurring && task.cycle_days && (
+                          {!!task.is_recurring && !!task.cycle_days && (
                             <span className="text-xs text-blue-600">🔄 {task.cycle_days}d</span>
                           )}
-                          {task.comment_count && task.comment_count > 0 && (
+                          {(task.comment_count ?? 0) > 0 && (
                             <span className="text-xs text-gray-400">💬{task.comment_count}</span>
                           )}
-                          {task.children_count && task.children_count > 0 && (
+                          {(task.children_count ?? 0) > 0 && (
                             <span className="text-xs text-gray-400">📋{task.children_count}</span>
                           )}
                         </div>
