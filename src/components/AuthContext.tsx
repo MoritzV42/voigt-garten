@@ -6,6 +6,7 @@ interface User {
   username?: string;
   name?: string;
   role: 'user' | 'admin';
+  profile_image_url?: string;
 }
 
 interface AuthContextType {

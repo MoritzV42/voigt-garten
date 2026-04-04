@@ -7,6 +7,7 @@ interface User {
   username?: string;
   name?: string;
   role: 'user' | 'admin';
+  profile_image_url?: string;
 }
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'https://garten.infinityspace42.de';
@@ -133,9 +134,18 @@ export default function GlobalNavbar() {
             onClick={() => setShowDropdown(!showDropdown)}
             className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-garden-50 transition"
           >
-            <div className="w-8 h-8 rounded-full bg-garden-600 text-white flex items-center justify-center text-sm font-medium">
-              {user.name?.charAt(0) || user.username?.charAt(0) || user.email.charAt(0).toUpperCase()}
-            </div>
+            {user.profile_image_url ? (
+              <img
+                src={user.profile_image_url}
+                alt=""
+                className="w-8 h-8 rounded-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-garden-600 text-white flex items-center justify-center text-sm font-medium">
+                {user.name?.charAt(0) || user.username?.charAt(0) || user.email.charAt(0).toUpperCase()}
+              </div>
+            )}
             <span className="hidden md:block text-sm text-gray-700">
               {user.name || user.username || user.email.split('@')[0]}
             </span>
@@ -161,11 +171,11 @@ export default function GlobalNavbar() {
                   )}
                 </div>
                 <a
-                  href="/wartung"
+                  href="/taskmanagement"
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   onClick={() => setShowDropdown(false)}
                 >
-                  Wartungsaufgaben
+                  Aufgaben
                 </a>
                 {user.role === 'admin' && (
                   <a

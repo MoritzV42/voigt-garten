@@ -23,6 +23,7 @@ from collections import deque
 from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification, send_magic_link_email, send_welcome_email, send_feedback_request, send_google_review_followup, send_payment_reminder
 from telegram_service import send_moderation_request, answer_callback_query, notify_admin, notify_booking, notify_feedback, notify_email_sent
 from storage import LocalStorage
+import urllib.parse
 
 try:
     from pricing_service import calculate_booking_price, calculate_cancellation_refund, get_availability, validate_booking
@@ -44,6 +45,11 @@ JWT_EXPIRY_HOURS = 24
 
 if JWT_SECRET == 'voigt-garten-secret-key-change-in-production-2026':
     print("WARNING: Using default JWT secret! Set JWT_SECRET environment variable in production.")
+
+# Google OAuth
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://garten.infinityspace42.de/api/auth/google/callback')
 
 # Image processing
 try:
@@ -533,6 +539,26 @@ def migrate_db():
     except Exception as e:
         print(f"Migration recurring→projects: {e}")
 
+    # Add report_type column to issue_reports
+    try:
+        conn.execute("ALTER TABLE issue_reports ADD COLUMN report_type TEXT DEFAULT 'mangel'")
+        conn.commit()
+        print("Migration: Added report_type column to issue_reports")
+    except Exception:
+        pass  # Column already exists
+
+    # Add Google OAuth columns to users
+    for col_stmt in [
+        "ALTER TABLE users ADD COLUMN google_id TEXT",
+        "ALTER TABLE users ADD COLUMN profile_image_url TEXT",
+    ]:
+        try:
+            conn.execute(col_stmt)
+            conn.commit()
+            print(f"Migration: {col_stmt}")
+        except Exception:
+            pass  # Column already exists
+
     # Seed inventory if empty
     seed_inventory(conn)
 
@@ -965,6 +991,110 @@ def migrate_db():
             ))
     conn.commit()
     print("Seeded legal/regulatory tasks")
+
+    # Seed IT tasks (completed features from development)
+    it_tasks = [
+        {
+            'title': 'Website-Grundgeruest aufgebaut',
+            'description': 'Astro + React + Tailwind als Technologie-Stack aufgesetzt. '
+                'Startseite, Galerie, mehrseitiges System mit responsivem Layout implementiert.',
+            'effort': 'schwer',
+        },
+        {
+            'title': 'Foto-Galerie mit Upload-System',
+            'description': 'Nutzer koennen Bilder hochladen mit automatischer WebP-Konvertierung. '
+                'Kategorien, Lightbox-Viewer und Admin-Moderation integriert.',
+            'effort': 'schwer',
+        },
+        {
+            'title': '360-Grad Panorama-Viewer',
+            'description': 'Equirectangular-Panoramen im Browser betrachten mit Pannellum.js. '
+                'Spezialbehandlung ohne WebP-Konvertierung fuer Originalqualitaet.',
+            'effort': 'mittel',
+        },
+        {
+            'title': 'Login-System mit Magic-Link',
+            'description': 'Anmeldung per Email-Link ohne Passwort-Vergessen-Problem. '
+                'JWT-Sessions, Token-Verifizierung, automatische Registrierung.',
+            'effort': 'schwer',
+        },
+        {
+            'title': 'Kanban-Board fuer Aufgaben',
+            'description': 'Drag-and-Drop Aufgabenverwaltung mit Status-Workflow '
+                '(Offen, Als Naechstes, In Arbeit, Erledigt). Kanban- und Listenansicht.',
+            'effort': 'schwer',
+        },
+        {
+            'title': 'Subtasks, Kommentare und Abhaengigkeiten',
+            'description': 'Aufgaben koennen Unteraufgaben haben, kommentiert und miteinander '
+                'verknuepft werden. Hierarchische Aufgabenstruktur.',
+            'effort': 'schwer',
+        },
+        {
+            'title': 'Interaktive SVG-Gartenkarte',
+            'description': 'Klickbare Karte mit 3 Farbmodi, Zoom/Pan, Touch-Gesten. '
+                '27 benannte Bereiche mit Beschreibungen aus der Datenbank.',
+            'effort': 'schwer',
+        },
+        {
+            'title': 'Inventar-Verwaltung',
+            'description': 'Gebaeude, Stockwerke, Raeume und Gegenstaende digital erfassen '
+                'und durchsuchen. Hierarchische Navigation mit Zustandserfassung.',
+            'effort': 'mittel',
+        },
+        {
+            'title': 'Telegram-Bot (@Garten_Bot)',
+            'description': 'Galerie-Moderation per Inline-Buttons (Freigeben/Ablehnen). '
+                'Chat-Kommandos fuer Aufgaben, Inventar, Buchungen und Status.',
+            'effort': 'mittel',
+        },
+        {
+            'title': 'Docker-Deployment und Auto-Rebuild',
+            'description': 'Multi-Stage Build, Gunicorn, Volume-Mounts. '
+                'Ein-Klick-Rebuild per SSH mit automatischem DB-Backup.',
+            'effort': 'mittel',
+        },
+        {
+            'title': 'Buchungssystem mit Preisberechnung',
+            'description': 'Kalender, Verfuegbarkeitspruefung, Saisonpreise, Tagesnutzung. '
+                'Stornierung mit Erstattungsberechnung, AGB-Checkboxen.',
+            'effort': 'schwer',
+        },
+        {
+            'title': 'Rechnungen erstellen und versenden',
+            'description': 'PDF-Erzeugung aus Buchungen, Email-Versand via Resend. '
+                'Zahlungsstatus-Tracking mit automatischen Zahlungserinnerungen.',
+            'effort': 'schwer',
+        },
+        {
+            'title': 'Mehrsprachigkeit (DE/EN)',
+            'description': 'DeepL-Uebersetzung mit DB-Cache, Sprach-Toggle in der Navigation. '
+                'Preload-Endpoint fuer gecachte Uebersetzungen.',
+            'effort': 'mittel',
+        },
+        {
+            'title': 'E2E-Tests mit Playwright',
+            'description': 'Automatisierte Tests fuer API-Endpoints und Seitennavigation. '
+                'Hydration-Retry-Helper fuer React-Komponenten.',
+            'effort': 'mittel',
+        },
+        {
+            'title': 'Kostenuebersicht und Gutschriften',
+            'description': 'Laufende Kosten tracken (monatlich/jaehrlich/einmalig). '
+                'Wartungsgutschriften fuer Helfer verwalten und verrechnen.',
+            'effort': 'mittel',
+        },
+    ]
+    for task in it_tasks:
+        existing = conn.execute("SELECT id FROM projects WHERE title = ?", (task['title'],)).fetchone()
+        if not existing:
+            conn.execute('''
+                INSERT INTO projects (title, description, category, status, priority,
+                                     effort, created_by)
+                VALUES (?, ?, 'it', 'done', 'mittel', ?, 'moritzvoigt42@gmail.com')
+            ''', (task['title'], task['description'], task['effort']))
+    conn.commit()
+    print("Seeded IT development tasks")
 
     # Map area descriptions table
     conn.execute('''
@@ -2640,8 +2770,15 @@ def login():
     ''', (login_id, login_id)).fetchone()
     conn.close()
 
-    if not user or not check_password_hash(user['password_hash'], password):
-        return jsonify({'error': 'Ungültige Anmeldedaten'}), 401
+    if not user:
+        return jsonify({'error': 'Ungueltige Anmeldedaten'}), 401
+
+    # Block password login for Google-only users (empty password_hash)
+    if not user['password_hash']:
+        return jsonify({'error': 'Dieser Account nutzt Google-Anmeldung. Bitte mit Google anmelden.'}), 401
+
+    if not check_password_hash(user['password_hash'], password):
+        return jsonify({'error': 'Ungueltige Anmeldedaten'}), 401
 
     # Update last login
     conn = get_db()
@@ -2660,7 +2797,8 @@ def login():
             'email': user['email'],
             'username': user['username'],
             'name': user['name'],
-            'role': user['role']
+            'role': user['role'],
+            'profile_image_url': user['profile_image_url'] if user['profile_image_url'] else None
         }
     })
 
@@ -2688,13 +2826,28 @@ def verify_auth():
     if not user:
         return jsonify({'authenticated': False}), 401
 
+    # Fetch additional user details from DB
+    conn = get_db()
+    db_user = conn.execute('SELECT name, username, profile_image_url FROM users WHERE id = ?',
+                           (user['user_id'],)).fetchone()
+    conn.close()
+
+    user_data = {
+        'id': user['user_id'],
+        'email': user['email'],
+        'role': user['role']
+    }
+    if db_user:
+        if db_user['name']:
+            user_data['name'] = db_user['name']
+        if db_user['username']:
+            user_data['username'] = db_user['username']
+        if db_user['profile_image_url']:
+            user_data['profile_image_url'] = db_user['profile_image_url']
+
     return jsonify({
         'authenticated': True,
-        'user': {
-            'id': user['user_id'],
-            'email': user['email'],
-            'role': user['role']
-        }
+        'user': user_data
     })
 
 
@@ -2939,6 +3092,139 @@ def complete_registration():
     except sqlite3.IntegrityError:
         conn.close()
         return jsonify({'error': 'Email oder Username bereits vergeben'}), 409
+
+
+@app.route('/api/auth/google/url', methods=['GET'])
+def google_auth_url():
+    """Return Google OAuth authorization URL."""
+    if not GOOGLE_CLIENT_ID:
+        return jsonify({'error': 'Google OAuth nicht konfiguriert'}), 503
+
+    params = urllib.parse.urlencode({
+        'client_id': GOOGLE_CLIENT_ID,
+        'redirect_uri': GOOGLE_REDIRECT_URI,
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'access_type': 'offline',
+        'prompt': 'select_account',
+    })
+    url = f'https://accounts.google.com/o/oauth2/v2/auth?{params}'
+    return jsonify({'url': url})
+
+
+@app.route('/api/auth/google/callback', methods=['GET'])
+def google_callback():
+    """Handle Google OAuth callback, create/find user, issue JWT."""
+    code = request.args.get('code')
+    error = request.args.get('error')
+
+    if error or not code:
+        return f'<script>window.location.href="/auth/google-success?error={error or "no_code"}"</script>'
+
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        return '<script>window.location.href="/auth/google-success?error=not_configured"</script>'
+
+    try:
+        import requests as http_requests
+
+        # Exchange code for tokens
+        token_resp = http_requests.post('https://oauth2.googleapis.com/token', data={
+            'code': code,
+            'client_id': GOOGLE_CLIENT_ID,
+            'client_secret': GOOGLE_CLIENT_SECRET,
+            'redirect_uri': GOOGLE_REDIRECT_URI,
+            'grant_type': 'authorization_code',
+        }, timeout=10)
+
+        if not token_resp.ok:
+            return '<script>window.location.href="/auth/google-success?error=token_exchange"</script>'
+
+        tokens = token_resp.json()
+        access_token = tokens.get('access_token')
+
+        # Get user info
+        userinfo_resp = http_requests.get('https://www.googleapis.com/oauth2/v2/userinfo',
+                                          headers={'Authorization': f'Bearer {access_token}'}, timeout=10)
+        if not userinfo_resp.ok:
+            return '<script>window.location.href="/auth/google-success?error=userinfo"</script>'
+
+        ginfo = userinfo_resp.json()
+        google_id = ginfo.get('id')
+        email = ginfo.get('email')
+        name = ginfo.get('name')
+        picture = ginfo.get('picture')
+
+        if not email:
+            return '<script>window.location.href="/auth/google-success?error=no_email"</script>'
+
+        conn = get_db()
+
+        # Try to find user by google_id or email
+        user = conn.execute('SELECT * FROM users WHERE google_id = ? OR email = ?',
+                            (google_id, email)).fetchone()
+
+        if user:
+            # Update google info
+            conn.execute('''
+                UPDATE users SET google_id = ?, profile_image_url = ?, name = COALESCE(name, ?), last_login = ?
+                WHERE id = ?
+            ''', (google_id, picture, name, datetime.now().isoformat(), user['id']))
+            conn.commit()
+            user_id = user['id']
+            role = user['role']
+            username = user['username']
+        else:
+            # Create new user (no password needed for Google-only users)
+            # Generate unique username from email
+            base_username = email.split('@')[0][:20]
+            username = base_username
+            suffix = 1
+            while conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone():
+                username = f"{base_username}{suffix}"
+                suffix += 1
+
+            conn.execute('''
+                INSERT INTO users (email, username, password_hash, name, role, google_id, profile_image_url, last_login)
+                VALUES (?, ?, '', ?, 'user', ?, ?, ?)
+            ''', (email, username, name, google_id, picture, datetime.now().isoformat()))
+            user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+            conn.commit()
+            role = 'user'
+
+            # Notify admin
+            send_activity_notification('user_registered', {
+                'Name': name or username,
+                'Email': email,
+                'Methode': 'Google OAuth'
+            })
+
+        conn.close()
+
+        # Create JWT
+        auth_token = create_token(user_id, email, role)
+
+        # Build user JSON for frontend
+        user_json = json.dumps({
+            'id': user_id,
+            'email': email,
+            'username': username,
+            'name': name,
+            'role': role,
+            'profile_image_url': picture,
+        })
+        user_json_escaped = user_json.replace("'", "\\'")
+
+        # Redirect to frontend success page with token
+        return f'''<script>
+            localStorage.setItem('voigt-garten-token', '{auth_token}');
+            localStorage.setItem('voigt-garten-user', '{user_json_escaped}');
+            window.dispatchEvent(new CustomEvent('auth-change', {{ detail: {{ user: {user_json} }} }}));
+            window.location.href = '/';
+        </script>'''
+
+    except Exception as e:
+        print(f"Google OAuth error: {e}")
+        return f'<script>window.location.href="/auth/google-success?error=server"</script>'
 
 
 @app.route('/api/admin/users', methods=['POST'])
@@ -3748,17 +4034,19 @@ def get_issues():
 @app.route('/api/issues', methods=['POST'])
 @require_auth
 def create_issue(user):
-    """Report a new issue/defect."""
+    """Report a new issue, bug, feature request, or feedback."""
     photo_path = None
     title = None
     description = None
     category = None
+    report_type = 'mangel'
 
     # Handle multipart form data for photo upload
     if request.content_type and 'multipart/form-data' in request.content_type:
         title = request.form.get('title')
         description = request.form.get('description')
         category = request.form.get('category')
+        report_type = request.form.get('report_type', 'mangel')
 
         if 'photo' in request.files:
             photo = request.files['photo']
@@ -3774,21 +4062,28 @@ def create_issue(user):
         title = data.get('title')
         description = data.get('description')
         category = data.get('category')
+        report_type = data.get('report_type', 'mangel')
 
     if not title:
         return jsonify({'error': 'Titel erforderlich'}), 400
 
+    # Validate report_type
+    if report_type not in ('mangel', 'bug', 'feature', 'feedback'):
+        report_type = 'mangel'
+
     conn = get_db()
     conn.execute('''
-        INSERT INTO issue_reports (title, description, category, photo_filename, reported_by)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (title, description, category, photo_path, user['email']))
+        INSERT INTO issue_reports (title, description, category, photo_filename, reported_by, report_type)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (title, description, category, photo_path, user['email'], report_type))
     issue_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
     conn.commit()
     conn.close()
 
+    type_labels = {'mangel': 'Mangel', 'bug': 'Bug', 'feature': 'Feature-Wunsch', 'feedback': 'Feedback'}
     # Send notification to admin
     send_activity_notification('issue_report', {
+        'Typ': type_labels.get(report_type, report_type),
         'Titel': title,
         'Kategorie': category or 'Nicht angegeben',
         'Beschreibung': description or '-',
@@ -3799,7 +4094,7 @@ def create_issue(user):
     return jsonify({
         'success': True,
         'issueId': issue_id,
-        'message': 'Mängelmeldung eingereicht. Ein Admin wird sich das ansehen.'
+        'message': 'Meldung eingereicht. Ein Admin wird sich das ansehen.'
     })
 
 

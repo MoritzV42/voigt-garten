@@ -6,16 +6,66 @@ interface Props {
   onSuccess: () => void;
 }
 
-const CATEGORIES = [
-  { id: 'wasser', label: '💧 Wasser/Sanitär' },
-  { id: 'elektrik', label: '⚡ Elektrik' },
-  { id: 'haus', label: '🏠 Haus/Gebäude' },
-  { id: 'garten', label: '🌱 Garten' },
-  { id: 'sicherheit', label: '🔒 Sicherheit' },
-  { id: 'sonstiges', label: '🔧 Sonstiges' },
+type ReportType = 'mangel' | 'bug' | 'feature' | 'feedback';
+
+const REPORT_TYPES: { id: ReportType; label: string; icon: string }[] = [
+  { id: 'mangel', label: 'Mangel / Defekt', icon: '⚠️' },
+  { id: 'bug', label: 'Bug melden', icon: '🐛' },
+  { id: 'feature', label: 'Feature-Wunsch', icon: '💡' },
+  { id: 'feedback', label: 'Feedback', icon: '💬' },
 ];
 
+const CATEGORIES_BY_TYPE: Record<ReportType, { id: string; label: string }[]> = {
+  mangel: [
+    { id: 'wasser', label: '💧 Wasser/Sanitär' },
+    { id: 'elektrik', label: '⚡ Elektrik' },
+    { id: 'haus', label: '🏠 Haus/Gebäude' },
+    { id: 'garten', label: '🌱 Garten' },
+    { id: 'sicherheit', label: '🔒 Sicherheit' },
+    { id: 'sonstiges', label: '🔧 Sonstiges' },
+  ],
+  bug: [
+    { id: 'website', label: '🌐 Website' },
+    { id: 'buchung', label: '📅 Buchung' },
+    { id: 'karte', label: '🗺️ Karte' },
+    { id: 'aufgaben', label: '📋 Aufgaben' },
+    { id: 'sonstiges', label: '🔧 Sonstiges' },
+  ],
+  feature: [
+    { id: 'website', label: '🌐 Website' },
+    { id: 'buchung', label: '📅 Buchung' },
+    { id: 'karte', label: '🗺️ Karte' },
+    { id: 'aufgaben', label: '📋 Aufgaben' },
+    { id: 'sonstiges', label: '🔧 Sonstiges' },
+  ],
+  feedback: [
+    { id: 'allgemein', label: '��� Allgemein' },
+    { id: 'garten', label: '🌱 Garten' },
+    { id: 'website', label: '🌐 Website' },
+  ],
+};
+
+const PLACEHOLDERS: Record<ReportType, { title: string; description: string }> = {
+  mangel: {
+    title: 'z.B. Wasserhahn tropft, Lampe kaputt...',
+    description: 'Beschreibe das Problem genauer...',
+  },
+  bug: {
+    title: 'z.B. Buchungskalender zeigt falsche Daten...',
+    description: 'Was hast du erwartet und was ist stattdessen passiert?',
+  },
+  feature: {
+    title: 'z.B. Wetteranzeige auf der Startseite...',
+    description: 'Beschreibe deine Idee und warum sie hilfreich waere...',
+  },
+  feedback: {
+    title: 'z.B. Toller Aufenthalt, aber...',
+    description: 'Dein Feedback hilft uns, den Garten zu verbessern...',
+  },
+};
+
 export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) {
+  const [reportType, setReportType] = useState<ReportType>('mangel');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -55,6 +105,11 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
     }
   };
 
+  const handleReportTypeChange = (type: ReportType) => {
+    setReportType(type);
+    setCategory('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -75,6 +130,7 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
         formData.append('title', title);
         formData.append('description', description);
         formData.append('category', category);
+        formData.append('report_type', reportType);
         formData.append('photo', photo);
 
         response = await fetch(`${API_URL}/api/issues`, {
@@ -89,7 +145,7 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ title, description, category })
+          body: JSON.stringify({ title, description, category, report_type: reportType })
         });
       }
 
@@ -112,6 +168,7 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
   };
 
   const resetForm = () => {
+    setReportType('mangel');
     setTitle('');
     setDescription('');
     setCategory('');
@@ -126,14 +183,17 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
     onClose();
   };
 
+  const categories = CATEGORIES_BY_TYPE[reportType];
+  const placeholders = PLACEHOLDERS[reportType];
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
         {/* Header */}
         <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">⚠️ Mangel melden</h2>
-            <p className="text-sm text-gray-500">Melde einen Defekt oder ein Problem im Garten</p>
+            <h2 className="text-xl font-bold text-gray-900">Meldung erstellen</h2>
+            <p className="text-sm text-gray-500">Melde ein Problem, einen Bug oder teile dein Feedback</p>
           </div>
           <button
             onClick={handleClose}
@@ -155,17 +215,40 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
         ) : (
           /* Form */
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {/* Report Type Selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Art der Meldung
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {REPORT_TYPES.map(type => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => handleReportTypeChange(type.id)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition border ${
+                      reportType === type.id
+                        ? 'bg-garden-600 text-white border-garden-600'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-garden-400'
+                    }`}
+                  >
+                    {type.icon} {type.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Was ist das Problem? *
+                {reportType === 'mangel' ? 'Was ist das Problem?' : reportType === 'bug' ? 'Was funktioniert nicht?' : reportType === 'feature' ? 'Deine Idee' : 'Dein Feedback'} *
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="z.B. Wasserhahn tropft, Lampe kaputt..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
+                placeholder={placeholders.title}
                 required
                 autoFocus
               />
@@ -179,10 +262,10 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
               >
-                <option value="">Kategorie auswählen...</option>
-                {CATEGORIES.map(cat => (
+                <option value="">Kategorie auswaehlen...</option>
+                {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.label}</option>
                 ))}
               </select>
@@ -196,22 +279,22 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
                 rows={3}
-                placeholder="Beschreibe das Problem genauer..."
+                placeholder={placeholders.description}
               />
             </div>
 
             {/* Photo Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Foto (optional, aber hilfreich!)
+                Foto (optional)
               </label>
               <div
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-amber-500 transition"
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-garden-500 transition"
               >
                 {photoPreview ? (
                   <div className="relative">
@@ -232,7 +315,7 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
                   <>
                     <div className="text-4xl mb-2">📷</div>
                     <p className="text-gray-600">Klicken oder Foto hierher ziehen</p>
-                    <p className="text-xs text-gray-400 mt-1">Ein Foto hilft bei der Einschätzung</p>
+                    <p className="text-xs text-gray-400 mt-1">Ein Foto hilft bei der Einschaetzung</p>
                   </>
                 )}
               </div>
@@ -264,9 +347,9 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-400 text-white py-3 rounded-lg font-medium transition"
+                className="flex-1 bg-garden-600 hover:bg-garden-700 disabled:bg-gray-400 text-white py-3 rounded-lg font-medium transition"
               >
-                {isSubmitting ? 'Wird gesendet...' : '⚠️ Meldung senden'}
+                {isSubmitting ? 'Wird gesendet...' : 'Meldung senden'}
               </button>
             </div>
           </form>

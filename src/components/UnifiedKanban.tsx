@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import TaskDetailModal from './TaskDetailModal';
 import IssueReportModal from './IssueReportModal';
+import LoginModal from './LoginModal';
 
 
 interface User {
@@ -112,6 +113,7 @@ export default function UnifiedKanban() {
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showIssueModal, setShowIssueModal] = useState(false);
+  const [showLoginForAccess, setShowLoginForAccess] = useState(false);
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -890,22 +892,54 @@ export default function UnifiedKanban() {
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'admin';
 
+  // Login required to view tasks
+  if (!isAuthenticated && !isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-lg p-8 sm:p-12 text-center max-w-lg mx-auto">
+          <div className="text-6xl mb-4">🔒</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Anmeldung erforderlich</h2>
+          <p className="text-gray-600 mb-6">
+            Bitte melde dich an, um die Aufgaben zu sehen und mitzuarbeiten.
+          </p>
+          <button
+            onClick={() => setShowLoginForAccess(true)}
+            className="px-6 py-3 bg-garden-600 hover:bg-garden-700 text-white rounded-lg font-medium transition text-lg"
+          >
+            Anmelden
+          </button>
+          <p className="text-sm text-gray-500 mt-4">
+            Nach der Anmeldung kannst du Aufgaben uebernehmen und Guthaben sammeln.
+          </p>
+        </div>
+        <LoginModal
+          isOpen={showLoginForAccess}
+          onClose={() => setShowLoginForAccess(false)}
+          onSuccess={() => {
+            setShowLoginForAccess(false);
+            window.location.reload();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with Stats */}
       <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Wartungsaufgaben</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Aufgaben</h2>
             <p className="text-gray-600">Alle wiederkehrenden und einmaligen Aufgaben</p>
           </div>
           <div className="flex gap-2">
             {isAuthenticated && (
               <button
                 onClick={() => setShowIssueModal(true)}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition min-h-[44px]"
+                className="px-4 py-2 bg-garden-600 hover:bg-garden-700 text-white rounded-lg font-medium transition min-h-[44px]"
               >
-                ⚠️ Mangel melden
+                ✏️ Meldung erstellen
               </button>
             )}
           </div>

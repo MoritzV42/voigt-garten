@@ -5,7 +5,7 @@ import { test, expect, Page } from '@playwright/test';
 async function waitForKanban(page: Page) {
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt === 0) {
-      await page.goto('/wartung', { waitUntil: 'load' });
+      await page.goto('/taskmanagement', { waitUntil: 'load' });
     } else {
       await page.reload({ waitUntil: 'load' });
     }
@@ -21,14 +21,14 @@ async function waitForKanban(page: Page) {
   await page.waitForSelector('input[placeholder*="Suche"]', { timeout: 20000 });
 }
 
-test.describe('Wartungsseite - Grundstruktur', () => {
+test.describe('Taskmanagement - Grundstruktur', () => {
   test.beforeEach(async ({ page }) => {
     await waitForKanban(page);
   });
 
   test('Überschrift und Stats-Bereich vorhanden', async ({ page }) => {
     // React-rendered heading
-    await expect(page.locator('text=Wartungsaufgaben')).toBeAttached();
+    await expect(page.locator('text=Aufgaben')).toBeAttached();
     // At least one stats label should be present (content depends on data)
     await expect(page.locator('text=Gesamt')).toBeAttached();
   });
@@ -44,7 +44,7 @@ test.describe('Wartungsseite - Grundstruktur', () => {
   });
 });
 
-test.describe('Wartungsseite - Suchleiste', () => {
+test.describe('Taskmanagement - Suchleiste', () => {
   test.beforeEach(async ({ page }) => {
     await waitForKanban(page);
   });
@@ -75,13 +75,13 @@ test.describe('Wartungsseite - Suchleiste', () => {
   });
 });
 
-test.describe('Wartungsseite - Filter', () => {
+test.describe('Taskmanagement - Filter', () => {
   test.beforeEach(async ({ page }) => {
     await waitForKanban(page);
   });
 
   test('Kategorie-Filter Dropdown öffnet sich', async ({ page }) => {
-    const btn = page.locator('#wartung-content button:has-text("Kategorie")');
+    const btn = page.locator('#taskmanagement-content button:has-text("Kategorie")');
     await btn.scrollIntoViewIfNeeded();
     await btn.click();
     await page.waitForTimeout(300);
@@ -110,7 +110,7 @@ test.describe('Wartungsseite - Filter', () => {
   });
 
   test('Filter auswählen zeigt Badge-Count', async ({ page }) => {
-    const btn = page.locator('#wartung-content button:has-text("Kategorie")');
+    const btn = page.locator('#taskmanagement-content button:has-text("Kategorie")');
     await btn.scrollIntoViewIfNeeded();
     await btn.click();
     await page.waitForTimeout(300);
@@ -119,7 +119,7 @@ test.describe('Wartungsseite - Filter', () => {
     await expect(checkbox).toBeVisible({ timeout: 5000 });
     await checkbox.click();
     // Close dropdown by clicking outside
-    await page.locator('h2:has-text("Wartungsaufgaben")').click({ force: true });
+    await page.locator('h2:has-text("Aufgaben")').click({ force: true });
     await page.waitForTimeout(300);
     // Button should now show a badge with count
     const badge = btn.locator('span.bg-garden-600');
@@ -127,7 +127,7 @@ test.describe('Wartungsseite - Filter', () => {
   });
 
   test('"Alle Filter zurücksetzen" Button erscheint bei aktiven Filtern', async ({ page }) => {
-    const btn = page.locator('#wartung-content button:has-text("Kategorie")');
+    const btn = page.locator('#taskmanagement-content button:has-text("Kategorie")');
     await btn.scrollIntoViewIfNeeded();
     await btn.click();
     await page.waitForTimeout(300);
@@ -135,14 +135,14 @@ test.describe('Wartungsseite - Filter', () => {
     await expect(checkbox).toBeVisible({ timeout: 5000 });
     await checkbox.click();
     // Close dropdown
-    await page.locator('h2:has-text("Wartungsaufgaben")').click({ force: true });
+    await page.locator('h2:has-text("Aufgaben")').click({ force: true });
     await page.waitForTimeout(300);
     // Reset button should be visible
     await expect(page.locator('button:has-text("Alle Filter zurücksetzen")')).toBeAttached();
   });
 });
 
-test.describe('Wartungsseite - Kanban View', () => {
+test.describe('Taskmanagement - Kanban View', () => {
   test.beforeEach(async ({ page }) => {
     await waitForKanban(page);
   });
@@ -164,7 +164,7 @@ test.describe('Wartungsseite - Kanban View', () => {
   });
 });
 
-test.describe('Wartungsseite - Listen View', () => {
+test.describe('Taskmanagement - Listen View', () => {
   test('Liste zeigt Tabelle mit Sortierung', async ({ page }) => {
     await waitForKanban(page);
     await page.locator('button:has-text("Liste")').click();
@@ -190,7 +190,7 @@ test.describe('Wartungsseite - Listen View', () => {
 
 // Timeline view was removed in the refactor
 
-test.describe('Wartungsseite - TaskDetailModal', () => {
+test.describe('Taskmanagement - TaskDetailModal', () => {
   test.beforeEach(async ({ page }) => {
     await waitForKanban(page);
   });
@@ -254,7 +254,7 @@ test.describe('Wartungsseite - TaskDetailModal', () => {
   });
 });
 
-test.describe('Wartungsseite - Sidebar', () => {
+test.describe('Taskmanagement - Sidebar', () => {
   test('Desktop: Sidebar mit Guthaben-System vorhanden', async ({ page }) => {
     await waitForKanban(page);
     // Sidebar content exists in DOM (may need scroll to be visible)
@@ -263,7 +263,7 @@ test.describe('Wartungsseite - Sidebar', () => {
   });
 });
 
-test.describe('Wartungsseite - Mobile', () => {
+test.describe('Taskmanagement - Mobile', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test('Mobile: Sidebar ist als Accordion versteckt', async ({ page }) => {

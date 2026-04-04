@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Seitenladung - Alle Seiten erreichbar', () => {
   const pages = [
     { path: '/', title: 'Start' },
-    { path: '/wartung', title: 'Wartung' },
+    { path: '/taskmanagement', title: 'Taskmanagement' },
     { path: '/galerie', title: 'Galerie' },
     { path: '/buchen', title: 'Buchen' },
     { path: '/ueber-den-garten', title: 'Der Garten' },
@@ -44,7 +44,7 @@ test.describe('Navigation - Links vorhanden', () => {
     // Main navigation links (use first() since mobile nav duplicates them)
     await expect(nav.locator('a[href="/galerie"]').first()).toBeVisible();
     await expect(nav.locator('a[href="/buchen"]').first()).toBeVisible();
-    await expect(nav.locator('a[href="/wartung"]').first()).toBeVisible();
+    await expect(nav.locator('a[href="/taskmanagement"]').first()).toBeVisible();
     await expect(nav.locator('a[href="/inventar"]').first()).toBeVisible();
     await expect(nav.locator('a[href="/umgebung"]').first()).toBeVisible();
   });
