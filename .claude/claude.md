@@ -672,6 +672,10 @@ Keyword-basierter Bot (kein LLM), verarbeitet Nachrichten im konfigurierten Chat
 - `public/images/gartenplan-shapes.svg` — bereinigte SVG (5KB statt 4MB), nur Shapes mit normalisierten IDs
 - 27 benannte Areas passend zu den map_area_descriptions in der DB
 
+## Coding Standards
+
+**Deutsche Texte:** Alle User-facing Strings müssen korrekte Umlaute verwenden (ä, ö, ü, ß). Keine ae/oe/ue/ss-Ersetzungen. Ausnahme: DB-Slugs und Variablennamen dürfen ASCII bleiben.
+
 ---
 
 **Version:** 2.1

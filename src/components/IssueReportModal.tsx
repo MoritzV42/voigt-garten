@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useCategories } from '../hooks/useCategories';
 
 interface Props {
   isOpen: boolean;
@@ -15,15 +16,7 @@ const REPORT_TYPES: { id: ReportType; label: string; icon: string }[] = [
   { id: 'feedback', label: 'Feedback', icon: '💬' },
 ];
 
-const CATEGORIES_BY_TYPE: Record<ReportType, { id: string; label: string }[]> = {
-  mangel: [
-    { id: 'wasser', label: '💧 Wasser/Sanitär' },
-    { id: 'elektrik', label: '⚡ Elektrik' },
-    { id: 'haus', label: '🏠 Haus/Gebäude' },
-    { id: 'garten', label: '🌱 Garten' },
-    { id: 'sicherheit', label: '🔒 Sicherheit' },
-    { id: 'sonstiges', label: '🔧 Sonstiges' },
-  ],
+const STATIC_CATEGORIES_BY_TYPE: Record<string, { id: string; label: string }[]> = {
   bug: [
     { id: 'website', label: '🌐 Website' },
     { id: 'buchung', label: '📅 Buchung' },
@@ -56,7 +49,7 @@ const PLACEHOLDERS: Record<ReportType, { title: string; description: string }> =
   },
   feature: {
     title: 'z.B. Wetteranzeige auf der Startseite...',
-    description: 'Beschreibe deine Idee und warum sie hilfreich waere...',
+    description: 'Beschreibe deine Idee und warum sie hilfreich wäre...',
   },
   feedback: {
     title: 'z.B. Toller Aufenthalt, aber...',
@@ -65,6 +58,7 @@ const PLACEHOLDERS: Record<ReportType, { title: string; description: string }> =
 };
 
 export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) {
+  const { categories: apiCategories } = useCategories();
   const [reportType, setReportType] = useState<ReportType>('mangel');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -183,7 +177,9 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
     onClose();
   };
 
-  const categories = CATEGORIES_BY_TYPE[reportType];
+  const categories = reportType === 'mangel'
+    ? Object.values(apiCategories).map(c => ({ id: c.name, label: `${c.emoji} ${c.label}` }))
+    : (STATIC_CATEGORIES_BY_TYPE[reportType] || []);
   const placeholders = PLACEHOLDERS[reportType];
 
   return (
@@ -264,7 +260,7 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-garden-500"
               >
-                <option value="">Kategorie auswaehlen...</option>
+                <option value="">Kategorie auswählen...</option>
                 {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.label}</option>
                 ))}
@@ -315,7 +311,7 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
                   <>
                     <div className="text-4xl mb-2">📷</div>
                     <p className="text-gray-600">Klicken oder Foto hierher ziehen</p>
-                    <p className="text-xs text-gray-400 mt-1">Ein Foto hilft bei der Einschaetzung</p>
+                    <p className="text-xs text-gray-400 mt-1">Ein Foto hilft bei der Einschätzung</p>
                   </>
                 )}
               </div>

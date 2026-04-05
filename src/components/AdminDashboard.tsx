@@ -578,11 +578,11 @@ export default function AdminDashboard() {
         { field: 'guest_phone', label: 'Telefon', type: 'text' },
         { field: 'check_in', label: 'Check-in', type: 'date' },
         { field: 'check_out', label: 'Check-out', type: 'date' },
-        { field: 'guests', label: 'Gaeste', type: 'number', width: 'w-20' },
+        { field: 'guests', label: 'Gäste', type: 'number', width: 'w-20' },
         { field: 'total_price', label: 'Preis (EUR)', type: 'number', width: 'w-24' },
         { field: 'status', label: 'Status', type: 'select', options: [
           { value: 'pending', label: 'Offen', color: 'bg-amber-100 text-amber-800' },
-          { value: 'confirmed', label: 'Bestaetigt', color: 'bg-green-100 text-green-800' },
+          { value: 'confirmed', label: 'Bestätigt', color: 'bg-green-100 text-green-800' },
           { value: 'cancelled', label: 'Storniert', color: 'bg-red-100 text-red-800' },
         ]},
         { field: 'notes', label: 'Notizen', type: 'textarea' },
@@ -899,7 +899,7 @@ export default function AdminDashboard() {
       token={token!}
       onDataChange={setGalleryItems}
       canDelete={true}
-      emptyMessage="Keine Galerie-Eintraege"
+      emptyMessage="Keine Galerie-Einträge"
     />
   );
 
@@ -939,7 +939,7 @@ export default function AdminDashboard() {
         { field: 'category', label: 'Kategorie', type: 'select', options: [
           { value: 'Elektriker', label: 'Elektriker' },
           { value: 'Klempner', label: 'Klempner' },
-          { value: 'Gaertner', label: 'Gaertner' },
+          { value: 'Gaertner', label: 'Gärtner' },
           { value: 'Maler', label: 'Maler' },
           { value: 'Dachdecker', label: 'Dachdecker' },
           { value: 'Allrounder', label: 'Allrounder' },
@@ -972,7 +972,7 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-purple-50 rounded-xl p-4">
             <div className="text-2xl font-bold text-purple-600">{costsSummary.yearly?.toFixed(0) || 0}EUR</div>
-            <div className="text-sm text-purple-700">Jaehrlich</div>
+            <div className="text-sm text-purple-700">Jährlich</div>
           </div>
           <div className="bg-amber-50 rounded-xl p-4">
             <div className="text-2xl font-bold text-amber-600">{costsSummary.once?.toFixed(0) || 0}EUR</div>
@@ -994,7 +994,7 @@ export default function AdminDashboard() {
           { field: 'frequency', label: 'Frequenz', type: 'select', options: [
             { value: 'einmalig', label: 'Einmalig' },
             { value: 'monatlich', label: 'Monatlich', color: 'bg-blue-100 text-blue-800' },
-            { value: 'jaehrlich', label: 'Jaehrlich', color: 'bg-purple-100 text-purple-800' },
+            { value: 'jaehrlich', label: 'Jährlich', color: 'bg-purple-100 text-purple-800' },
           ]},
           { field: 'category', label: 'Kategorie', type: 'text' },
           { field: 'date', label: 'Datum', type: 'date' },

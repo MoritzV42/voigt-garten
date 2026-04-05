@@ -191,7 +191,7 @@ def send_activity_notification(activity_type: str, details: dict) -> bool:
     try:
         titles = {
             'gallery_upload': 'Neues Galerie-Bild',
-            'issue_report': 'Neue Maengelmeldung',
+            'issue_report': 'Neue Mängelmeldung',
             'task_completed': 'Aufgabe erledigt',
             'user_registered': 'Neue Registrierung',
         }
@@ -209,7 +209,7 @@ def send_activity_notification(activity_type: str, details: dict) -> bool:
             "html": f"""
                 <div style="font-family: sans-serif;">
                     <h2>{title}</h2>
-                    <p>Neue Aktivitaet auf <a href="https://garten.infinityspace42.de">garten.infinityspace42.de</a>:</p>
+                    <p>Neue Aktivität auf <a href="https://garten.infinityspace42.de">garten.infinityspace42.de</a>:</p>
 
                     <table style="border-collapse: collapse; margin: 20px 0;">
                         {details_html}
@@ -244,11 +244,11 @@ def send_maintenance_reminder(task_title: str, days_overdue: int) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [ADMIN_EMAIL],
-            "subject": f"{urgency}: {task_title} - {days_overdue} Tage ueberfaellig",
+            "subject": f"{urgency}: {task_title} - {days_overdue} Tage überfällig",
             "html": f"""
                 <div style="font-family: sans-serif;">
                     <h2>{urgency}</h2>
-                    <p>Die folgende Wartungsaufgabe ist <strong>{days_overdue} Tage ueberfaellig</strong>:</p>
+                    <p>Die folgende Wartungsaufgabe ist <strong>{days_overdue} Tage überfällig</strong>:</p>
 
                     <div style="background: #fef2f2; padding: 20px; border-radius: 10px; border-left: 4px solid #ef4444;">
                         <h3 style="margin-top: 0;">{task_title}</h3>
@@ -256,7 +256,7 @@ def send_maintenance_reminder(task_title: str, days_overdue: int) -> bool:
 
                     <p style="margin-top: 20px;">
                         <a href="https://garten.infinityspace42.de/wartung" style="background: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                            Zur Wartungsuebersicht
+                            Zur Wartungsübersicht
                         </a>
                     </p>
                 </div>
@@ -302,7 +302,7 @@ def send_magic_link_email(email: str, token: str, name: str = None) -> bool:
 
                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px 20px;margin:24px 0;">
                     <p style="color:#166534;margin:0;font-size:13px;">
-                        Dieser Link ist <strong>30 Minuten</strong> gueltig.
+                        Dieser Link ist <strong>30 Minuten</strong> gültig.
                         Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:
                     </p>
                     <p style="color:#16a34a;margin:8px 0 0 0;font-size:12px;word-break:break-all;">
@@ -348,11 +348,11 @@ def send_welcome_email(email: str, name: str) -> bool:
                 <div style="margin:24px 0;">
                     <div style="background:#f0fdf4;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #dcfce7;">
                         <p style="margin:0 0 4px 0;font-weight:600;color:#166534;">5.300 m² Natur pur</p>
-                        <p style="margin:0;color:#4a5568;font-size:13px;">Suedhang-Lage mit altem Baumbestand, Obstbaeumen und viel Platz zum Erholen.</p>
+                        <p style="margin:0;color:#4a5568;font-size:13px;">Südhang-Lage mit altem Baumbestand, Obstbäumen und viel Platz zum Erholen.</p>
                     </div>
                     <div style="background:#f0fdf4;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #dcfce7;">
                         <p style="margin:0 0 4px 0;font-weight:600;color:#166534;">Solar-Autarkie</p>
-                        <p style="margin:0;color:#4a5568;font-size:13px;">700W Solar + 1,4kWh Akku, eigener Brunnen - nachhaltig und unabhaengig.</p>
+                        <p style="margin:0;color:#4a5568;font-size:13px;">700W Solar + 1,4kWh Akku, eigener Brunnen - nachhaltig und unabhängig.</p>
                     </div>
                     <div style="background:#f0fdf4;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #dcfce7;">
                         <p style="margin:0 0 4px 0;font-weight:600;color:#166534;">51 Jahre Tradition</p>
@@ -406,7 +406,7 @@ def send_feedback_request(email: str, name: str, booking_id: int) -> bool:
                 </h2>
                 <p style="color:#4a5568;line-height:1.6;margin:0 0 24px 0;">
                     Wir hoffen, du hattest eine wunderbare Zeit in unserem Garten!
-                    Dein Feedback hilft uns, den Aufenthalt fuer zukuenftige Gaeste noch besser zu machen.
+                    Dein Feedback hilft uns, den Aufenthalt für zukünftige Gäste noch besser zu machen.
                 </p>
 
                 <div style="text-align:center;margin:32px 0;">
@@ -445,15 +445,15 @@ def send_google_review_followup(email: str, name: str) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [email],
-            "subject": "Danke fuer dein Feedback! - Voigt-Garten",
+            "subject": "Danke für dein Feedback! - Voigt-Garten",
             "html": f"""{_email_header('Voigt-Garten')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Danke, {name}!
                 </h2>
                 <p style="color:#4a5568;line-height:1.6;margin:0 0 24px 0;">
                     Es freut uns sehr, dass dir dein Aufenthalt gefallen hat!
-                    Wuerdest du uns mit einer kurzen Google-Bewertung unterstuetzen?
-                    Das hilft anderen Gaesten, uns zu finden.
+                    Würdest du uns mit einer kurzen Google-Bewertung unterstützen?
+                    Das hilft anderen Gästen, uns zu finden.
                 </p>
 
                 <div style="text-align:center;margin:32px 0;">
@@ -500,24 +500,24 @@ def send_payment_reminder(booking_data: dict, days_since: int = 7) -> bool:
                     Hallo {booking_data['name']}!
                 </h2>
                 <p style="color:#4a5568;line-height:1.6;margin:0 0 24px 0;">
-                    Wir haben fuer deine Buchung vom {booking_data['checkIn']} noch keinen Zahlungseingang verzeichnen koennen.
-                    Bitte ueberweise den Betrag zeitnah, damit wir deine Buchung bestaetigen koennen.
+                    Wir haben für deine Buchung vom {booking_data['checkIn']} noch keinen Zahlungseingang verzeichnen können.
+                    Bitte überweise den Betrag zeitnah, damit wir deine Buchung bestätigen können.
                 </p>
 
                 <div style="background:#faf5f0;padding:20px;border-radius:10px;margin:20px 0;border:1px solid #fde68a;">
                     <p><strong>Betrag:</strong> {booking_data['totalPrice']:.2f} EUR</p>
-                    <p><strong>Empfaenger:</strong> {holder_display}</p>
+                    <p><strong>Empfänger:</strong> {holder_display}</p>
                     <p><strong>IBAN:</strong> {iban_display}</p>
                     <p><strong>Verwendungszweck:</strong> Garten {booking_data['checkIn']}</p>
                 </div>
 
                 <p style="color:#4a5568;">
-                    Falls du bereits ueberwiesen hast, kannst du diese Email ignorieren.
+                    Falls du bereits überwiesen hast, kannst du diese Email ignorieren.
                     Bei Fragen erreichst du uns unter dieser Email-Adresse.
                 </p>
 
                 <p style="color:#666;margin-top:30px;">
-                    Liebe Gruesse,<br/>Familie Voigt
+                    Liebe Grüße,<br/>Familie Voigt
                 </p>
             {_email_footer()}""",
             "reply_to": ADMIN_EMAIL

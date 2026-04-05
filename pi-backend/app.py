@@ -867,6 +867,130 @@ def migrate_db():
         print(f"Site config seed: {e}")
 
 
+    # -- Categories tables (multi-category support) --
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            label TEXT NOT NULL,
+            emoji TEXT,
+            color TEXT,
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS project_categories (
+            project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+            PRIMARY KEY (project_id, category_id)
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS recurring_task_categories (
+            recurring_task_id INTEGER NOT NULL REFERENCES recurring_tasks(id) ON DELETE CASCADE,
+            category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+            PRIMARY KEY (recurring_task_id, category_id)
+        )
+    ''')
+    conn.commit()
+
+    # Seed categories if empty
+    cat_count = conn.execute("SELECT COUNT(*) as c FROM categories").fetchone()['c']
+    if cat_count == 0:
+        category_seeds = [
+            ('rasen', 'Rasenpflege', '🌿', 'bg-green-100 text-green-800', 0),
+            ('beete', 'Beetarbeiten', '🌻', 'bg-yellow-100 text-yellow-800', 1),
+            ('baeume', 'Bäume & Hecken', '🌳', 'bg-emerald-100 text-emerald-800', 2),
+            ('brennholz', 'Brennholz', '🪵', 'bg-amber-100 text-amber-800', 3),
+            ('elektrik', 'Elektrik', '⚡', 'bg-blue-100 text-blue-800', 4),
+            ('putzen', 'Reinigung', '🧹', 'bg-purple-100 text-purple-800', 5),
+            ('wasser', 'Wasser', '💧', 'bg-cyan-100 text-cyan-800', 6),
+            ('haus', 'Haus', '🏠', 'bg-orange-100 text-orange-800', 7),
+            ('garten', 'Garten', '🌱', 'bg-lime-100 text-lime-800', 8),
+            ('rechtliches', 'Rechtliches', '⚖️', 'bg-rose-100 text-rose-800', 9),
+            ('it', 'IT & Bugs', '💻', 'bg-indigo-100 text-indigo-800', 10),
+            ('sonstiges', 'Sonstiges', '🔧', 'bg-gray-100 text-gray-800', 11),
+        ]
+        for name, label, emoji, color, sort_order in category_seeds:
+            conn.execute(
+                'INSERT INTO categories (name, label, emoji, color, sort_order) VALUES (?, ?, ?, ?, ?)',
+                (name, label, emoji, color, sort_order)
+            )
+        conn.commit()
+        print("Seeded 12 categories")
+
+    # Migrate existing TEXT category → junction tables (one-time)
+    try:
+        existing_pc = conn.execute("SELECT COUNT(*) as c FROM project_categories").fetchone()['c']
+        if existing_pc == 0:
+            conn.execute('''
+                INSERT OR IGNORE INTO project_categories (project_id, category_id)
+                SELECT p.id, c.id FROM projects p JOIN categories c ON p.category = c.name
+                WHERE p.category IS NOT NULL
+            ''')
+            conn.commit()
+            migrated = conn.execute("SELECT COUNT(*) as c FROM project_categories").fetchone()['c']
+            if migrated > 0:
+                print(f"Migration: Migrated {migrated} project→category mappings")
+    except Exception as e:
+        print(f"Migration project_categories: {e}")
+
+    try:
+        existing_rtc = conn.execute("SELECT COUNT(*) as c FROM recurring_task_categories").fetchone()['c']
+        if existing_rtc == 0:
+            conn.execute('''
+                INSERT OR IGNORE INTO recurring_task_categories (recurring_task_id, category_id)
+                SELECT rt.id, c.id FROM recurring_tasks rt JOIN categories c ON rt.category = c.name
+                WHERE rt.category IS NOT NULL
+            ''')
+            conn.commit()
+            migrated = conn.execute("SELECT COUNT(*) as c FROM recurring_task_categories").fetchone()['c']
+            if migrated > 0:
+                print(f"Migration: Migrated {migrated} recurring_task→category mappings")
+    except Exception as e:
+        print(f"Migration recurring_task_categories: {e}")
+
+    # Re-categorize "sonstiges" tasks that belong elsewhere
+    try:
+        recategorize_map = {
+            # project_id -> [new_categories]
+            35: ['garten'], 20: ['garten'],       # Werkzeug pflegen
+            36: ['garten'], 21: ['garten'],       # Zaun kontrollieren
+            37: ['garten', 'haus'], 22: ['garten', 'haus'],  # Winterfest machen
+            38: ['garten', 'haus'], 23: ['garten', 'haus'],  # Frühjahrs-Check
+            39: ['rechtliches'],                   # Pachtvertrag mit Opa
+            40: ['rechtliches', 'garten'],         # Oster-Planung
+            41: ['garten'],                        # Baumarkt-Besorgungen
+            43: ['it'],                            # Software-Features
+            44: ['rechtliches'],                   # Rechtliches Backend
+        }
+        for project_id, new_cats in recategorize_map.items():
+            # Check if project exists and is currently 'sonstiges'
+            row = conn.execute('SELECT category FROM projects WHERE id = ?', (project_id,)).fetchone()
+            if row and row['category'] == 'sonstiges':
+                # Update primary category
+                conn.execute('UPDATE projects SET category = ? WHERE id = ?', (new_cats[0], project_id))
+                # Update junction table
+                conn.execute('DELETE FROM project_categories WHERE project_id = ?', (project_id,))
+                for cat_name in new_cats:
+                    cat_row = conn.execute('SELECT id FROM categories WHERE name = ?', (cat_name,)).fetchone()
+                    if cat_row:
+                        conn.execute(
+                            'INSERT OR IGNORE INTO project_categories (project_id, category_id) VALUES (?, ?)',
+                            (project_id, cat_row['id'])
+                        )
+                print(f"Re-categorized project #{project_id} → {new_cats}")
+        conn.commit()
+    except Exception as e:
+        print(f"Re-categorize sonstiges: {e}")
+
+    # Indices for category junction tables
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_project_categories_pid ON project_categories(project_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_project_categories_cid ON project_categories(category_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_recurring_task_categories_rtid ON recurring_task_categories(recurring_task_id)")
+    conn.commit()
+
     conn.close()
     print("Database migrations complete")
 
@@ -2819,7 +2943,11 @@ def create_project(user):
     """Create new project."""
     data = request.json
 
-    if not data.get('title') or not data.get('category'):
+    # Support both 'category' (string) and 'categories' (array)
+    primary_category = data.get('category')
+    if not primary_category and data.get('categories'):
+        primary_category = data['categories'][0]
+    if not data.get('title') or not primary_category:
         return jsonify({'error': 'Titel und Kategorie erforderlich'}), 400
 
     conn = get_db()
@@ -2830,7 +2958,7 @@ def create_project(user):
     ''', (
         data['title'],
         data.get('description'),
-        data['category'],
+        primary_category,
         data.get('status', 'offen'),
         data.get('priority', 'mittel'),
         data.get('estimatedCost') or data.get('estimated_cost'),
@@ -2840,6 +2968,17 @@ def create_project(user):
         data.get('map_area')
     ))
     project_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+    # Insert category mappings into junction table
+    categories_list = data.get('categories', [data['category']] if data.get('category') else [])
+    for cat_name in categories_list:
+        cat_row = conn.execute('SELECT id FROM categories WHERE name = ?', (cat_name,)).fetchone()
+        if cat_row:
+            conn.execute(
+                'INSERT OR IGNORE INTO project_categories (project_id, category_id) VALUES (?, ?)',
+                (project_id, cat_row['id'])
+            )
+
     conn.commit()
     conn.close()
 
@@ -2855,9 +2994,9 @@ def get_project(project_id):
     """Get single project by ID."""
     conn = get_db()
     project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
-    conn.close()
 
     if not project:
+        conn.close()
         return jsonify({'error': 'Projekt nicht gefunden'}), 404
 
     proj = parse_json_fields(dict(project))
@@ -2865,6 +3004,15 @@ def get_project(project_id):
         proj['assigned_to_list'] = []
     if not proj.get('dependencies'):
         proj['dependencies'] = []
+
+    # Fetch categories from junction table
+    cat_rows = conn.execute('''
+        SELECT c.name FROM project_categories pc
+        JOIN categories c ON pc.category_id = c.id
+        WHERE pc.project_id = ?
+    ''', (project_id,)).fetchall()
+    proj['categories'] = [r['name'] for r in cat_rows] if cat_rows else ([proj['category']] if proj.get('category') else [])
+    conn.close()
 
     return jsonify({'project': proj})
 
@@ -2933,6 +3081,22 @@ def update_project(project_id, user):
         conn.execute(f'''
             UPDATE projects SET {', '.join(updates)} WHERE id = ?
         ''', params)
+        conn.commit()
+
+    # Update junction table if categories array provided
+    categories_list = data.get('categories')
+    if categories_list is not None and isinstance(categories_list, list):
+        conn.execute('DELETE FROM project_categories WHERE project_id = ?', (project_id,))
+        for cat_name in categories_list:
+            cat_row = conn.execute('SELECT id FROM categories WHERE name = ?', (cat_name,)).fetchone()
+            if cat_row:
+                conn.execute(
+                    'INSERT OR IGNORE INTO project_categories (project_id, category_id) VALUES (?, ?)',
+                    (project_id, cat_row['id'])
+                )
+        # Update primary category field for backwards compatibility
+        if categories_list:
+            conn.execute('UPDATE projects SET category = ? WHERE id = ?', (categories_list[0], project_id))
         conn.commit()
 
     conn.close()
@@ -3708,6 +3872,17 @@ def reject_issue(issue_id, user):
     })
 
 
+# ============ Categories API ============
+
+@app.route('/api/categories', methods=['GET'])
+def get_categories():
+    """Get all categories."""
+    conn = get_db()
+    cats = conn.execute('SELECT * FROM categories ORDER BY sort_order').fetchall()
+    conn.close()
+    return jsonify({'categories': [dict(c) for c in cats]})
+
+
 # ============ Unified Tasks API ============
 
 @app.route('/api/tasks/unified', methods=['GET'])
@@ -3739,13 +3914,31 @@ def get_unified_tasks():
     for row in conn.execute('SELECT parent_task_id, COUNT(*) as cnt FROM projects WHERE parent_task_id IS NOT NULL GROUP BY parent_task_id').fetchall():
         children_counts[row['parent_task_id']] = row['cnt']
 
+    # Pre-fetch category mappings from junction tables
+    project_cats = {}
+    for row in conn.execute('''
+        SELECT pc.project_id, c.name FROM project_categories pc
+        JOIN categories c ON pc.category_id = c.id
+    ''').fetchall():
+        project_cats.setdefault(row['project_id'], []).append(row['name'])
+
+    recurring_cats = {}
+    for row in conn.execute('''
+        SELECT rtc.recurring_task_id, c.name FROM recurring_task_categories rtc
+        JOIN categories c ON rtc.category_id = c.id
+    ''').fetchall():
+        recurring_cats.setdefault(row['recurring_task_id'], []).append(row['name'])
+
     # Get recurring tasks
     if task_type in ['recurring', 'all']:
         query = 'SELECT * FROM recurring_tasks WHERE is_active = 1'
         params = []
 
         if category:
-            query += ' AND category = ?'
+            query += ''' AND id IN (
+                SELECT rtc.recurring_task_id FROM recurring_task_categories rtc
+                JOIN categories c ON rtc.category_id = c.id WHERE c.name = ?
+            )'''
             params.append(category)
         if effort:
             query += ' AND effort = ?'
@@ -3765,6 +3958,7 @@ def get_unified_tasks():
         for task in recurring:
             t = dict(task)
             t['task_type'] = 'recurring'
+            t['categories'] = recurring_cats.get(t['id'], [t['category']] if t.get('category') else [])
 
             # Calculate status
             if t['next_due']:
@@ -3796,7 +3990,10 @@ def get_unified_tasks():
         params = []
 
         if category:
-            query += ' AND category = ?'
+            query += ''' AND id IN (
+                SELECT pc.project_id FROM project_categories pc
+                JOIN categories c ON pc.category_id = c.id WHERE c.name = ?
+            )'''
             params.append(category)
         if effort:
             query += ' AND effort = ?'
@@ -3826,6 +4023,7 @@ def get_unified_tasks():
         for project in projects:
             p = dict(project)
             p['task_type'] = 'project'
+            p['categories'] = project_cats.get(p['id'], [p['category']] if p.get('category') else [])
 
             # Compute due_status from due_date
             if p.get('due_date'):
@@ -3871,6 +4069,9 @@ def get_unified_tasks():
 
             tasks.append(p)
 
+    # Get categories from DB for filter options
+    all_categories = conn.execute('SELECT name FROM categories ORDER BY sort_order').fetchall()
+    cat_names = [r['name'] for r in all_categories]
     conn.close()
 
     # Sorting
@@ -3889,8 +4090,6 @@ def get_unified_tasks():
 
         tasks.sort(key=sort_key, reverse=reverse)
 
-    # Get unique values for filters
-    categories = list(set(t.get('category') for t in tasks if t.get('category')))
     efforts = list(set(t.get('effort') for t in tasks if t.get('effort')))
     assignees_list = list(set(t.get('assigned_to') for t in tasks if t.get('assigned_to')))
 
@@ -3898,7 +4097,7 @@ def get_unified_tasks():
         'tasks': tasks,
         'total': len(tasks),
         'filters': {
-            'categories': sorted(categories),
+            'categories': cat_names,
             'efforts': ['leicht', 'mittel', 'schwer'],
             'assignees': sorted(assignees_list)
         }

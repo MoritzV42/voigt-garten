@@ -148,7 +148,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: Props) {
               if (data.url) {
                 window.location.href = data.url;
               } else {
-                setError(data.error || 'Google-Anmeldung nicht verfuegbar');
+                setError(data.error || 'Google-Anmeldung nicht verfügbar');
               }
             } catch {
               setError('Verbindungsfehler');
@@ -226,15 +226,15 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: Props) {
             <div className="text-center py-6">
               <div className="text-5xl mb-4">📧</div>
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Pruefe dein Postfach!
+                Prüfe dein Postfach!
               </h3>
               <p className="text-gray-600 text-sm mb-4">
-                Wir haben einen Bestaetigungslink an<br />
+                Wir haben einen Bestätigungslink an<br />
                 <strong className="text-garden-700">{email}</strong><br />
                 gesendet.
               </p>
               <p className="text-gray-500 text-xs mb-6">
-                Der Link ist 30 Minuten gueltig. Pruefe auch deinen Spam-Ordner.
+                Der Link ist 30 Minuten gültig. Prüfe auch deinen Spam-Ordner.
               </p>
               <button
                 onClick={() => { setMagicLinkSent(false); setEmail(''); setName(''); }}

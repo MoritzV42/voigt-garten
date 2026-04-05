@@ -41,7 +41,7 @@ export default function VerifyPage() {
 
       if (!response.ok) {
         setStatus('error');
-        setError(data.error || 'Token ungueltig oder abgelaufen.');
+        setError(data.error || 'Token ungültig oder abgelaufen.');
         return;
       }
 
@@ -71,7 +71,7 @@ export default function VerifyPage() {
     setFormError('');
 
     if (password !== confirmPassword) {
-      setFormError('Passwoerter stimmen nicht ueberein');
+      setFormError('Passwörter stimmen nicht überein');
       return;
     }
 
@@ -215,7 +215,7 @@ export default function VerifyPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Passwort bestaetigen *
+                  Passwort bestätigen *
                 </label>
                 <input
                   type="password"

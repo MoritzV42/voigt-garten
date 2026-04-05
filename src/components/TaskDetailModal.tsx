@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useCategories, getCategoryConfig, getTaskCategories } from '../hooks/useCategories';
 
 interface Assignee {
   id: number;
@@ -30,6 +31,7 @@ interface Task {
   title: string;
   description?: string;
   category: string;
+  categories?: string[];
   task_type: 'recurring' | 'project';
   status?: string;
   priority?: string;
@@ -70,18 +72,7 @@ interface Props {
   onRefresh?: () => void;
 }
 
-const CATEGORY_CONFIG: Record<string, { emoji: string; label: string; color: string }> = {
-  rasen: { emoji: '🌿', label: 'Rasenpflege', color: 'bg-green-100 text-green-800' },
-  beete: { emoji: '🌻', label: 'Beetarbeiten', color: 'bg-yellow-100 text-yellow-800' },
-  baeume: { emoji: '🌳', label: 'Bäume & Hecken', color: 'bg-emerald-100 text-emerald-800' },
-  brennholz: { emoji: '🪵', label: 'Brennholz', color: 'bg-amber-100 text-amber-800' },
-  elektrik: { emoji: '⚡', label: 'Elektrik', color: 'bg-blue-100 text-blue-800' },
-  putzen: { emoji: '🧹', label: 'Reinigung', color: 'bg-purple-100 text-purple-800' },
-  sonstiges: { emoji: '🔧', label: 'Sonstiges', color: 'bg-gray-100 text-gray-800' },
-  wasser: { emoji: '💧', label: 'Wasser', color: 'bg-cyan-100 text-cyan-800' },
-  haus: { emoji: '🏠', label: 'Haus', color: 'bg-orange-100 text-orange-800' },
-  garten: { emoji: '🌱', label: 'Garten', color: 'bg-lime-100 text-lime-800' },
-};
+// CATEGORY_CONFIG removed — now loaded from API via useCategories()
 
 const PROVIDER_CATEGORY_ICONS: Record<string, string> = {
   'Elektriker': '⚡',
@@ -107,11 +98,16 @@ export default function TaskDetailModal({
   allAssignees = [],
   onRefresh
 }: Props) {
+  const { categories: CATEGORY_CONFIG } = useCategories();
   const [notes, setNotes] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Category editing
+  const [editingCategories, setEditingCategories] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   // Subtasks
   const [subtasks, setSubtasks] = useState<SubTask[]>([]);
@@ -155,6 +151,8 @@ export default function TaskDetailModal({
     setDueDate(task.due_date || '');
     setCycleDays(task.cycle_days || 0);
     setCreditValue(task.credit_value || 0);
+    setSelectedCategories(getTaskCategories(task));
+    setEditingCategories(false);
   }, [isOpen, task.id]);
 
   const getToken = () => localStorage.getItem(TOKEN_KEY);
@@ -191,7 +189,30 @@ export default function TaskDetailModal({
 
   if (!isOpen) return null;
 
-  const category = CATEGORY_CONFIG[task.category] || CATEGORY_CONFIG.sonstiges;
+  const taskCats = getTaskCategories(task);
+
+  const toggleCategory = (catName: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(catName) ? prev.filter(c => c !== catName) : [...prev, catName]
+    );
+  };
+
+  const saveCategories = async () => {
+    if (selectedCategories.length === 0) return;
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/projects/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categories: selectedCategories })
+      });
+      if (res.ok) {
+        setEditingCategories(false);
+        onRefresh?.();
+      }
+    } catch { /* ignore */ }
+  };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -443,9 +464,23 @@ export default function TaskDetailModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-start justify-between z-10">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full ${category.color}`}>
-                {category.emoji} {category.label}
-              </span>
+              {taskCats.map(catName => {
+                const cat = getCategoryConfig(CATEGORY_CONFIG, catName);
+                return (
+                  <span key={catName} className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full ${cat.color}`}>
+                    {cat.emoji} {cat.label}
+                  </span>
+                );
+              })}
+              {isAdmin && !editingCategories && (
+                <button
+                  onClick={() => setEditingCategories(true)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                  title="Kategorien bearbeiten"
+                >
+                  ✏️
+                </button>
+              )}
               {task.is_recurring && task.cycle_days && (
                 <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
                   🔄 Alle {task.cycle_days} Tage
@@ -474,6 +509,48 @@ export default function TaskDetailModal({
             &times;
           </button>
         </div>
+
+        {/* Category Edit */}
+        {editingCategories && (
+          <div className="px-4 sm:px-6 py-3 border-b border-gray-200 bg-gray-50">
+            <div className="text-sm font-medium text-gray-700 mb-2">Kategorien bearbeiten</div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {Object.entries(CATEGORY_CONFIG).map(([name, cat]) => (
+                <label
+                  key={name}
+                  className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full cursor-pointer border transition ${
+                    selectedCategories.includes(name)
+                      ? `${cat.color} border-current`
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedCategories.includes(name)}
+                    onChange={() => toggleCategory(name)}
+                    className="sr-only"
+                  />
+                  {cat.emoji} {cat.label}
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={saveCategories}
+                disabled={selectedCategories.length === 0}
+                className="px-3 py-1 text-sm bg-garden-600 text-white rounded-lg hover:bg-garden-700 disabled:opacity-50"
+              >
+                Speichern
+              </button>
+              <button
+                onClick={() => { setEditingCategories(false); setSelectedCategories(getTaskCategories(task)); }}
+                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto">

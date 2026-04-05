@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import TaskDetailModal from './TaskDetailModal';
 import IssueReportModal from './IssueReportModal';
 import LoginModal from './LoginModal';
+import { useCategories, getCategoryConfig, getTaskCategories } from '../hooks/useCategories';
 
 
 interface User {
@@ -25,6 +26,7 @@ interface Task {
   title: string;
   description?: string;
   category: string;
+  categories?: string[];
   task_type: 'recurring' | 'project';
   status?: string;
   priority?: string;
@@ -62,20 +64,7 @@ interface Filters {
 const TOKEN_KEY = 'voigt-garten-token';
 const USER_KEY = 'voigt-garten-user';
 
-const CATEGORY_CONFIG: Record<string, { emoji: string; label: string; color: string }> = {
-  rasen: { emoji: '🌿', label: 'Rasenpflege', color: 'bg-green-100 text-green-800' },
-  beete: { emoji: '🌻', label: 'Beetarbeiten', color: 'bg-yellow-100 text-yellow-800' },
-  baeume: { emoji: '🌳', label: 'Bäume & Hecken', color: 'bg-emerald-100 text-emerald-800' },
-  brennholz: { emoji: '🪵', label: 'Brennholz', color: 'bg-amber-100 text-amber-800' },
-  elektrik: { emoji: '⚡', label: 'Elektrik', color: 'bg-blue-100 text-blue-800' },
-  putzen: { emoji: '🧹', label: 'Reinigung', color: 'bg-purple-100 text-purple-800' },
-  sonstiges: { emoji: '🔧', label: 'Sonstiges', color: 'bg-gray-100 text-gray-800' },
-  wasser: { emoji: '💧', label: 'Wasser', color: 'bg-cyan-100 text-cyan-800' },
-  haus: { emoji: '🏠', label: 'Haus', color: 'bg-orange-100 text-orange-800' },
-  garten: { emoji: '🌱', label: 'Garten', color: 'bg-lime-100 text-lime-800' },
-  rechtliches: { emoji: '⚖️', label: 'Rechtliches', color: 'bg-rose-100 text-rose-800' },
-  it: { emoji: '💻', label: 'IT & Bugs', color: 'bg-indigo-100 text-indigo-800' },
-};
+// CATEGORY_CONFIG removed — now loaded from API via useCategories()
 
 const PRIORITY_COLORS: Record<string, string> = {
   kritisch: 'border-l-red-500 bg-red-50',
@@ -105,6 +94,7 @@ const PROVIDER_CATEGORY_ICONS: Record<string, string> = {
 };
 
 export default function UnifiedKanban() {
+  const { categories: CATEGORY_CONFIG } = useCategories();
   const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filters, setFilters] = useState<Filters>({ categories: [], efforts: [], assignees: [] });
@@ -386,7 +376,8 @@ export default function UnifiedKanban() {
         }
       }
 
-      if (filterCategories.length > 0 && !filterCategories.includes(task.category)) return false;
+      const taskCats = getTaskCategories(task);
+      if (filterCategories.length > 0 && !filterCategories.some(fc => taskCats.includes(fc))) return false;
       if (filterEfforts.length > 0 && task.effort && !filterEfforts.includes(task.effort)) return false;
       if (filterTypes.length > 0 && !filterTypes.includes(task.task_type)) return false;
       if (filterPriorities.length > 0 && task.priority && !filterPriorities.includes(task.priority)) return false;
@@ -598,7 +589,7 @@ export default function UnifiedKanban() {
   };
 
   const renderTaskCard = (task: Task, draggable: boolean = false) => {
-    const category = CATEGORY_CONFIG[task.category] || CATEGORY_CONFIG.sonstiges;
+    const taskCats = getTaskCategories(task);
     const priorityClass = task.priority ? PRIORITY_COLORS[task.priority] : 'border-l-gray-300';
     const isDragging = draggedTask?.id === task.id && draggedTask?.task_type === task.task_type;
     const isBlocked = task.has_blockers;
@@ -637,10 +628,17 @@ export default function UnifiedKanban() {
           </div>
         </div>
 
-        {/* Category Badge */}
-        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${category.color}`}>
-          {category.emoji} {category.label}
-        </span>
+        {/* Category Badges */}
+        <div className="flex flex-wrap gap-1">
+          {taskCats.map(catName => {
+            const cat = getCategoryConfig(CATEGORY_CONFIG, catName);
+            return (
+              <span key={catName} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${cat.color}`}>
+                {cat.emoji} {cat.label}
+              </span>
+            );
+          })}
+        </div>
 
         {/* Subtask Progress */}
         {(task.children_count ?? 0) > 0 && (
@@ -817,7 +815,7 @@ export default function UnifiedKanban() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedTasks.map(task => {
-              const category = CATEGORY_CONFIG[task.category] || CATEGORY_CONFIG.sonstiges;
+              const taskCats = getTaskCategories(task);
               return (
                 <tr
                   key={`${task.task_type}-${task.id}`}
@@ -844,9 +842,16 @@ export default function UnifiedKanban() {
                     </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${category.color}`}>
-                      {category.emoji} {category.label}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {taskCats.map(catName => {
+                        const cat = getCategoryConfig(CATEGORY_CONFIG, catName);
+                        return (
+                          <span key={catName} className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${cat.color}`}>
+                            {cat.emoji} {cat.label}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
                     {task.priority && (
@@ -910,7 +915,7 @@ export default function UnifiedKanban() {
             Anmelden
           </button>
           <p className="text-sm text-gray-500 mt-4">
-            Nach der Anmeldung kannst du Aufgaben uebernehmen und Guthaben sammeln.
+            Nach der Anmeldung kannst du Aufgaben übernehmen und Guthaben sammeln.
           </p>
         </div>
         <LoginModal
