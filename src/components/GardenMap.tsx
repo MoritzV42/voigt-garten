@@ -15,6 +15,8 @@ interface AreaStatus {
   status: 'ok' | 'due-soon' | 'overdue' | 'no-data';
   description?: string;
   photo_count?: number;
+  task_count?: number;
+  inventory_count?: number;
 }
 
 export type MapMode = 'gebaeude' | 'natur' | 'technik' | 'wasser' | 'alle';
@@ -270,7 +272,7 @@ export default function GardenMap({
   // Fetch and parse SVG
   useEffect(() => {
     setLoading(true);
-    fetch('/images/gartenplan-shapes.svg')
+    fetch('/images/gartenplan-shapes.svg?v=3')
       .then((res) => res.text())
       .then((text) => {
         setShapes(parseSvgShapes(text));
@@ -573,9 +575,17 @@ export default function GardenMap({
         {areaStatuses[hoveredShape.id]?.description && (
           <div className="text-xs text-gray-600 mt-0.5">{areaStatuses[hoveredShape.id].description}</div>
         )}
-        {(areaStatuses[hoveredShape.id]?.photo_count || 0) > 0 && (
-          <div className="text-xs text-gray-500 mt-0.5">
-            {areaStatuses[hoveredShape.id]?.photo_count} Foto{(areaStatuses[hoveredShape.id]?.photo_count || 0) > 1 ? 's' : ''}
+        {((areaStatuses[hoveredShape.id]?.task_count || 0) > 0 || (areaStatuses[hoveredShape.id]?.photo_count || 0) > 0 || (areaStatuses[hoveredShape.id]?.inventory_count || 0) > 0) && (
+          <div className="flex gap-2 mt-1 text-xs text-gray-500">
+            {(areaStatuses[hoveredShape.id]?.task_count || 0) > 0 && (
+              <span>📋 {areaStatuses[hoveredShape.id].task_count} Aufgaben</span>
+            )}
+            {(areaStatuses[hoveredShape.id]?.photo_count || 0) > 0 && (
+              <span>📷 {areaStatuses[hoveredShape.id].photo_count}</span>
+            )}
+            {(areaStatuses[hoveredShape.id]?.inventory_count || 0) > 0 && (
+              <span>📦 {areaStatuses[hoveredShape.id].inventory_count}</span>
+            )}
           </div>
         )}
       </div>

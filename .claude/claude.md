@@ -669,8 +669,9 @@ Keyword-basierter Bot (kein LLM), verarbeitet Nachrichten im konfigurierten Chat
 - Cluster: Gewerbeanmeldung, Sanitär/Wasser, Sicherheit, Baurecht, Versicherungen, Plattform
 
 ### SVG-Karte
-- `public/images/gartenplan-shapes.svg` — bereinigte SVG (5KB statt 4MB), nur Shapes mit normalisierten IDs
-- 27 benannte Areas passend zu den map_area_descriptions in der DB
+- `public/images/gartenplan-shapes.svg` — bereinigte SVG, nur Shapes mit normalisierten IDs
+- 34 benannte Areas passend zu den map_area_descriptions in der DB
+- Neue Areas: 4 Regentonnen (wasser), unterirdischer Wasserbehälter (wasser), Solaranlage mit Speicher (technik), unterer Kompost (natur)
 
 ## Coding Standards
 
