@@ -64,7 +64,19 @@ interface Issue {
   created_at: string;
 }
 
-type Tab = 'dashboard' | 'bookings' | 'projects' | 'users' | 'issues' | 'galerie' | 'credits' | 'dienstleister' | 'kosten' | 'karte' | 'invoices' | 'applications';
+type Tab = 'dashboard' | 'bookings' | 'projects' | 'users' | 'issues' | 'galerie' | 'credits' | 'dienstleister' | 'kosten' | 'karte' | 'invoices' | 'applications' | 'milestones';
+
+interface Milestone {
+  id: number;
+  name: string;
+  description: string | null;
+  target_date: string | null;
+  status: string;
+  image_path: string | null;
+  sort_order: number;
+  total_count: number;
+  done_count: number;
+}
 
 const API_BASE = import.meta.env.PUBLIC_API_URL || 'https://garten.infinityspace42.de';
 
@@ -86,6 +98,7 @@ export default function AdminDashboard() {
   const [costsSummary, setCostsSummary] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
 
   // Fetch data when user is admin
   useEffect(() => {
@@ -111,6 +124,7 @@ export default function AdminDashboard() {
       fetchCostsSummary(),
       fetchInvoices(),
       fetchApplications(),
+      fetchMilestones(),
     ]);
     setIsLoading(false);
   };
@@ -283,6 +297,18 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchMilestones = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/milestones?include=idea`);
+      if (response.ok) {
+        const data = await response.json();
+        setMilestones(data.milestones || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch milestones:', error);
+    }
+  };
+
   const confirmProject = async (projectId: number, creditAmount: number) => {
     try {
       const response = await fetch(`${API_BASE}/api/projects/${projectId}/confirm`, {
@@ -421,8 +447,81 @@ export default function AdminDashboard() {
   const pendingApplicationsCount = applications.filter(a => a.status === 'pending').length;
 
   // Dashboard Tab
-  const DashboardTab = () => (
+  const DashboardTab = () => {
+    const launchMs = milestones.find(m => m.name === 'Launch 01.05.2026');
+    const activeMs = milestones.filter(m => m.status === 'active');
+    const daysUntil = (dateStr: string | null) => {
+      if (!dateStr) return null;
+      const diff = new Date(dateStr).getTime() - Date.now();
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    };
+    return (
     <div className="space-y-6">
+      {/* Launch Countdown */}
+      {launchMs && (
+        <div className="bg-gradient-to-r from-garden-700 to-garden-900 text-white rounded-xl p-6 shadow-lg">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-garden-200 mb-1">Launch-Countdown</div>
+              <div className="text-2xl font-bold">🚀 {launchMs.name}</div>
+              <div className="text-sm text-garden-200 mt-1">{launchMs.description}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-5xl font-bold">{daysUntil(launchMs.target_date) ?? '–'}</div>
+              <div className="text-sm text-garden-200">Tage verbleibend</div>
+            </div>
+          </div>
+          {launchMs.total_count > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-garden-200 mb-1">
+                <span>Fortschritt: {launchMs.done_count} / {launchMs.total_count} Tasks</span>
+                <span>{Math.round((launchMs.done_count / launchMs.total_count) * 100)}%</span>
+              </div>
+              <div className="w-full bg-garden-950/40 rounded-full h-2">
+                <div
+                  className="bg-green-400 h-2 rounded-full transition-all"
+                  style={{ width: `${(launchMs.done_count / launchMs.total_count) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Milestone Progress */}
+      {activeMs.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="font-bold text-xl text-gray-800 mb-4">🎯 Aktive Meilensteine</h3>
+          <div className="space-y-3">
+            {activeMs.map(m => {
+              const pct = m.total_count > 0 ? Math.round((m.done_count / m.total_count) * 100) : 0;
+              const days = daysUntil(m.target_date);
+              return (
+                <div key={m.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-medium text-gray-900">{m.name}</div>
+                      {m.target_date && (
+                        <div className="text-xs text-gray-500">
+                          {new Date(m.target_date).toLocaleDateString('de-DE')}
+                          {days !== null && ` · ${days} Tage`}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-sm font-semibold text-garden-700">
+                      {m.done_count} / {m.total_count}
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-garden-600 h-2 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-amber-50 rounded-xl p-6">
@@ -523,7 +622,68 @@ export default function AdminDashboard() {
         </div>
       )}
     </div>
-  );
+    );
+  };
+
+  // Milestones Tab
+  const MilestonesTab = () => {
+    const milestoneColumns: ColumnDef<Milestone>[] = [
+      { field: 'name', label: 'Name', type: 'text', editable: true, sortable: true },
+      { field: 'description', label: 'Beschreibung', type: 'textarea', editable: true },
+      { field: 'target_date', label: 'Ziel-Datum', type: 'date', editable: true, sortable: true },
+      {
+        field: 'status',
+        label: 'Status',
+        type: 'select',
+        editable: true,
+        sortable: true,
+        options: [
+          { value: 'active', label: 'Aktiv', color: 'bg-green-100 text-green-800' },
+          { value: 'done', label: 'Erledigt', color: 'bg-blue-100 text-blue-800' },
+          { value: 'idea', label: 'Idee', color: 'bg-purple-100 text-purple-800' },
+        ],
+      },
+      {
+        field: 'sort_order',
+        label: '#',
+        type: 'number',
+        editable: true,
+        width: '60px',
+      },
+      {
+        field: 'done_count',
+        label: 'Fortschritt',
+        type: 'readonly',
+        editable: false,
+        render: (_v: any, row: Milestone) =>
+          row.total_count > 0 ? `${row.done_count} / ${row.total_count}` : '–',
+      },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">🎯 Meilensteine / Roadmap</h2>
+          <p className="text-sm text-gray-600">
+            Aktive Meilensteine erscheinen im Dashboard-Widget. „Ideen" bleiben als
+            Ideenliste für die Zukunft.
+          </p>
+        </div>
+        <EditableTable<Milestone>
+          data={milestones}
+          columns={milestoneColumns}
+          apiBase="/api/admin/milestones"
+          token={token || ''}
+          onDataChange={setMilestones}
+          canAdd
+          canDelete
+          newRowDefaults={{ name: 'Neuer Meilenstein', status: 'active', sort_order: 99 } as Partial<Milestone>}
+          title="Meilensteine"
+          emptyMessage="Noch keine Meilensteine angelegt"
+        />
+      </div>
+    );
+  };
 
   // Pending Project Card
   const PendingProjectCard = ({ project, onConfirm }: { project: Project; onConfirm: (id: number, credit: number) => void }) => {
@@ -1640,6 +1800,7 @@ export default function AdminDashboard() {
       <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
         {[
           { key: 'dashboard', label: 'Dashboard' },
+          { key: 'milestones', label: 'Meilensteine' },
           { key: 'issues', label: `Mängel${pendingIssuesCount > 0 ? ` (${pendingIssuesCount})` : ''}`, badge: pendingIssuesCount > 0 },
           { key: 'bookings', label: 'Buchungen' },
           { key: 'projects', label: 'Projekte' },
@@ -1682,6 +1843,7 @@ export default function AdminDashboard() {
       {activeTab === 'karte' && <KarteTab />}
       {activeTab === 'users' && <UsersTab />}
       {activeTab === 'applications' && <ApplicationsTab />}
+      {activeTab === 'milestones' && <MilestonesTab />}
     </div>
   );
 }

@@ -8,39 +8,25 @@ import Layout from '../layouts/Layout.astro';
 
     <div class="prose prose-garden max-w-none text-gray-700 space-y-8">
 
-      <section>
+      <!-- Dynamischer Block: Betreiber (umgeschaltet via site_config.impressum_mode) -->
+      <section id="impressum-dynamic">
         <h2 class="font-display text-2xl font-semibold text-garden-800">Angaben gemäß § 5 TMG</h2>
-        <p>
-          Refugium Naturgärten<br />
-          Standort: Refugium Etzdorf<br />
-          Inhaber: Konny Voigt<br />
-          [PLACEHOLDER - Straße und Hausnummer]<br />
-          Etzdorf im Rosental, Sachsen<br />
-          [PLACEHOLDER - PLZ und Ort]
-        </p>
+        <div id="impressum-operator-block" class="space-y-2">
+          <p class="text-gray-400 italic">Lade aktuelle Angaben…</p>
+        </div>
       </section>
 
       <section>
         <h2 class="font-display text-2xl font-semibold text-garden-800">Kontakt</h2>
         <p>
-          Telefon: [PLACEHOLDER]<br />
-          E-Mail: <a href="mailto:garten@infinityspace42.de" class="text-garden-600 hover:text-garden-700">garten@infinityspace42.de</a>
+          E-Mail: <a href="mailto:garten@infinityspace42.de" class="text-garden-600 hover:text-garden-700">garten@infinityspace42.de</a><br />
+          Telefon: <a href="tel:+4901652593763" class="text-garden-600 hover:text-garden-700">01652593763</a>
         </p>
       </section>
 
       <section>
         <h2 class="font-display text-2xl font-semibold text-garden-800">Umsatzsteuer-ID / Steuernummer</h2>
-        <p>
-          Steuernummer: [PLACEHOLDER]
-        </p>
-      </section>
-
-      <section>
-        <h2 class="font-display text-2xl font-semibold text-garden-800">Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
-        <p>
-          Konny Voigt<br />
-          [PLACEHOLDER - Adresse]
-        </p>
+        <p id="impressum-tax">[wird nach Launch 01.05.2026 eingetragen]</p>
       </section>
 
       <section>
@@ -50,9 +36,6 @@ import Layout from '../layouts/Layout.astro';
           <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener noreferrer" class="text-garden-600 hover:text-garden-700">
             https://ec.europa.eu/consumers/odr/
           </a>
-        </p>
-        <p>
-          Unsere E-Mail-Adresse finden Sie oben im Impressum.
         </p>
       </section>
 
@@ -69,15 +52,9 @@ import Layout from '../layouts/Layout.astro';
         <p>
           Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten
           nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als
-          Diensteanbieter jedoch nicht unter Pflicht, übermittelte oder gespeicherte fremde
+          Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde
           Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige
           Tätigkeit hinweisen.
-        </p>
-        <p>
-          Verpflichtungen zur Entfernung oder Sperrung der Nutzung von Informationen nach den
-          allgemeinen Gesetzen bleiben hiervon unberührt. Eine diesbezügliche Haftung ist jedoch
-          erst ab dem Zeitpunkt der Kenntnis einer konkreten Rechtsverletzung möglich. Bei
-          Bekanntwerden von entsprechenden Rechtsverletzungen werden wir diese Inhalte umgehend entfernen.
         </p>
       </section>
 
@@ -85,11 +62,8 @@ import Layout from '../layouts/Layout.astro';
         <h2 class="font-display text-2xl font-semibold text-garden-800">Haftung für Links</h2>
         <p>
           Unser Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen
-          Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen.
-          Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der
-          Seiten verantwortlich. Die verlinkten Seiten wurden zum Zeitpunkt der Verlinkung auf
-          mögliche Rechtsverstöße überprüft. Rechtswidrige Inhalte waren zum Zeitpunkt der
-          Verlinkung nicht erkennbar.
+          Einfluss haben. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter
+          oder Betreiber der Seiten verantwortlich.
         </p>
       </section>
 
@@ -99,11 +73,42 @@ import Layout from '../layouts/Layout.astro';
           Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen
           dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art
           der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen
-          Zustimmung des jeweiligen Autors bzw. Erstellers.
+          Zustimmung des jeweiligen Autors.
         </p>
       </section>
 
       <p class="text-sm text-gray-400 mt-12">Zuletzt aktualisiert: April 2026</p>
     </div>
   </div>
+
+  <script>
+    const API_BASE = import.meta.env.PUBLIC_API_URL || 'https://garten.infinityspace42.de';
+    const block = document.getElementById('impressum-operator-block');
+    fetch(`${API_BASE}/api/site-config/impressum`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!block) return;
+        const modeLabel =
+          data.mode === 'post_lease'
+            ? '<span class="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded mb-2">Status: Gewerblicher Betrieb</span>'
+            : '<span class="inline-block bg-amber-100 text-amber-800 text-xs font-medium px-2 py-1 rounded mb-2">Status: Vor-Launch · Pachtvertrag in Vorbereitung</span>';
+        block.innerHTML = `
+          ${modeLabel}
+          <p>
+            <strong>${data.operator_name}</strong><br />
+            ${data.operator_note}<br />
+            Refugium Etzdorf · Refugium Naturgärten<br />
+            Etzdorf im Rosental, Sachsen<br />
+            E-Mail: <a href="mailto:${data.email}" class="text-garden-600 hover:text-garden-700">${data.email}</a>
+          </p>
+          <p class="text-sm text-gray-600 italic mt-4">${data.notice}</p>
+        `;
+      })
+      .catch(() => {
+        if (block) {
+          block.innerHTML =
+            '<p>Refugium Naturgärten · Standort Refugium Etzdorf · Etzdorf im Rosental, Sachsen · garten@infinityspace42.de</p>';
+        }
+      });
+  </script>
 </Layout>

@@ -1047,6 +1047,121 @@ def migrate_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_job_applications_created ON job_applications(created_at)")
     conn.commit()
 
+    # -- Milestones (Roadmap) --
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS milestones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            target_date DATE,
+            status TEXT DEFAULT 'active',
+            image_path TEXT,
+            sort_order INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    try:
+        conn.execute("ALTER TABLE projects ADD COLUMN milestone_id INTEGER REFERENCES milestones(id)")
+        conn.commit()
+        print("Migration: Added milestone_id column to projects")
+    except Exception:
+        pass
+    conn.commit()
+
+    # Seed milestones if empty
+    try:
+        ms_count = conn.execute("SELECT COUNT(*) as c FROM milestones").fetchone()['c']
+        if ms_count == 0:
+            milestone_seeds = [
+                ('Launch 01.05.2026', 'Go-Live als gewerbliche Vermietung', '2026-05-01', 'active', 0),
+                ('Sommer-Saison 2026', 'Start der ersten vollen Saison', '2026-06-21', 'active', 1),
+                ('Pool unten', 'Naturpool im unteren Gartenbereich', None, 'idea', 2),
+                ('Unterirdischer Pool', 'Vision: unterirdischer Pool unter dem Haus', None, 'idea', 3),
+                ('3D-AI-Roadmap-Hintergrund', 'Visualisierte Meilensteine mit nanobanana/video-ai, Antigravity-Scroll-Logik als Roadmap-Hintergrund', None, 'idea', 4),
+            ]
+            for name, desc, target, status, order in milestone_seeds:
+                conn.execute(
+                    'INSERT INTO milestones (name, description, target_date, status, sort_order) VALUES (?, ?, ?, ?, ?)',
+                    (name, desc, target, status, order)
+                )
+            conn.commit()
+            print("Seeded 5 milestones")
+    except Exception as e:
+        print(f"Milestone seed: {e}")
+
+    # Seed 12 Launch-Offline-Tasks if not exists
+    try:
+        existing = conn.execute(
+            "SELECT id FROM projects WHERE title = ? AND category = ?",
+            ('Pachtvertrag unterschreiben', 'launch-offline')
+        ).fetchone()
+        if not existing:
+            launch_ms = conn.execute(
+                "SELECT id FROM milestones WHERE name = 'Launch 01.05.2026'"
+            ).fetchone()
+            launch_ms_id = launch_ms['id'] if launch_ms else None
+
+            offline_tasks = [
+                ('Pachtvertrag unterschreiben',
+                 'Gespräch mit Opa Konrad, formelles Dokument (auch selbst erstellt) unterschreiben. Ohne Pachtvertrag kein gewerblicher Launch und kein Impressum-Umschalten. #impressum-trigger',
+                 'hoch'),
+                ('Schornsteinfeger-Check',
+                 'Schornsteinfeger bestellen, Kaminofen abnehmen lassen. Pflicht für gewerbliche Vermietung.',
+                 'hoch'),
+                ('Versicherungsschutz klären',
+                 'Gewerbehaftpflicht, Gebäudeversicherung und Gästehaftpflicht recherchieren und abschließen.',
+                 'hoch'),
+                ('WC-Upgrade Trockentrenntoilette',
+                 'Plumpsklo durch ökologische Trockentrenntoilette upgraden – Natur pur ohne Kompromisse, Komfort für Gäste.',
+                 'hoch'),
+                ('Job-Anzeigen schalten',
+                 'Kleinanzeigen, MyHammer, Stellenwerk Jena – Minijob-Inserate für Garten-Hilfen & Studenten online stellen.',
+                 'hoch'),
+                ('Hardware-Einkauf (Starlink, Kameras, Elektro)',
+                 'Starlink Kit, Überwachungskameras, Elektro-Material, AUS-Schalter-Hardware bestellen und liefern lassen.',
+                 'hoch'),
+                ('Studenten-Onboarding (Minijob-Anmeldung)',
+                 'Minijob-Zentrale-Anmeldung vorbereiten, SV-Nummern einsammeln, Verträge vorbereiten.',
+                 'hoch'),
+                ('Oster-Familien-Meeting',
+                 'Familien-Meeting Ostern: Kooperationsmodell, Rollen, Nutzungskonzept final abstimmen.',
+                 'mittel'),
+                ('Elektro-Endabnahme (E-Check)',
+                 'Elektriker für professionelle Endabnahme (E-Check) beauftragen. Voraussetzung für gewerbliche Vermietung.',
+                 'mittel'),
+                ('Beschilderung Videoüberwachung + AUS-Schalter montieren',
+                 'DSGVO-konforme Schilder "Videoüberwachung" anbringen, physischen AUS-Schalter im Gartenhaus montieren.',
+                 'mittel'),
+                ('Foto-Shooting Lifestyle',
+                 'Professionelles Foto-Shooting (Deep Work am Starlink, Weinberg, Romantik, Familien) für Marketing und Website.',
+                 'mittel'),
+                ('Gäste-Ordner analog erstellen',
+                 'Physischer Ordner im Gartenhaus: Hausordnung, Notrufnummern, Anleitungen, WLAN-Daten, Karte.',
+                 'niedrig'),
+            ]
+            for title, desc, prio in offline_tasks:
+                conn.execute('''
+                    INSERT INTO projects (title, description, category, status, priority,
+                        created_by, milestone_id)
+                    VALUES (?, ?, 'launch-offline', 'offen', ?, 'system-seed', ?)
+                ''', (title, desc, prio, launch_ms_id))
+            conn.commit()
+            print(f"Seeded 12 launch-offline tasks")
+    except Exception as e:
+        print(f"Launch-offline seed: {e}")
+
+    # Seed impressum_mode if not set
+    try:
+        row = conn.execute("SELECT value FROM site_config WHERE key = 'impressum_mode'").fetchone()
+        if not row:
+            conn.execute(
+                "INSERT INTO site_config (key, value) VALUES (?, ?)",
+                ('impressum_mode', 'pre_lease')
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"Impressum mode seed: {e}")
+
     conn.close()
     print("Database migrations complete")
 
@@ -3228,8 +3343,8 @@ def create_project(user):
     conn = get_db()
     conn.execute('''
         INSERT INTO projects (title, description, category, status, priority,
-                             estimated_cost, effort, timeframe, created_by, map_area)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             estimated_cost, effort, timeframe, created_by, map_area, milestone_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         data['title'],
         data.get('description'),
@@ -3240,7 +3355,8 @@ def create_project(user):
         data.get('effort'),
         data.get('timeframe'),
         user['email'],
-        data.get('map_area')
+        data.get('map_area'),
+        data.get('milestone_id') or data.get('milestoneId')
     ))
     project_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
 
@@ -3334,7 +3450,7 @@ def update_project(project_id, user):
     allowed_fields = ['title', 'description', 'category', 'status', 'priority',
                       'estimated_cost', 'effort', 'timeframe', 'assigned_to',
                       'dependencies', 'start_date', 'due_date', 'assigned_to_list',
-                      'parent_task_id', 'map_area']
+                      'parent_task_id', 'map_area', 'milestone_id']
     json_fields = {'dependencies', 'assigned_to_list'}
 
     for field in allowed_fields:
@@ -3530,6 +3646,18 @@ def confirm_project(project_id, user):
             credit_amount,
             f"Projekt: {project['title']}"
         ))
+
+    # Hook: wenn "Pachtvertrag unterschreiben" bestätigt wird → Impressum-Mode umschalten
+    try:
+        if project['description'] and '#impressum-trigger' in project['description']:
+            conn.execute('''
+                INSERT INTO site_config (key, value, updated_at) VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+            ''', ('impressum_mode', 'post_lease', datetime.now().isoformat()))
+            conn.commit()
+            print(f"Impressum mode auto-switched to post_lease via confirmed task #{project_id}")
+    except Exception as e:
+        print(f"Impressum switch hook: {e}")
 
     conn.commit()
     conn.close()
@@ -5374,6 +5502,118 @@ def translate_texts():
 
     conn.close()
     return jsonify({'translations': result})
+
+
+@app.route('/api/milestones', methods=['GET'])
+def get_milestones():
+    """Get all milestones with aggregated task progress."""
+    include_idea = request.args.get('include') == 'idea'
+    conn = get_db()
+    if include_idea:
+        query = "SELECT * FROM milestones ORDER BY sort_order, id"
+    else:
+        query = "SELECT * FROM milestones WHERE status != 'idea' ORDER BY sort_order, id"
+    rows = conn.execute(query).fetchall()
+    result = []
+    for row in rows:
+        m = dict(row)
+        counts = conn.execute('''
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done
+            FROM projects WHERE milestone_id = ?
+        ''', (m['id'],)).fetchone()
+        m['total_count'] = counts['total'] or 0
+        m['done_count'] = counts['done'] or 0
+        result.append(m)
+    conn.close()
+    return jsonify({'milestones': result})
+
+
+@app.route('/api/admin/milestones', methods=['POST'])
+@require_admin
+def create_milestone(user):
+    """Admin: Create new milestone."""
+    data = request.json or {}
+    if not data.get('name'):
+        return jsonify({'error': 'Name erforderlich'}), 400
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO milestones (name, description, target_date, status, image_path, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (
+        data['name'],
+        data.get('description'),
+        data.get('target_date'),
+        data.get('status', 'active'),
+        data.get('image_path'),
+        data.get('sort_order', 0)
+    ))
+    new_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'id': new_id})
+
+
+@app.route('/api/admin/milestones/<int:milestone_id>', methods=['PATCH'])
+@require_admin
+def update_milestone(milestone_id, user):
+    """Admin: Update milestone."""
+    data = request.json or {}
+    conn = get_db()
+    allowed = ['name', 'description', 'target_date', 'status', 'image_path', 'sort_order']
+    updates = []
+    params = []
+    for f in allowed:
+        if f in data:
+            updates.append(f'{f} = ?')
+            params.append(data[f])
+    if not updates:
+        conn.close()
+        return jsonify({'error': 'Keine Änderungen'}), 400
+    params.append(milestone_id)
+    conn.execute(f"UPDATE milestones SET {', '.join(updates)} WHERE id = ?", params)
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/milestones/<int:milestone_id>', methods=['DELETE'])
+@require_admin
+def delete_milestone(milestone_id, user):
+    """Admin: Delete milestone (unlinks projects)."""
+    conn = get_db()
+    conn.execute('UPDATE projects SET milestone_id = NULL WHERE milestone_id = ?', (milestone_id,))
+    conn.execute('DELETE FROM milestones WHERE id = ?', (milestone_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/site-config/impressum', methods=['GET'])
+def get_impressum_config():
+    """Public: Get current impressum mode + text blocks."""
+    conn = get_db()
+    row = conn.execute("SELECT value FROM site_config WHERE key = 'impressum_mode'").fetchone()
+    conn.close()
+    mode = row['value'] if row else 'pre_lease'
+    if mode == 'post_lease':
+        content = {
+            'mode': 'post_lease',
+            'operator_name': 'Infinity Space – Moritz Voigt',
+            'operator_note': 'Pächter des Grundstücks von Konny Voigt',
+            'email': 'garten@infinityspace42.de',
+            'notice': 'Betrieben durch Infinity Space auf Grundlage eines Pachtvertrags mit dem Grundstückseigentümer Konny Voigt.',
+        }
+    else:
+        content = {
+            'mode': 'pre_lease',
+            'operator_name': 'Konny Voigt (Standort-Eigentümer)',
+            'operator_note': 'Künftiger Betreiber/Pächter: Infinity Space – Moritz Voigt',
+            'email': 'garten@infinityspace42.de',
+            'notice': 'Hinweis: Der Pachtvertrag zwischen Konny Voigt (Eigentümer) und Infinity Space (künftiger Betreiber) ist in Vorbereitung. Der gewerbliche Launch als Refugium Naturgärten ist für den 01.05.2026 geplant.',
+        }
+    return jsonify(content)
 
 
 @app.route('/api/translations/preload', methods=['GET'])
