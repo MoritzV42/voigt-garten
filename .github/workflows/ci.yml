@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch: # erlaubt manuellen Trigger im GitHub-UI
 
 jobs:
   build:
@@ -33,16 +34,45 @@ jobs:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy via SSH
+      - name: Trigger rebuild on Hetzner
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 5m
           script: bash ~/voigt-garten/rebuild-voigt-garten.sh
 
-      - name: Health check
-        run: curl -f https://garten.infinityspace42.de/api/health
+      - name: Wait for deploy (verify commit)
+        run: |
+          HEALTH_URL="https://garten.infinityspace42.de/api/health"
+          EXPECTED="${GITHUB_SHA:0:7}"
+          echo "Waiting for commit $EXPECTED to go live..."
+
+          # Async Rebuild-Script braucht Zeit fuer docker build + recreate.
+          # Polle bis zu 5 Minuten.
+          for i in $(seq 1 60); do
+            RESP=$(curl -sf --max-time 5 "$HEALTH_URL" || echo "")
+            if [ -n "$RESP" ]; then
+              LIVE_COMMIT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('commit','?'))" 2>/dev/null || echo "?")
+              echo "Attempt $i: health OK, live commit = $LIVE_COMMIT"
+              if [ "$LIVE_COMMIT" = "$EXPECTED" ]; then
+                echo "✓ Deployment verified: commit $EXPECTED is live"
+                exit 0
+              fi
+            else
+              echo "Attempt $i: health not ready, retry in 5s..."
+            fi
+            sleep 5
+          done
+          echo "Timeout: commit $EXPECTED did not go live within 5 minutes"
+          curl -v "$HEALTH_URL" || true
+          exit 1

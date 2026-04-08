@@ -1548,11 +1548,13 @@ def serve_gallery_image(filename):
 
 @app.route('/api/health', methods=['GET'])
 def health():
-    """Health check endpoint."""
+    """Health check endpoint. Meldet zusaetzlich den deployed Git-Commit,
+    damit CI verifizieren kann ob die aktuelle Version live ist."""
     return jsonify({
         'status': 'ok',
         'service': 'voigt-garten-pi',
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'commit': os.environ.get('GIT_COMMIT', 'unknown')
     })
 
 

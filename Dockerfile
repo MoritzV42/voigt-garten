@@ -51,6 +51,10 @@ RUN mkdir -p /app/data /app/data/invoices /app/public/images/gallery
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 
+# Git commit wird beim Build injiziert (ARG von docker compose build)
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
+
 # Expose port
 EXPOSE 5055
 
