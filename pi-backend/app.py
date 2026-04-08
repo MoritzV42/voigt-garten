@@ -942,6 +942,17 @@ def migrate_db():
         conn.commit()
         print("Seeded 12 categories")
 
+    # Ensure marketing & infrastructure categories exist (idempotent)
+    conn.execute(
+        "INSERT OR IGNORE INTO categories (name, label, emoji, color, sort_order) VALUES (?, ?, ?, ?, ?)",
+        ('marketing', 'Marketing', '📣', 'bg-pink-100 text-pink-800', 12)
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO categories (name, label, emoji, color, sort_order) VALUES (?, ?, ?, ?, ?)",
+        ('infrastruktur', 'Infrastruktur', '🏗️', 'bg-slate-100 text-slate-800', 13)
+    )
+    conn.commit()
+
     # Migrate existing TEXT category → junction tables (one-time)
     try:
         existing_pc = conn.execute("SELECT COUNT(*) as c FROM project_categories").fetchone()['c']

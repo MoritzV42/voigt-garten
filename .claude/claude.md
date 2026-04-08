@@ -62,9 +62,10 @@ Volume Mounts -> Server Filesystem
 |   |-- telegram_service.py # Telegram Bot Moderation
 |   |-- telegram_agent.py   # Autonomer Telegram Bot Agent (@Garten_Bot)
 |   |-- storage.py          # Storage-Interface (Local + erweiterbar)
-|   |-- garten.db           # SQLite (Volume)
 |   |-- requirements.txt
 |   |-- start.sh            # Init + Migration + Gunicorn Start
+|-- data/                   # Volume-Mount für SQLite
+|   |-- garten.db           # Live-DB (-> /app/data/garten.db)
 |-- .claude/
 |   |-- claude.md           # Diese Dokumentation
 
