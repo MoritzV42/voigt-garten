@@ -64,7 +64,7 @@ interface Issue {
   created_at: string;
 }
 
-type Tab = 'dashboard' | 'bookings' | 'projects' | 'users' | 'issues' | 'galerie' | 'credits' | 'dienstleister' | 'kosten' | 'karte' | 'invoices';
+type Tab = 'dashboard' | 'bookings' | 'projects' | 'users' | 'issues' | 'galerie' | 'credits' | 'dienstleister' | 'kosten' | 'karte' | 'invoices' | 'applications';
 
 const API_BASE = import.meta.env.PUBLIC_API_URL || 'https://garten.infinityspace42.de';
 
@@ -85,6 +85,7 @@ export default function AdminDashboard() {
   const [costs, setCosts] = useState<any[]>([]);
   const [costsSummary, setCostsSummary] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
 
   // Fetch data when user is admin
   useEffect(() => {
@@ -109,6 +110,7 @@ export default function AdminDashboard() {
       fetchCosts(),
       fetchCostsSummary(),
       fetchInvoices(),
+      fetchApplications(),
     ]);
     setIsLoading(false);
   };
@@ -267,6 +269,20 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchApplications = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/applications`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setApplications(data.applications || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch applications:', error);
+    }
+  };
+
   const confirmProject = async (projectId: number, creditAmount: number) => {
     try {
       const response = await fetch(`${API_BASE}/api/projects/${projectId}/confirm`, {
@@ -402,6 +418,7 @@ export default function AdminDashboard() {
   }
 
   const pendingIssuesCount = issues.filter(i => i.status === 'pending').length;
+  const pendingApplicationsCount = applications.filter(a => a.status === 'pending').length;
 
   // Dashboard Tab
   const DashboardTab = () => (
@@ -1013,6 +1030,241 @@ export default function AdminDashboard() {
 
   // Karte Tab
   // Invoices Tab
+  const ApplicationsTab = () => {
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [savingId, setSavingId] = useState<number | null>(null);
+    const [notesDraft, setNotesDraft] = useState<Record<number, string>>({});
+
+    const positionLabels: Record<string, string> = {
+      tech_student: 'Tech-Aushilfe / Student',
+      elektro_meister: 'Elektro-Meister / E-Check',
+      gaertner: 'Gärtner / Instandhaltung',
+      initiativ: 'Initiativbewerbung',
+    };
+
+    const statusColors: Record<string, string> = {
+      pending: 'bg-amber-100 text-amber-800',
+      contacted: 'bg-blue-100 text-blue-800',
+      hired: 'bg-green-100 text-green-800',
+      rejected: 'bg-gray-100 text-gray-600',
+    };
+
+    const statusLabels: Record<string, string> = {
+      pending: 'Offen',
+      contacted: 'Kontaktiert',
+      hired: 'Eingestellt',
+      rejected: 'Abgelehnt',
+    };
+
+    const updateApplication = async (appId: number, patch: Record<string, any>) => {
+      setSavingId(appId);
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/applications/${appId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(patch),
+        });
+        if (response.ok) {
+          await fetchApplications();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Aktion fehlgeschlagen');
+        }
+      } catch {
+        alert('Netzwerkfehler');
+      } finally {
+        setSavingId(null);
+      }
+    };
+
+    const downloadResume = (appId: number) => {
+      const url = `${API_BASE}/api/admin/applications/${appId}/resume`;
+      fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => {
+          if (!r.ok) throw new Error('Download fehlgeschlagen');
+          return r.blob();
+        })
+        .then(blob => {
+          const objectUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = objectUrl;
+          a.download = `Bewerbung_${appId}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(objectUrl);
+        })
+        .catch(() => alert('Lebenslauf konnte nicht heruntergeladen werden.'));
+    };
+
+    const filteredApps = statusFilter === 'all'
+      ? applications
+      : applications.filter((a: any) => a.status === statusFilter);
+
+    return (
+      <div className="space-y-4">
+        {/* Filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {['all', 'pending', 'contacted', 'hired', 'rejected'].map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                statusFilter === s
+                  ? 'bg-garden-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {s === 'all' ? 'Alle' : statusLabels[s] || s}
+              {s !== 'all' && (
+                <span className="ml-1">({applications.filter((a: any) => a.status === s).length})</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {filteredApps.length === 0 ? (
+          <div className="bg-gray-50 rounded-xl p-8 text-center">
+            <div className="text-4xl mb-4">📭</div>
+            <h3 className="font-bold text-gray-600">Keine Bewerbungen</h3>
+            <p className="text-gray-500 text-sm">Neue Bewerbungen erscheinen hier automatisch.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredApps.map((app: any) => {
+              const isOpen = expandedId === app.id;
+              return (
+                <div key={app.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  {/* Header */}
+                  <div
+                    className="flex items-start justify-between gap-4 p-4 cursor-pointer hover:bg-gray-50 transition"
+                    onClick={() => setExpandedId(isOpen ? null : app.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="font-semibold text-gray-900">{app.name}</h3>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[app.status] || 'bg-gray-100'}`}>
+                          {statusLabels[app.status] || app.status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {positionLabels[app.position] || app.position}
+                        <span className="mx-1.5 text-gray-300">·</span>
+                        <a
+                          href={`mailto:${app.email}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:text-garden-700 hover:underline"
+                        >
+                          {app.email}
+                        </a>
+                        {app.phone && (
+                          <>
+                            <span className="mx-1.5 text-gray-300">·</span>
+                            <span>{app.phone}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-gray-400 whitespace-nowrap">
+                      {app.created_at ? new Date(app.created_at).toLocaleDateString('de-DE') : '-'}
+                      <div className="mt-1">
+                        <span className="text-gray-400">{isOpen ? '▲' : '▼'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expanded */}
+                  {isOpen && (
+                    <div className="border-t border-gray-100 p-5 bg-gray-50 space-y-4">
+                      {/* Meta-Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">Verfügbar ab</div>
+                          <div className="text-gray-800">{app.available_from || '-'}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">Stunden/Woche</div>
+                          <div className="text-gray-800">{app.hours_per_week ? `${app.hours_per_week} h` : '-'}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">Bevorzugte Zeiten</div>
+                          <div className="text-gray-800">{app.preferred_times || '-'}</div>
+                        </div>
+                      </div>
+
+                      {/* Motivation */}
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Motivation</div>
+                        <div className="text-sm text-gray-800 whitespace-pre-wrap bg-white rounded-lg p-3 border border-gray-200">
+                          {app.motivation || '-'}
+                        </div>
+                      </div>
+
+                      {/* Resume + Admin Notes */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Lebenslauf</div>
+                          {app.resume_path ? (
+                            <button
+                              onClick={() => downloadResume(app.id)}
+                              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition"
+                            >
+                              📄 PDF herunterladen
+                            </button>
+                          ) : (
+                            <span className="text-sm text-gray-400 italic">Kein Lebenslauf</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Admin-Notizen</div>
+                          <textarea
+                            rows={2}
+                            value={notesDraft[app.id] ?? app.admin_notes ?? ''}
+                            onChange={(e) => setNotesDraft(prev => ({ ...prev, [app.id]: e.target.value }))}
+                            onBlur={(e) => {
+                              if (e.target.value !== (app.admin_notes ?? '')) {
+                                updateApplication(app.id, { admin_notes: e.target.value });
+                              }
+                            }}
+                            className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:ring-1 focus:ring-garden-500 focus:border-garden-500"
+                            placeholder="Interne Notizen ..."
+                          />
+                        </div>
+                      </div>
+
+                      {/* Status Actions */}
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-200">
+                        <span className="text-xs text-gray-500 mr-1">Status:</span>
+                        {(['pending', 'contacted', 'hired', 'rejected'] as const).map(s => (
+                          <button
+                            key={s}
+                            onClick={() => updateApplication(app.id, { status: s })}
+                            disabled={savingId === app.id || app.status === s}
+                            className={`text-xs px-3 py-1 rounded-full font-medium transition disabled:opacity-50 ${
+                              app.status === s
+                                ? 'bg-garden-600 text-white cursor-default'
+                                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            {statusLabels[s]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const InvoicesTab = () => {
     const [actionLoading, setActionLoading] = useState<number | null>(null);
 
@@ -1397,6 +1649,7 @@ export default function AdminDashboard() {
           { key: 'invoices', label: 'Rechnungen' },
           { key: 'kosten', label: 'Kosten' },
           { key: 'karte', label: 'Karte' },
+          { key: 'applications', label: `Bewerbungen${pendingApplicationsCount > 0 ? ` (${pendingApplicationsCount})` : ''}`, badge: pendingApplicationsCount > 0 },
           { key: 'users', label: 'User' },
         ].map(tab => (
           <button
@@ -1428,6 +1681,7 @@ export default function AdminDashboard() {
       {activeTab === 'invoices' && <InvoicesTab />}
       {activeTab === 'karte' && <KarteTab />}
       {activeTab === 'users' && <UsersTab />}
+      {activeTab === 'applications' && <ApplicationsTab />}
     </div>
   );
 }

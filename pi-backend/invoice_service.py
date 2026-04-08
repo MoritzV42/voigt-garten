@@ -156,7 +156,7 @@ def generate_invoice_pdf(
     # Company name
     c.setFont('Helvetica-Bold', 20)
     c.setFillColor(green)
-    c.drawString(25*mm, height - 25*mm, config.get('company_name', 'Natur Refugium Etzdorf'))
+    c.drawString(25*mm, height - 25*mm, config.get('company_name', 'Refugium Naturgärten'))
 
     # Company address (right aligned)
     c.setFont('Helvetica', 9)
@@ -164,7 +164,7 @@ def generate_invoice_pdf(
     right_x = width - 25*mm
     y = height - 25*mm
     for line in [
-        config.get('company_name', 'Natur Refugium Etzdorf'),
+        config.get('company_name', 'Refugium Naturgärten'),
         config.get('address', 'Etzdorf im Rosental'),
         f"Tel: {config.get('phone', '')}",
         config.get('email', 'garten@infinityspace42.de'),
@@ -331,7 +331,7 @@ def generate_invoice_pdf(
     c.setFont('Helvetica', 7)
     c.setFillColor(gray)
     footer_y = 15*mm
-    c.drawString(25*mm, footer_y, f"{config.get('company_name', 'Natur Refugium Etzdorf')} · {config.get('address', '')}")
+    c.drawString(25*mm, footer_y, f"{config.get('company_name', 'Refugium Naturgärten')} · {config.get('address', '')}")
     c.drawString(25*mm, footer_y - 3.5*mm, f"E-Mail: {config.get('email', '')} · Tel: {config.get('phone', '')}")
     if config.get('tax_number') and '[PLACEHOLDER]' not in config.get('tax_number', ''):
         c.drawString(25*mm, footer_y - 7*mm, f"Steuernummer: {config.get('tax_number', '')}")

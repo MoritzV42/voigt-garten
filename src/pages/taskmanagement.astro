@@ -5,16 +5,58 @@ import CreditSystem from '../components/CreditSystem';
 import GardenMap from '../components/GardenMap';
 ---
 
-<Layout title="Taskmanagement" description="Aufgaben und Guthaben-System für den Voigt-Garten">
+<Layout title="Aufgaben" description="Aufgaben im Refugium Etzdorf – freiwillige Mithilfe für Gäste, internes Guthaben-System für die Familie.">
   <!-- Header -->
   <section class="bg-gradient-to-b from-garden-100 to-white py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
       <h1 class="font-display text-4xl md:text-5xl font-bold text-garden-900 mb-4">
-        Taskmanagement
+        Aufgaben im Refugium
       </h1>
       <p class="text-xl text-garden-700 max-w-2xl mx-auto">
-        Alle Arbeiten im Überblick. Wer hilft, bekommt Guthaben!
+        Alle Arbeiten im Überblick – ein Stück Garten lebendig halten.
       </p>
+    </div>
+  </section>
+
+  <!-- Rechtlicher Hinweis: Öffentlich vs. Familie -->
+  <section class="py-8 bg-white">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Öffentlich: freiwillige Gefälligkeit -->
+        <div class="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-6">
+          <div class="flex items-start gap-3 mb-3">
+            <span class="text-3xl">🌿</span>
+            <h2 class="font-display text-xl font-bold text-emerald-900">Für Gäste &amp; Besucher</h2>
+          </div>
+          <p class="text-sm text-emerald-900 leading-relaxed">
+            Wenn du Lust hast, etwas beizutragen, freuen wir uns sehr. Alle hier gelisteten
+            Arbeiten sind <strong>freiwillige Gefälligkeiten ohne Gegenleistung</strong> –
+            eine nachbarschaftliche Mithilfe, kein Auftragsverhältnis.
+          </p>
+          <p class="text-sm text-emerald-900 mt-2 leading-relaxed">
+            Es gibt <strong>keinen Anspruch auf Vergütung</strong>. Eventuelle Aufmerksamkeiten
+            (z.B. Obst aus dem Garten, ein Kaffee, ein Dankeschön) bleiben rein freiwillig
+            und sind keine Bezahlung im rechtlichen Sinn.
+          </p>
+        </div>
+
+        <!-- Familie / eingeloggt -->
+        <div class="bg-amber-50 border-2 border-amber-200 rounded-xl p-6">
+          <div class="flex items-start gap-3 mb-3">
+            <span class="text-3xl">🏡</span>
+            <h2 class="font-display text-xl font-bold text-amber-900">Interner Familien-Bereich</h2>
+          </div>
+          <p class="text-sm text-amber-900 leading-relaxed">
+            Für eingeloggte Familienmitglieder gilt das <strong>interne Guthaben-System</strong>:
+            erledigte Aufgaben werden nach Bestätigung als Guthaben für zukünftige Buchungen
+            verrechnet.
+          </p>
+          <p class="text-sm text-amber-900 mt-2 leading-relaxed">
+            Dieses Guthaben gilt ausschließlich familienintern und stellt keine Bezahlung
+            für Dritte dar. Melde dich an, um deine Credits und internen Aufgaben zu sehen.
+          </p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -47,11 +89,15 @@ import GardenMap from '../components/GardenMap';
               </svg>
             </summary>
             <div class="space-y-6 mt-4">
-              <!-- Credit System -->
-              <div id="credits" class="bg-white rounded-xl shadow-lg p-6">
-                <h3 class="font-display text-xl font-bold text-garden-900 mb-4">
-                  Guthaben-System
-                </h3>
+              <!-- Credit System (nur familienintern) -->
+              <div id="credits" class="bg-white rounded-xl shadow-lg p-6 border-2 border-amber-200">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-xl">🏡</span>
+                  <h3 class="font-display text-xl font-bold text-garden-900">
+                    Guthaben (intern)
+                  </h3>
+                </div>
+                <p class="text-xs text-amber-800 mb-4">Nur für eingeloggte Familienmitglieder – nicht für externe Gäste.</p>
                 <CreditSystem client:load />
               </div>
 
@@ -86,7 +132,7 @@ import GardenMap from '../components/GardenMap';
               <div class="bg-amber-50 rounded-xl p-6 border-2 border-amber-200">
                 <h3 class="font-semibold text-amber-800 mb-2">Etwas melden?</h3>
                 <p class="text-sm text-amber-700 mb-4">
-                  Nutze den "Meldung erstellen" Button fuer Probleme, Bugs oder Ideen.
+                  Nutze den "Meldung erstellen" Button für Probleme, Bugs oder Ideen.
                 </p>
                 <a href="/dienstleister" class="text-amber-800 hover:text-amber-900 font-medium text-sm underline">
                   Dienstleister ansehen →
@@ -97,17 +143,21 @@ import GardenMap from '../components/GardenMap';
 
           <!-- Desktop Sidebar (hidden on mobile - shown via details above) -->
           <div class="hidden lg:block space-y-6">
-            <!-- Credit System -->
-            <div id="credits-desktop" class="bg-white rounded-xl shadow-lg p-6">
-              <h3 class="font-display text-xl font-bold text-garden-900 mb-4">
-                Guthaben-System
-              </h3>
+            <!-- Credit System (nur familienintern) -->
+            <div id="credits-desktop" class="bg-white rounded-xl shadow-lg p-6 border-2 border-amber-200">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-xl">🏡</span>
+                <h3 class="font-display text-xl font-bold text-garden-900">
+                  Guthaben (intern)
+                </h3>
+              </div>
+              <p class="text-xs text-amber-800 mb-4">Nur für eingeloggte Familienmitglieder – nicht für externe Gäste.</p>
               <CreditSystem client:load />
             </div>
 
             <!-- How it works -->
             <div class="bg-garden-50 rounded-xl p-6">
-              <h3 class="font-semibold text-garden-800 mb-4">So funktioniert's:</h3>
+              <h3 class="font-semibold text-garden-800 mb-4">So funktioniert's (Familien-Bereich):</h3>
               <ol class="space-y-3 text-sm text-gray-700">
                 <li class="flex gap-2">
                   <span class="bg-garden-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">1</span>
@@ -174,7 +224,7 @@ import GardenMap from '../components/GardenMap';
             <div class="bg-amber-50 rounded-xl p-6 border-2 border-amber-200">
               <h3 class="font-semibold text-amber-800 mb-2">Etwas melden?</h3>
               <p class="text-sm text-amber-700 mb-4">
-                Nutze den "Meldung erstellen" Button fuer Probleme, Bugs oder Ideen. Ein Admin wird sich darum kümmern.
+                Nutze den "Meldung erstellen" Button für Probleme, Bugs oder Ideen. Ein Admin wird sich darum kümmern.
               </p>
               <a href="/dienstleister" class="text-amber-800 hover:text-amber-900 font-medium text-sm underline">
                 Dienstleister ansehen →

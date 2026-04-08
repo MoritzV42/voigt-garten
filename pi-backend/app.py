@@ -19,9 +19,10 @@ import jwt
 import json
 import functools
 import secrets
+import uuid
 from collections import deque
-from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification, send_magic_link_email, send_welcome_email, send_feedback_request, send_google_review_followup, send_payment_reminder
-from telegram_service import send_moderation_request, answer_callback_query, notify_admin, notify_booking, notify_feedback, notify_email_sent
+from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification, send_magic_link_email, send_welcome_email, send_feedback_request, send_google_review_followup, send_payment_reminder, send_application_confirmation, send_application_notification_admin
+from telegram_service import send_moderation_request, answer_callback_query, notify_admin, notify_booking, notify_feedback, notify_email_sent, notify_job_application
 from storage import LocalStorage
 import urllib.parse
 
@@ -848,23 +849,37 @@ def migrate_db():
         print(f"Pricing rules seed: {e}")
 
     # Seed site_config defaults
+    # WICHTIG: Diese Seeds greifen NUR bei einer frisch angelegten DB (count == 0).
+    # In einer bestehenden Produktions-DB werden existierende Werte NICHT überschrieben.
+    # Nach dem Rebranding zu "Refugium Naturgärten" müssen die Werte in Prod entweder
+    # manuell via SQL oder über das Admin-Settings-UI aktualisiert werden.
     try:
         count = conn.execute("SELECT COUNT(*) as c FROM site_config").fetchone()['c']
         if count == 0:
             defaults = [
-                ('company_name', 'Natur Refugium Etzdorf'),
+                # Dachmarke (Firmenname für Rechnungen, Impressum etc.)
+                ('company_name', 'Refugium Naturgärten'),
+                # Standort-Name für Website-Titel, Email-Header etc.
+                ('site_name', 'Refugium Etzdorf'),
+                ('site_title', 'Refugium Etzdorf – Refugium Naturgärten'),
+                ('footer_text', 'Refugium Naturgärten · betrieben über Infinity Space'),
+                # Bankverbindung: Platzhalter, müssen im Admin-UI befüllt werden.
+                # HINWEIS: Diese Werte dürfen NICHT falsch sein – lieber Platzhalter
+                # als falsche Kontoinhaber.
                 ('account_holder', '[PLACEHOLDER]'),
                 ('iban', '[PLACEHOLDER]'),
                 ('bic', '[PLACEHOLDER]'),
                 ('address', 'Etzdorf im Rosental, Sachsen'),
                 ('tax_number', '[PLACEHOLDER]'),
                 ('email', 'garten@infinityspace42.de'),
+                ('support_email_display', 'Refugium Etzdorf <garten@infinityspace42.de>'),
                 ('phone', '01652593763'),
                 ('first_year_discount', '42'),
                 ('week_discount', '10'),
                 ('repeat_discount', '15'),
                 ('max_overnight_guests', '6'),
                 ('max_day_guests', '20'),
+                ('family_discount_code', 'REFUGIUM-FAMILY'),
             ]
             for key, value in defaults:
                 conn.execute('INSERT INTO site_config (key, value) VALUES (?, ?)', (key, value))
@@ -996,6 +1011,29 @@ def migrate_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_project_categories_pid ON project_categories(project_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_project_categories_cid ON project_categories(category_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_recurring_task_categories_rtid ON recurring_task_categories(recurring_task_id)")
+    conn.commit()
+
+    # Job applications table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS job_applications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT,
+            position TEXT NOT NULL,
+            available_from TEXT,
+            hours_per_week INTEGER,
+            preferred_times TEXT,
+            motivation TEXT,
+            resume_path TEXT,
+            status TEXT DEFAULT 'pending',
+            admin_notes TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT
+        )
+    ''')
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_job_applications_status ON job_applications(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_job_applications_created ON job_applications(created_at)")
     conn.commit()
 
     conn.close()
@@ -1919,6 +1957,225 @@ def bookings():
     return jsonify({
         'bookings': [{'checkIn': b['check_in'], 'checkOut': b['check_out']} for b in bookings_list]
     })
+
+
+# ============ Job Applications ============
+
+ALLOWED_APPLICATION_POSITIONS = {'tech_student', 'elektro_meister', 'gaertner', 'initiativ'}
+ALLOWED_HOURS_PER_WEEK = {5, 10, 20, 40}
+MAX_RESUME_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+APPLICATIONS_DIR = os.path.join(DATA_DIR, 'applications')
+_EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
+
+def _get_application_dict(row) -> dict:
+    item = dict(row)
+    if item.get('resume_path'):
+        item['resume_url'] = f"/api/admin/applications/{item['id']}/resume"
+    return item
+
+
+@app.route('/api/applications', methods=['POST'])
+@limiter.limit("3 per minute")
+def create_application():
+    """Public endpoint to submit a job application (JSON or multipart)."""
+    # Accept both JSON and multipart/form-data (wegen optionalem PDF-Upload)
+    if request.content_type and request.content_type.startswith('multipart/'):
+        data = request.form
+        resume_file = request.files.get('resume')
+    else:
+        data = request.get_json(silent=True) or {}
+        resume_file = None
+
+    name = (data.get('name') or '').strip()
+    email = (data.get('email') or '').strip().lower()
+    position = (data.get('position') or '').strip()
+    motivation = (data.get('motivation') or '').strip()
+    phone = (data.get('phone') or '').strip() or None
+    available_from = (data.get('available_from') or '').strip() or None
+    preferred_times = (data.get('preferred_times') or '').strip() or None
+
+    # Required fields
+    if not name or not email or not position or not motivation:
+        return jsonify({'error': 'Name, Email, Position und Motivation sind erforderlich'}), 400
+
+    if not _EMAIL_RE.match(email):
+        return jsonify({'error': 'Ungültige Email-Adresse'}), 400
+
+    if position not in ALLOWED_APPLICATION_POSITIONS:
+        return jsonify({'error': 'Ungültige Position'}), 400
+
+    # hours_per_week optional
+    hours_raw = data.get('hours_per_week')
+    hours_per_week = None
+    if hours_raw not in (None, '', 'null'):
+        try:
+            hours_per_week = int(hours_raw)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Ungültige Stundenangabe'}), 400
+        if hours_per_week not in ALLOWED_HOURS_PER_WEEK:
+            return jsonify({'error': 'Stunden/Woche muss 5, 10, 20 oder 40 sein'}), 400
+
+    # Optional resume upload
+    resume_path = None
+    if resume_file and resume_file.filename:
+        filename_lower = resume_file.filename.lower()
+        if not filename_lower.endswith('.pdf'):
+            return jsonify({'error': 'Nur PDF-Dateien erlaubt'}), 400
+
+        # Size check
+        resume_file.stream.seek(0, os.SEEK_END)
+        size = resume_file.stream.tell()
+        resume_file.stream.seek(0)
+        if size > MAX_RESUME_SIZE_BYTES:
+            return jsonify({'error': 'Datei zu groß (max 5 MB)'}), 400
+        if size == 0:
+            return jsonify({'error': 'Datei ist leer'}), 400
+
+        # Magic-number check
+        header = resume_file.stream.read(5)
+        resume_file.stream.seek(0)
+        if not header.startswith(b'%PDF'):
+            return jsonify({'error': 'Datei ist kein gültiges PDF'}), 400
+
+        # Ensure target dir, save with uuid filename (kein User-Input im Pfad)
+        os.makedirs(APPLICATIONS_DIR, exist_ok=True)
+        safe_filename = uuid.uuid4().hex + '.pdf'
+        target_abs = os.path.join(APPLICATIONS_DIR, safe_filename)
+        resume_file.save(target_abs)
+        resume_path = safe_filename  # store only filename, not full path
+
+    # Insert into DB
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO job_applications
+            (name, email, phone, position, available_from, hours_per_week,
+             preferred_times, motivation, resume_path, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+    ''', (
+        name, email, phone, position, available_from, hours_per_week,
+        preferred_times, motivation, resume_path, datetime.utcnow().isoformat()
+    ))
+    app_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    # Build data dict for notifications
+    notify_data = {
+        'id': app_id,
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'position': position,
+        'available_from': available_from,
+        'hours_per_week': hours_per_week,
+        'preferred_times': preferred_times,
+        'motivation': motivation,
+        'resume_path': resume_path,
+    }
+
+    # Notifications — isolated so failures don't kill the insert
+    try:
+        send_application_confirmation(notify_data)
+    except Exception as e:
+        print(f"Application confirmation email error: {e}")
+    try:
+        send_application_notification_admin(notify_data)
+    except Exception as e:
+        print(f"Application admin email error: {e}")
+    try:
+        notify_job_application(notify_data)
+    except Exception as e:
+        print(f"Application telegram notify error: {e}")
+
+    return jsonify({'success': True, 'id': app_id})
+
+
+@app.route('/api/admin/applications', methods=['GET'])
+@require_admin
+def admin_list_applications():
+    """List all job applications (admin only)."""
+    conn = get_db()
+    rows = conn.execute(
+        'SELECT * FROM job_applications ORDER BY created_at DESC'
+    ).fetchall()
+    conn.close()
+    return jsonify({
+        'applications': [_get_application_dict(r) for r in rows]
+    })
+
+
+@app.route('/api/admin/applications/<int:app_id>', methods=['PATCH'])
+@require_admin
+def admin_update_application(app_id: int):
+    """Update application status and/or admin notes."""
+    data = request.json or {}
+    allowed_statuses = {'pending', 'contacted', 'rejected', 'hired'}
+
+    updates = []
+    params = []
+
+    if 'status' in data:
+        if data['status'] not in allowed_statuses:
+            return jsonify({'error': 'Ungültiger Status'}), 400
+        updates.append('status = ?')
+        params.append(data['status'])
+
+    if 'admin_notes' in data:
+        updates.append('admin_notes = ?')
+        params.append(data['admin_notes'])
+
+    if not updates:
+        return jsonify({'error': 'Keine Felder zum Aktualisieren'}), 400
+
+    updates.append('updated_at = CURRENT_TIMESTAMP')
+    params.append(app_id)
+
+    conn = get_db()
+    cursor = conn.execute(
+        f"UPDATE job_applications SET {', '.join(updates)} WHERE id = ?",
+        params
+    )
+    conn.commit()
+    affected = cursor.rowcount
+    conn.close()
+
+    if affected == 0:
+        return jsonify({'error': 'Bewerbung nicht gefunden'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/applications/<int:app_id>/resume', methods=['GET'])
+@require_admin
+def admin_download_resume(app_id: int):
+    """Download resume PDF for an application (admin only, path-traversal safe)."""
+    conn = get_db()
+    row = conn.execute(
+        'SELECT resume_path FROM job_applications WHERE id = ?', (app_id,)
+    ).fetchone()
+    conn.close()
+
+    if not row or not row['resume_path']:
+        return jsonify({'error': 'Kein Lebenslauf vorhanden'}), 404
+
+    filename = row['resume_path']
+    target_path = os.path.join(APPLICATIONS_DIR, filename)
+    # Path-traversal protection: resolved path must be under APPLICATIONS_DIR
+    real_target = os.path.realpath(target_path)
+    real_base = os.path.realpath(APPLICATIONS_DIR)
+    if not (real_target == real_base or real_target.startswith(real_base + os.sep)):
+        return jsonify({'error': 'Ungültiger Dateipfad'}), 400
+
+    if not os.path.exists(real_target):
+        return jsonify({'error': 'Datei nicht gefunden'}), 404
+
+    return send_file(
+        real_target,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'Bewerbung_{app_id}.pdf'
+    )
 
 
 # ============ Pricing & Availability Routes ============

@@ -7,7 +7,7 @@ interface Props {
   description?: string;
 }
 
-const { title, description = "Natur Refugium Etzdorf – Familiengeführter Naturgarten mit Übernachtungsmöglichkeit in Sachsen. 5.300m² Südhang, Solar-Autarkie, eigener Brunnen." } = Astro.props;
+const { title, description = "Refugium Etzdorf – Naturgarten mit Übernachtungsmöglichkeit in Sachsen. 5.300m² Südhang, Solar-Autarkie, eigener Brunnen. Betrieben von Refugium Naturgärten." } = Astro.props;
 const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
 ---
 
@@ -18,7 +18,7 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
-    <meta property="og:title" content={`${title} | Natur Refugium Etzdorf`} />
+    <meta property="og:title" content={`${title} | Refugium Etzdorf`} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonicalUrl} />
@@ -30,12 +30,12 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
     <!-- Pannellum 360° Panorama Viewer -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js" is:inline></script>
-    <title>{title} | Natur Refugium Etzdorf</title>
+    <title>{title} | Refugium Etzdorf</title>
     <script type="application/ld+json" set:html={JSON.stringify({
       "@context": "https://schema.org",
       "@type": "LodgingBusiness",
-      "name": "Natur Refugium Etzdorf",
-      "description": "Familiengeführter Naturgarten mit Übernachtungsmöglichkeit in Etzdorf im Rosental, Sachsen. 5.300m² Südhang mit Solar-Autarkie.",
+      "name": "Refugium Etzdorf",
+      "description": "Naturgarten mit Übernachtungsmöglichkeit in Etzdorf im Rosental, Sachsen. 5.300m² Südhang mit Solar-Autarkie. Ein Standort von Refugium Naturgärten.",
       "url": "https://garten.infinityspace42.de",
       "telephone": "+4901652593763",
       "email": "garten@infinityspace42.de",
@@ -66,7 +66,7 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
           <div class="flex items-center">
             <a href="/" class="flex items-center gap-2">
               <span class="text-3xl">🌳</span>
-              <span class="font-display text-xl font-semibold text-garden-800">Voigt-Garten</span>
+              <span class="font-display text-xl font-semibold text-garden-800">Refugium Etzdorf</span>
             </a>
           </div>
           <div class="hidden sm:flex sm:items-center sm:gap-6">
@@ -78,6 +78,7 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
             <a href="/inventar" class="text-gray-600 hover:text-garden-700 transition">Inventar</a>
             <a href="/gartenkarte" class="text-gray-600 hover:text-garden-700 transition">Karte</a>
             <a href="/umgebung" class="text-gray-600 hover:text-garden-700 transition">Umgebung</a>
+            <a href="/jobs" class="text-gray-600 hover:text-garden-700 transition">Jobs</a>
             <div class="border-l border-gray-200 h-6 mx-2"></div>
             <LanguageToggle client:load />
             <GlobalNavbar client:load />
@@ -105,6 +106,7 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
           <a href="/inventar" class="block py-2 text-gray-600 hover:text-garden-700">Inventar</a>
           <a href="/gartenkarte" class="block py-2 text-gray-600 hover:text-garden-700">Karte</a>
           <a href="/umgebung" class="block py-2 text-gray-600 hover:text-garden-700">Umgebung</a>
+          <a href="/jobs" class="block py-2 text-gray-600 hover:text-garden-700">Jobs</a>
           <div class="border-t border-garden-100 pt-2 mt-2">
             <LanguageToggle client:load />
           </div>
@@ -120,16 +122,16 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
       <div class="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 class="font-display text-lg font-semibold mb-4">Voigt-Garten</h3>
+            <h3 class="font-display text-lg font-semibold mb-4">Refugium Naturgärten</h3>
             <p class="text-garden-200 text-sm">
-              Ein Stück Natur für die Familie.<br />
-              Erholung, Gemeinschaft, Tradition.
+              Standort: Refugium Etzdorf<br />
+              Naturnahe Auszeit mit Tradition.
             </p>
           </div>
           <div>
             <h3 class="font-display text-lg font-semibold mb-4">Kontakt</h3>
             <p class="text-garden-200 text-sm">
-              Familie Voigt<br />
+              Refugium Naturgärten<br />
               <!-- PLACEHOLDER: Adresse einfügen -->
               <a href="mailto:garten@infinityspace42.de" class="hover:text-white transition">
                 garten@infinityspace42.de
@@ -139,21 +141,23 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
           <div>
             <h3 class="font-display text-lg font-semibold mb-4">Familien-Rabatt</h3>
             <p class="text-garden-200 text-sm">
-              Code: <span class="font-mono bg-garden-800 px-2 py-1 rounded">VOIGT-GARTEN</span><br />
+              Code: <span class="font-mono bg-garden-800 px-2 py-1 rounded">REFUGIUM-FAMILY</span><br />
               50% Rabatt für Familienmitglieder
             </p>
           </div>
         </div>
         <div class="border-t border-garden-800 mt-8 pt-8 text-center text-garden-300 text-sm">
           <div class="flex flex-wrap justify-center gap-x-4 gap-y-1 mb-3">
+            <a href="/jobs" class="hover:text-white transition">Jobs & Mitmachen</a>
             <a href="/impressum" class="hover:text-white transition">Impressum</a>
             <a href="/datenschutz" class="hover:text-white transition">Datenschutz</a>
             <a href="/agb" class="hover:text-white transition">AGB</a>
             <a href="/hausordnung" class="hover:text-white transition">Hausordnung</a>
           </div>
-          &copy; {new Date().getFullYear()} Familie Voigt. Mit Liebe gepflegt.
+          &copy; {new Date().getFullYear()} Refugium Naturgärten. Mit Liebe gepflegt.
           <span class="mx-2">|</span>
           <a href="/admin" class="hover:text-white transition">Admin</a>
+          <div class="mt-2 text-xs text-garden-400">betrieben über Infinity Space</div>
         </div>
       </div>
     </footer>

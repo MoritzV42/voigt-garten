@@ -1,5 +1,5 @@
 """
-Email Service for Voigt-Garten
+Email Service for Refugium Naturgärten (Standort Refugium Etzdorf)
 Uses Resend API for transactional emails.
 """
 
@@ -12,7 +12,7 @@ from datetime import datetime
 resend.api_key = os.environ.get('RESEND_API_KEY', '')
 
 # Sender & Admin
-FROM_EMAIL = "Voigt-Garten <garten@infinityspace42.de>"
+FROM_EMAIL = "Refugium Etzdorf <garten@infinityspace42.de>"
 ADMIN_EMAIL = "moritz.infinityspace42@gmail.com"
 
 DATA_DIR = os.environ.get('DATA_DIR', os.path.join(os.path.dirname(__file__)))
@@ -40,7 +40,7 @@ def _email_header(title: str) -> str:
 <div style="background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);border-radius:16px 16px 0 0;padding:40px 30px;text-align:center;">
 <div style="font-size:48px;margin-bottom:10px;">🌳</div>
 <h1 style="color:white;margin:0;font-family:'Playfair Display',Georgia,serif;font-size:28px;font-weight:600;">{title}</h1>
-<p style="color:#bbf7d0;margin:8px 0 0 0;font-size:14px;">Familien-Garten in Etzdorf</p>
+<p style="color:#bbf7d0;margin:8px 0 0 0;font-size:14px;">Refugium Naturgärten · Standort Etzdorf</p>
 </div>
 <div style="background:white;padding:40px 30px;border-radius:0 0 16px 16px;box-shadow:0 4px 6px rgba(0,0,0,0.05);">"""
 
@@ -48,8 +48,9 @@ def _email_header(title: str) -> str:
 def _email_footer() -> str:
     return """</div>
 <div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:12px;">
-<p style="margin:0;">Familie Voigt &middot; Garten in Etzdorf im Rosental</p>
+<p style="margin:0;">Refugium Naturgärten &middot; Standort Refugium Etzdorf im Rosental</p>
 <p style="margin:4px 0 0 0;"><a href="https://garten.infinityspace42.de" style="color:#16a34a;text-decoration:none;">garten.infinityspace42.de</a></p>
+<p style="margin:8px 0 0 0;color:#cbd5e1;font-size:11px;">betrieben über Infinity Space</p>
 </div></div></body></html>"""
 
 
@@ -60,20 +61,20 @@ def send_booking_confirmation(booking_data: dict) -> bool:
         return False
 
     config = _get_site_config()
-    account_holder = config.get('account_holder', 'Familie Voigt')
+    account_holder = config.get('account_holder', 'Refugium Naturgärten')
     iban = config.get('iban', 'Wird nachgereicht')
     bic = config.get('bic', '')
 
     bic_line = f"<p><strong>BIC:</strong> {bic}</p>" if bic and bic != 'PLACEHOLDER' else ""
     iban_display = iban if iban != 'PLACEHOLDER' else 'Wird nachgereicht'
-    holder_display = account_holder if account_holder != 'PLACEHOLDER' else 'Familie Voigt'
+    holder_display = account_holder if account_holder != 'PLACEHOLDER' else 'Refugium Naturgärten'
 
     try:
         params = {
             "from": FROM_EMAIL,
             "to": [booking_data['email']],
-            "subject": "Buchungsanfrage eingegangen - Voigt-Garten",
-            "html": f"""{_email_header('Voigt-Garten')}
+            "subject": "[Refugium Etzdorf] Buchungsanfrage eingegangen",
+            "html": f"""{_email_header('Refugium Etzdorf')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Hallo {booking_data['name']}!
                 </h2>
@@ -123,7 +124,7 @@ def send_booking_confirmation(booking_data: dict) -> bool:
                 </p>
 
                 <p style="color:#666;margin-top:30px;">
-                    Liebe Grüße,<br/>Familie Voigt
+                    Liebe Grüße,<br/>dein Team vom Refugium Etzdorf
                 </p>
             {_email_footer()}""",
             "reply_to": ADMIN_EMAIL
@@ -205,7 +206,7 @@ def send_activity_notification(activity_type: str, details: dict) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [ADMIN_EMAIL],
-            "subject": f"{title} - Voigt-Garten",
+            "subject": f"[Refugium Etzdorf] {title}",
             "html": f"""
                 <div style="font-family: sans-serif;">
                     <h2>{title}</h2>
@@ -283,13 +284,13 @@ def send_magic_link_email(email: str, token: str, name: str = None) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [email],
-            "subject": "Dein Zugang zum Voigt-Garten",
-            "html": f"""{_email_header('Voigt-Garten')}
+            "subject": "[Refugium Etzdorf] Dein Zugang",
+            "html": f"""{_email_header('Refugium Etzdorf')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     {greeting}!
                 </h2>
                 <p style="color:#4a5568;line-height:1.6;margin:0 0 24px 0;">
-                    Klicke auf den Button unten, um deinen Zugang zum Voigt-Garten zu aktivieren.
+                    Klicke auf den Button unten, um deinen Zugang zum Refugium Etzdorf zu aktivieren.
                     Damit kannst du Aufenthalte buchen, die Galerie nutzen und vieles mehr.
                 </p>
 
@@ -335,14 +336,14 @@ def send_welcome_email(email: str, name: str) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [email],
-            "subject": "Willkommen im Voigt-Garten!",
-            "html": f"""{_email_header('Willkommen im Voigt-Garten!')}
+            "subject": "[Refugium Etzdorf] Willkommen!",
+            "html": f"""{_email_header('Willkommen im Refugium Etzdorf!')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Hallo {name}!
                 </h2>
                 <p style="color:#4a5568;line-height:1.6;margin:0 0 24px 0;">
-                    Dein Account wurde erfolgreich erstellt. Willkommen in unserem
-                    Familien-Garten in Etzdorf im Rosental!
+                    Dein Account wurde erfolgreich erstellt. Willkommen im
+                    Refugium Etzdorf im Rosental – einem Standort von Refugium Naturgärten.
                 </p>
 
                 <div style="margin:24px 0;">
@@ -365,7 +366,7 @@ def send_welcome_email(email: str, name: str) -> bool:
                         Aufenthalte ab <strong style="font-size:20px;color:#78350f;">45 EUR/Nacht</strong>
                     </p>
                     <p style="margin:4px 0 0 0;font-size:12px;color:#b45309;">
-                        Familien-Rabattcode: VOIGT-GARTEN (50%)
+                        Familien-Rabattcode: REFUGIUM-FAMILY (50%)
                     </p>
                 </div>
 
@@ -399,8 +400,8 @@ def send_feedback_request(email: str, name: str, booking_id: int) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [email],
-            "subject": "Wie war dein Aufenthalt? - Voigt-Garten",
-            "html": f"""{_email_header('Voigt-Garten')}
+            "subject": "[Refugium Etzdorf] Wie war dein Aufenthalt?",
+            "html": f"""{_email_header('Refugium Etzdorf')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Hallo {name}!
                 </h2>
@@ -445,8 +446,8 @@ def send_google_review_followup(email: str, name: str) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [email],
-            "subject": "Danke für dein Feedback! - Voigt-Garten",
-            "html": f"""{_email_header('Voigt-Garten')}
+            "subject": "[Refugium Etzdorf] Danke für dein Feedback!",
+            "html": f"""{_email_header('Refugium Etzdorf')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Danke, {name}!
                 </h2>
@@ -478,6 +479,164 @@ def send_google_review_followup(email: str, name: str) -> bool:
         return False
 
 
+# Position-Mapping fuer Bewerbungen (wird auch in app.py als Whitelist genutzt)
+JOB_POSITION_LABELS = {
+    'tech_student': 'Tech-Aushilfe / Student',
+    'elektro_meister': 'Elektro-Meister (Elektroinstallation)',
+    'gaertner': 'Gärtner / Gartenhelfer',
+    'initiativ': 'Initiativbewerbung',
+}
+
+RECLAIM_BOOKING_URL = "https://app.reclaim.ai/m/moritz-voigt/flexible-quick-meeting"
+
+
+def send_application_confirmation(app_data: dict) -> bool:
+    """Send application confirmation to applicant with Reclaim booking link."""
+    if not resend.api_key:
+        print("RESEND_API_KEY not configured")
+        return False
+
+    full_name = app_data.get('name', '').strip()
+    first_name = full_name.split()[0] if full_name else 'Du'
+    position_key = app_data.get('position', 'initiativ')
+    position_label = JOB_POSITION_LABELS.get(position_key, position_key)
+
+    try:
+        params = {
+            "from": FROM_EMAIL,
+            "to": [app_data['email']],
+            "subject": "[Refugium Etzdorf] Deine Bewerbung ist bei uns angekommen",
+            "html": f"""{_email_header('Refugium Etzdorf')}
+                <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
+                    Hallo {first_name}!
+                </h2>
+                <p style="color:#4a5568;line-height:1.6;margin:0 0 16px 0;">
+                    Vielen Dank für deine Bewerbung auf die Position
+                    <strong>{position_label}</strong> in unserem Refugium in Etzdorf im Rosental.
+                </p>
+                <p style="color:#4a5568;line-height:1.6;margin:0 0 24px 0;">
+                    Wir haben deine Unterlagen erhalten und schauen sie uns in Ruhe an.
+                    Spätestens innerhalb weniger Tage melden wir uns persönlich bei dir zurück.
+                </p>
+
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:20px;margin:24px 0;">
+                    <h3 style="color:#166534;margin:0 0 8px 0;font-size:16px;">
+                        Magst du direkt einen Kennenlern-Termin vorschlagen?
+                    </h3>
+                    <p style="color:#4a5568;margin:0 0 16px 0;font-size:14px;line-height:1.5;">
+                        Das spart uns beiden Hin- und Her-Mails. Buche einfach einen kurzen Slot,
+                        der dir passt – wir telefonieren oder treffen uns direkt im Garten.
+                    </p>
+                    <div style="text-align:center;">
+                        <a href="{RECLAIM_BOOKING_URL}"
+                           style="display:inline-block;background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);color:white;padding:14px 32px;text-decoration:none;border-radius:10px;font-weight:600;font-size:15px;box-shadow:0 4px 12px rgba(22,163,74,0.3);">
+                            Termin vorschlagen
+                        </a>
+                    </div>
+                    <p style="color:#16a34a;margin:12px 0 0 0;font-size:12px;text-align:center;word-break:break-all;">
+                        {RECLAIM_BOOKING_URL}
+                    </p>
+                </div>
+
+                <p style="color:#4a5568;line-height:1.6;margin:24px 0 0 0;">
+                    Falls du Fragen hast, antworte einfach auf diese Mail.
+                </p>
+
+                <p style="color:#666;margin-top:30px;">
+                    Liebe Grüße,<br/>Moritz Voigt<br/>
+                    <span style="color:#9ca3af;font-size:13px;">Refugium Naturgärten</span>
+                </p>
+            {_email_footer_refugium()}""",
+            "reply_to": ADMIN_EMAIL
+        }
+
+        resend.Emails.send(params)
+        print(f"Application confirmation sent to {app_data['email']}")
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
+
+def send_application_notification_admin(app_data: dict) -> bool:
+    """Notify admin about new job application."""
+    if not resend.api_key:
+        print("RESEND_API_KEY not configured")
+        return False
+
+    position_key = app_data.get('position', 'initiativ')
+    position_label = JOB_POSITION_LABELS.get(position_key, position_key)
+    name = app_data.get('name', '-')
+    email = app_data.get('email', '-')
+    phone = app_data.get('phone') or '-'
+    available_from = app_data.get('available_from') or '-'
+    hours_per_week = app_data.get('hours_per_week')
+    hours_display = f"{hours_per_week} h/Woche" if hours_per_week else '-'
+    preferred_times = app_data.get('preferred_times') or '-'
+    motivation = (app_data.get('motivation') or '-').replace('\n', '<br>')
+    resume_hint = ""
+    if app_data.get('resume_path'):
+        resume_hint = """
+            <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:16px 0;">
+                <p style="margin:0;color:#854d0e;font-size:14px;">
+                    <strong>Lebenslauf hochgeladen</strong> - siehe Admin-Dashboard zum Download.
+                </p>
+            </div>
+        """
+
+    try:
+        params = {
+            "from": FROM_EMAIL,
+            "to": [ADMIN_EMAIL],
+            "subject": f"[Refugium Bewerbung] {position_label} - {name}",
+            "html": f"""
+                <div style="font-family: sans-serif; max-width:640px;">
+                    <h2>Neue Bewerbung</h2>
+                    <p><strong>Position:</strong> {position_label}</p>
+
+                    <table style="border-collapse: collapse; margin-top:12px;">
+                        <tr><td style="padding:5px;"><strong>Name:</strong></td><td>{name}</td></tr>
+                        <tr><td style="padding:5px;"><strong>Email:</strong></td><td>{email}</td></tr>
+                        <tr><td style="padding:5px;"><strong>Telefon:</strong></td><td>{phone}</td></tr>
+                        <tr><td style="padding:5px;"><strong>Verfügbar ab:</strong></td><td>{available_from}</td></tr>
+                        <tr><td style="padding:5px;"><strong>Stunden/Woche:</strong></td><td>{hours_display}</td></tr>
+                        <tr><td style="padding:5px;vertical-align:top;"><strong>Bevorzugte Zeiten:</strong></td><td>{preferred_times}</td></tr>
+                    </table>
+
+                    <h3 style="margin-top:20px;">Motivation</h3>
+                    <div style="background:#f9fafb;border-left:4px solid #16a34a;padding:12px 16px;border-radius:4px;">
+                        <p style="margin:0;color:#374151;line-height:1.5;">{motivation}</p>
+                    </div>
+
+                    {resume_hint}
+
+                    <p style="margin-top: 24px;">
+                        <a href="https://garten.infinityspace42.de/admin#applications" style="background: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                            Zum Admin-Dashboard (Bewerbungen)
+                        </a>
+                    </p>
+                </div>
+            """,
+            "reply_to": email if email != '-' else ADMIN_EMAIL
+        }
+
+        resend.Emails.send(params)
+        print(f"Admin application notification sent for {name}")
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
+
+def _email_footer_refugium() -> str:
+    return """</div>
+<div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:12px;">
+<p style="margin:0;">Refugium Naturgärten &middot; betrieben über Infinity Space</p>
+<p style="margin:4px 0 0 0;">Etzdorf im Rosental, Sachsen</p>
+<p style="margin:4px 0 0 0;"><a href="https://garten.infinityspace42.de" style="color:#16a34a;text-decoration:none;">garten.infinityspace42.de</a></p>
+</div></div></body></html>"""
+
+
 def send_payment_reminder(booking_data: dict, days_since: int = 7) -> bool:
     """Send payment reminder to guest."""
     if not resend.api_key:
@@ -485,17 +644,17 @@ def send_payment_reminder(booking_data: dict, days_since: int = 7) -> bool:
         return False
 
     config = _get_site_config()
-    account_holder = config.get('account_holder', 'Familie Voigt')
+    account_holder = config.get('account_holder', 'Refugium Naturgärten')
     iban = config.get('iban', 'Wird nachgereicht')
-    holder_display = account_holder if account_holder != 'PLACEHOLDER' else 'Familie Voigt'
+    holder_display = account_holder if account_holder != 'PLACEHOLDER' else 'Refugium Naturgärten'
     iban_display = iban if iban != 'PLACEHOLDER' else 'Wird nachgereicht'
 
     try:
         params = {
             "from": FROM_EMAIL,
             "to": [booking_data['email']],
-            "subject": "Zahlungserinnerung - Voigt-Garten",
-            "html": f"""{_email_header('Voigt-Garten')}
+            "subject": "[Refugium Etzdorf] Zahlungserinnerung",
+            "html": f"""{_email_header('Refugium Etzdorf')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Hallo {booking_data['name']}!
                 </h2>
@@ -517,7 +676,7 @@ def send_payment_reminder(booking_data: dict, days_since: int = 7) -> bool:
                 </p>
 
                 <p style="color:#666;margin-top:30px;">
-                    Liebe Grüße,<br/>Familie Voigt
+                    Liebe Grüße,<br/>dein Team vom Refugium Etzdorf
                 </p>
             {_email_footer()}""",
             "reply_to": ADMIN_EMAIL

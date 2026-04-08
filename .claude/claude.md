@@ -583,6 +583,14 @@ Folgende Dateien/Ordner werden nicht mehr benotigt:
 
 ---
 
+## Bewerbungs-Uploads (Job Applications)
+
+- PDFs liegen im Container unter `/app/data/applications/` (d.h. `$DATA_DIR/applications/`)
+- **Kein neuer Volume-Mount nötig** — der bestehende `DATA_DIR`-Mount (aus `/home/moritz/stacks/voigt-garten/docker-compose.yml`) deckt diesen Unterordner automatisch ab. Beim Deploy muss nichts Neues gemountet werden.
+- Dateinamen: `<uuid>.pdf`, max 5 MB, Magic-Number-geprüft (`b'%PDF'`)
+- Verzeichnis wird beim ersten Upload via `os.makedirs(..., exist_ok=True)` automatisch angelegt
+- Download nur über Admin-Endpoint `GET /api/admin/applications/<id>/resume` mit Path-Traversal-Schutz (`os.path.realpath`)
+
 ## Storage-Architektur
 
 ```python

@@ -197,7 +197,7 @@ export default function EnvironmentMap() {
       .addTo(map)
       .bindPopup(`
         <div style="text-align: center; padding: 10px; min-width: 180px;">
-          <strong style="font-size: 16px;">Voigt-Garten Etzdorf</strong><br>
+          <strong style="font-size: 16px;">Refugium Etzdorf</strong><br>
           <span style="color: #666; font-size: 13px;">Dein Ziel!</span><br><br>
           <a href="https://www.google.com/maps/dir/?api=1&destination=51.2200,12.1300"
              target="_blank"

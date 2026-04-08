@@ -40,7 +40,7 @@ export default function ServiceProviderList({ categories }: Props) {
 
   const sendContactRequest = (provider: Provider, method: 'email' | 'phone') => {
     if (method === 'email' && provider.email) {
-      window.location.href = `mailto:${provider.email}?subject=Anfrage für Gartenarbeit (Voigt-Garten)`;
+      window.location.href = `mailto:${provider.email}?subject=Anfrage für Gartenarbeit (Refugium Etzdorf)`;
     } else if (method === 'phone' && provider.phone) {
       window.location.href = `tel:${provider.phone}`;
     }
@@ -81,7 +81,7 @@ export default function ServiceProviderList({ categories }: Props) {
                     <div className="text-4xl mb-2">🔍</div>
                     <p className="text-gray-500 mb-2">Noch keine Dienstleister in dieser Kategorie</p>
                     <a
-                      href={`mailto:garten@infinityspace42.de?subject=Neuer ${category.name} für Voigt-Garten`}
+                      href={`mailto:garten@infinityspace42.de?subject=Neuer ${category.name} für Refugium Etzdorf`}
                       className="text-garden-600 hover:text-garden-700 underline text-sm"
                     >
                       Kennst du jemanden? Jetzt melden →

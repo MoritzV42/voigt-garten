@@ -144,6 +144,16 @@ EVENT_EMOJIS = {
     'system_error': '🔴',
     'health_check_fail': '💔',
     'credit_added': '💳',
+    'job_application': '💼',
+}
+
+
+# Position-Label-Mapping fuer Bewerbungs-Notifications
+_JOB_POSITION_LABELS = {
+    'tech_student': 'Tech-Aushilfe / Student',
+    'elektro_meister': 'Elektro-Meister',
+    'gaertner': 'Gärtner / Gartenhelfer',
+    'initiativ': 'Initiativbewerbung',
 }
 
 
@@ -228,6 +238,51 @@ def notify_feedback(feedback_data: dict) -> bool:
             data[labels[key]] = '⭐' * val
 
     return notify_admin('feedback_received', data)
+
+
+def notify_job_application(app_data: dict) -> bool:
+    """Notify admin about new job application."""
+    import html as _html
+
+    position_key = app_data.get('position', 'initiativ')
+    position_label = _JOB_POSITION_LABELS.get(position_key, position_key)
+
+    motivation = (app_data.get('motivation') or '').strip()
+    if len(motivation) > 300:
+        motivation = motivation[:297] + '...'
+
+    hours = app_data.get('hours_per_week')
+    hours_display = f"{hours} h/Woche" if hours else '-'
+
+    data = {
+        'Name': _html.escape(app_data.get('name', '-')),
+        'Email': _html.escape(app_data.get('email', '-')),
+    }
+    phone = app_data.get('phone')
+    if phone:
+        data['Telefon'] = _html.escape(phone)
+    data['Position'] = _html.escape(position_label)
+    data['Verfügbar ab'] = _html.escape(app_data.get('available_from') or '-')
+    data['Stunden'] = hours_display
+    data['Bevorzugte Zeiten'] = _html.escape(app_data.get('preferred_times') or '-')
+    if motivation:
+        data['Motivation'] = _html.escape(motivation)
+    data['Lebenslauf'] = 'ja' if app_data.get('resume_path') else 'nein'
+
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping job_application notification")
+        return False
+
+    emoji = EVENT_EMOJIS.get('job_application', '💼')
+    lines = [f"{emoji} <b>Neue Bewerbung</b>", ""]
+    for key, value in data.items():
+        if value is not None and value != '':
+            lines.append(f"<b>{key}:</b> {value}")
+    lines.append("")
+    lines.append('<a href="https://garten.infinityspace42.de/admin#applications">→ Zum Dashboard (Bewerbungen)</a>')
+    text = "\n".join(lines)
+
+    return send_message(TELEGRAM_CHAT_ID, text)
 
 
 def notify_system_error(error_type: str, details: str) -> bool:

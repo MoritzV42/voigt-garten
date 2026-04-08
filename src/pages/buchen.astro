@@ -7,11 +7,11 @@ import BookingForm from '../components/BookingForm';
 const pricing = {
   perNight: 45, // Euro pro Nacht - PLACEHOLDER: Anpassen!
   weeklyDiscount: 15, // % Rabatt bei Wochenbuchung
-  familyDiscount: 50, // % mit VOIGT-GARTEN Code
+  familyDiscount: 50, // % mit REFUGIUM-FAMILY Code
 };
 ---
 
-<Layout title="Buchen" description="Buche deinen Aufenthalt im Voigt-Garten">
+<Layout title="Buchen" description="Buche deinen Aufenthalt im Refugium Etzdorf – ein Standort von Refugium Naturgärten.">
   <!-- Header -->
   <section class="bg-gradient-to-b from-garden-100 to-white py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -38,8 +38,8 @@ const pricing = {
         </div>
         <div class="bg-amber-50 rounded-lg p-6 border-2 border-amber-200">
           <div class="text-3xl font-bold text-amber-700">-{pricing.familyDiscount}%</div>
-          <div class="text-amber-800 font-medium">Familie Voigt</div>
-          <div class="text-xs text-amber-600 mt-1">Code: VOIGT-GARTEN</div>
+          <div class="text-amber-800 font-medium">Familien-Rabatt</div>
+          <div class="text-xs text-amber-600 mt-1">Code: REFUGIUM-FAMILY</div>
         </div>
       </div>
     </div>
@@ -116,6 +116,76 @@ const pricing = {
             Kreditkarte (sofort) oder<br />
             Überweisung (innerhalb 3 Tage)
           </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sicherheit & Kaution -->
+  <section class="py-16 bg-slate-50 border-t border-slate-200">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-10">
+        <span class="inline-block bg-slate-200 text-slate-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+          🔒 Sicherheit &amp; Kaution
+        </span>
+        <h2 class="font-display text-3xl font-bold text-garden-900 mb-4">
+          Transparenz ist uns wichtig
+        </h2>
+        <p class="text-gray-600 max-w-2xl mx-auto">
+          Damit du unbeschwert genießen kannst, hier klar und ehrlich alle Infos
+          zu Kameras, Privatsphäre und Kaution.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Kameras -->
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+          <h3 class="font-display text-xl font-bold text-garden-900 mb-3 flex items-center gap-2">
+            <span>📷</span> KI-gestützte Kameras
+          </h3>
+          <ul class="space-y-3 text-sm text-gray-700">
+            <li class="flex gap-2">
+              <span class="text-garden-600 mt-0.5">✓</span>
+              <span>Die Überwachung läuft <strong>ausschließlich bei Leerstand</strong> zwischen Buchungen – als Einbruchschutz auf dem abgelegenen Grundstück.</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-garden-600 mt-0.5">✓</span>
+              <span><strong>Während deiner Buchung sind die Kameras AUS</strong> – automatisch und nachweislich.</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-garden-600 mt-0.5">✓</span>
+              <span>Zusätzlich gibt es einen <strong>physischen AUS-Schalter</strong> vor Ort, mit dem du jederzeit die Kameras komplett vom Strom nehmen kannst.</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-garden-600 mt-0.5">✓</span>
+              <span><strong>Keine Speicherung während Belegung</strong>. Deine Privatsphäre ist garantiert.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Kaution -->
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+          <h3 class="font-display text-xl font-bold text-garden-900 mb-3 flex items-center gap-2">
+            <span>💶</span> Kaution
+          </h3>
+          <ul class="space-y-3 text-sm text-gray-700">
+            <li class="flex gap-2">
+              <span class="text-garden-600 mt-0.5">✓</span>
+              <span>Bei Buchung wird eine <strong>angemessene Kaution</strong> hinterlegt (Höhe siehe Buchungsbestätigung).</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-garden-600 mt-0.5">✓</span>
+              <span>Beim Check-out machen wir einen <strong>kurzen gemeinsamen Inventar-Abgleich</strong> anhand einer einfachen Checkliste.</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-garden-600 mt-0.5">✓</span>
+              <span>Ist alles in Ordnung, wird die <strong>Kaution innerhalb weniger Tage vollständig zurückerstattet</strong>.</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-garden-600 mt-0.5">✓</span>
+              <span>Kleine Gebrauchsspuren sind selbstverständlich normal und kein Grund für Einbehalte.</span>
+            </li>
+          </ul>
         </div>
       </div>
     </div>

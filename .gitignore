@@ -23,3 +23,6 @@ dist/
 
 # Database backups
 *.db.bak
+
+# Job application uploads (resumes, handled via DATA_DIR volume)
+pi-backend/data/applications/

@@ -396,7 +396,7 @@ export default function BookingForm({ pricing }: Props) {
           name="discountCode"
           value={formData.discountCode}
           onChange={handleChange}
-          placeholder="z.B. VOIGT-GARTEN"
+          placeholder="z.B. REFUGIUM-FAMILY"
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-garden-500 focus:border-transparent"
         />
       </div>

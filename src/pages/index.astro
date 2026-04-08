@@ -14,11 +14,14 @@ const jahreGartenTradition = aktuellesJahr - gartenGruendung;
   <VideoBackground page="startseite" className="bg-gradient-to-b from-garden-100 to-garden-50 py-20" client:load>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
       <h1 class="font-display text-5xl md:text-6xl font-bold text-garden-900 mb-6">
-        Willkommen im Voigt-Garten
+        Willkommen im Refugium Etzdorf
       </h1>
-      <p class="text-xl md:text-2xl text-garden-700 max-w-3xl mx-auto mb-8">
-        Ein Ort der Ruhe, Erholung und Familientradition.<br />
-        Buche deinen Urlaub im Grünen.
+      <p class="text-xl md:text-2xl text-garden-700 max-w-3xl mx-auto mb-2">
+        Ein Standort von <span class="font-semibold">Refugium Naturgärten</span>.
+      </p>
+      <p class="text-lg md:text-xl text-garden-700 max-w-3xl mx-auto mb-8 italic">
+        Opa Konrads Erbe: 5.300m² Südhang, autark mit Solar und Brunnen,<br />
+        verwurzelt in Tradition und mit leiser Technik ins Heute gebracht.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
         <a href="/buchen" class="bg-garden-600 hover:bg-garden-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition shadow-lg hover:shadow-xl">
@@ -39,22 +42,46 @@ const jahreGartenTradition = aktuellesJahr - gartenGruendung;
       </h2>
 
       <!-- Feature Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
         <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
-          <div class="text-4xl font-bold text-garden-600 mb-2">{jahreGartenTradition}</div>
-          <h3 class="font-display text-lg font-semibold text-garden-800">Jahre Familientradition</h3>
+          <div class="text-4xl mb-2">☀️</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Solar-Autarkie</h3>
+          <p class="text-sm text-garden-600 mt-1">700W PV + 1,4kWh Akku</p>
         </div>
         <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
-          <div class="text-4xl mb-2">🏡</div>
-          <h3 class="font-display text-lg font-semibold text-garden-800">Gemütliches Gartenhaus</h3>
+          <div class="text-4xl mb-2">💧</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Eigener Brunnen</h3>
+          <p class="text-sm text-garden-600 mt-1">50 Meter tief</p>
+        </div>
+        <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
+          <div class="text-4xl mb-2">📡</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Starlink-Internet</h3>
+          <p class="text-sm text-garden-600 mt-1">Remote-Work möglich</p>
+        </div>
+        <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
+          <div class="text-4xl mb-2">🍇</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Eigener Weinberg</h3>
+          <p class="text-sm text-garden-600 mt-1">Alte Reben am Südhang</p>
         </div>
         <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
           <div class="text-4xl mb-2">🌳</div>
-          <h3 class="font-display text-lg font-semibold text-garden-800">5.300m² Grundstück</h3>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Alte Eichen</h3>
+          <p class="text-sm text-garden-600 mt-1">Baumriesen mit Geschichte</p>
         </div>
         <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
-          <div class="text-4xl mb-2">🔥</div>
-          <h3 class="font-display text-lg font-semibold text-garden-800">Feuerstelle & Grill</h3>
+          <div class="text-4xl mb-2">🌄</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">5.300m² Südhang</h3>
+          <p class="text-sm text-garden-600 mt-1">Sonne den ganzen Tag</p>
+        </div>
+        <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
+          <div class="text-4xl font-bold text-garden-600 mb-2">{jahreGartenTradition}</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Jahre Tradition</h3>
+          <p class="text-sm text-garden-600 mt-1">Seit Opa Konrad</p>
+        </div>
+        <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
+          <div class="text-4xl mb-2">⚙️</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Tech for Good</h3>
+          <p class="text-sm text-garden-600 mt-1">Leise Technik, großer Nutzen</p>
         </div>
       </div>
 

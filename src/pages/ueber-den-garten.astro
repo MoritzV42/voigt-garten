@@ -4,14 +4,14 @@ import VideoBackground from '../components/VideoBackground';
 import LivestreamPlaceholder from '../components/LivestreamPlaceholder';
 ---
 
-<Layout title="Über den Garten" description="Garten Etzdorf im Rosental - 5.300 m² Natur pur, vollständig autark mit Solar und eigenem Brunnen">
+<Layout title="Über den Garten" description="Refugium Etzdorf im Rosental – 5.300 m² Natur pur, vollständig autark mit Solar und eigenem Brunnen. Ein Standort von Refugium Naturgärten.">
   <!-- Hero Section -->
   <VideoBackground page="ueber-den-garten" className="h-[70vh] min-h-[500px] bg-gradient-to-b from-garden-700 to-garden-900 flex items-center justify-center" client:load>
     <div class="text-center px-4 py-20">
       <h1 class="font-display text-5xl md:text-7xl font-bold text-white mb-4">
-        Garten Etzdorf
+        Refugium Etzdorf
       </h1>
-      <p class="text-2xl md:text-3xl text-garden-200 mb-2">im Rosental</p>
+      <p class="text-2xl md:text-3xl text-garden-200 mb-2">im Rosental · ein Standort von Refugium Naturgärten</p>
       <div class="flex justify-center gap-8 mt-8 text-white">
         <div class="text-center">
           <div class="text-4xl md:text-5xl font-bold counter" data-target="5300">0</div>
@@ -35,6 +35,44 @@ import LivestreamPlaceholder from '../components/LivestreamPlaceholder';
       </svg>
     </div>
   </VideoBackground>
+
+  <!-- Opa Konrads Erbe -->
+  <section class="py-20 bg-gradient-to-b from-amber-50 to-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-10 animate-on-scroll fade-in">
+        <span class="inline-block bg-amber-100 text-amber-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+          🌱 Opa Konrads Erbe
+        </span>
+        <h2 class="font-display text-3xl md:text-4xl font-bold text-garden-900 mb-4">
+          Drei Generationen, ein Stück Land
+        </h2>
+      </div>
+      <div class="prose prose-lg max-w-none text-gray-700 space-y-5 animate-on-scroll fade-in">
+        <p>
+          Dieser Garten wurde über Jahrzehnte von <strong>Konrad Voigt</strong> gepflegt –
+          dem Großvater, der jeden Stein kannte, jeden Baum gesetzt hat und auf dem Südhang
+          einen kleinen Weinberg angelegt hat, als andere das für verrückt hielten.
+        </p>
+        <p>
+          Heute führt sein Enkel <strong>Moritz</strong> das Werk weiter. Nicht als Museum,
+          sondern als lebendiges Refugium – offen für Familie, Freunde und Gäste, die die
+          Ruhe suchen und gleichzeitig wissen wollen, wie sich ein Ort anfühlt, der über
+          Generationen gewachsen ist.
+        </p>
+        <p>
+          Die alten <strong>Süßkirschen</strong> (rund 50 Jahre alt) tragen immer noch jedes
+          Jahr. Zwei mächtige <strong>Eichen</strong> mit über einem Meter Stammdurchmesser
+          spenden Schatten, wo früher Konrads Gartenstuhl stand. Zwei schlanke
+          <strong>Eschen</strong> säumen den oberen Weg. Und der kleine <strong>Weinberg</strong>
+          am Südhang liefert jedes Jahr ein paar Flaschen, die immer direkt vor Ort getrunken
+          werden – so wollte es der Großvater.
+        </p>
+        <p class="italic text-garden-700">
+          "Ein Garten ist nie fertig. Er wird weitergegeben." – Konrad Voigt
+        </p>
+      </div>
+    </div>
+  </section>
 
   <!-- Lage & Anfahrt -->
   <section class="py-20 bg-white">
@@ -270,20 +308,26 @@ import LivestreamPlaceholder from '../components/LivestreamPlaceholder';
 
         <div class="bg-white rounded-2xl p-6 shadow-md animate-on-scroll slide-in-up delay-1">
           <div class="text-4xl mb-3">🌳</div>
-          <h3 class="font-bold text-gray-900 mb-1">Eichen</h3>
-          <p class="text-sm text-gray-600">2 mächtige Exemplare mit über 1m Durchmesser</p>
+          <h3 class="font-bold text-gray-900 mb-1">Alte Eichen</h3>
+          <p class="text-sm text-gray-600">2 mächtige Exemplare mit über 1m Stammdurchmesser</p>
         </div>
 
         <div class="bg-white rounded-2xl p-6 shadow-md animate-on-scroll slide-in-up delay-2">
-          <div class="text-4xl mb-3">🌲</div>
-          <h3 class="font-bold text-gray-900 mb-1">Nadelbaum-Reihe</h3>
-          <p class="text-sm text-gray-600">Westseite, ~50 Jahre alt, dient als Windschutz</p>
+          <div class="text-4xl mb-3">🍃</div>
+          <h3 class="font-bold text-gray-900 mb-1">Eschen</h3>
+          <p class="text-sm text-gray-600">2 schlanke Eschen am oberen Weg</p>
         </div>
 
         <div class="bg-white rounded-2xl p-6 shadow-md animate-on-scroll slide-in-up delay-3">
           <div class="text-4xl mb-3">🍇</div>
           <h3 class="font-bold text-gray-900 mb-1">Weinberg</h3>
-          <p class="text-sm text-gray-600">~150m² auf dem Südhang</p>
+          <p class="text-sm text-gray-600">~150m² am Südhang – seit Opa Konrad</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-md animate-on-scroll slide-in-up">
+          <div class="text-4xl mb-3">🌲</div>
+          <h3 class="font-bold text-gray-900 mb-1">Nadelbaum-Reihe</h3>
+          <p class="text-sm text-gray-600">Westseite, ~50 Jahre alt, dient als Windschutz</p>
         </div>
       </div>
     </div>
@@ -293,6 +337,40 @@ import LivestreamPlaceholder from '../components/LivestreamPlaceholder';
   <section class="py-16 bg-white">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <LivestreamPlaceholder client:load />
+    </div>
+  </section>
+
+  <!-- Warum betrieben über Infinity Space -->
+  <section class="py-20 bg-gradient-to-b from-white to-slate-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-8 animate-on-scroll fade-in">
+        <span class="inline-block bg-slate-200 text-slate-800 text-sm font-medium px-4 py-1 rounded-full mb-4">
+          ⚙️ Tech hinter den Kulissen
+        </span>
+        <h2 class="font-display text-3xl md:text-4xl font-bold text-garden-900 mb-4">
+          Warum „betrieben über Infinity Space"?
+        </h2>
+      </div>
+      <div class="prose prose-lg max-w-none text-gray-700 space-y-4 animate-on-scroll fade-in">
+        <p>
+          Im Footer jeder Seite liest du den Hinweis <em>„betrieben über Infinity Space"</em>
+          – dahinter steckt eine bewusste Entscheidung. Die komplette Plattform dieses
+          Refugiums (Buchungssystem, Inventar, Aufgaben, Galerie, Gäste-Kommunikation)
+          wird vom Familienbetrieb <strong>Infinity Space</strong> entwickelt und betrieben.
+        </p>
+        <p>
+          Infinity Space baut leise, nachhaltige Software für kleine Betriebe und Projekte,
+          die Technik brauchen, aber keine Konzernlösung wollen. Das Refugium Etzdorf ist
+          das erste Pilotprojekt der Dachmarke <strong>Refugium Naturgärten</strong> und
+          dient gleichzeitig als lebendes Testbett: Was hier funktioniert, läuft später
+          auch in anderen Gärten und Refugien.
+        </p>
+        <p>
+          Der Grundgedanke ist simpel: <strong>Technik soll der Natur dienen, nicht
+          umgekehrt.</strong> Darum genau so viel Digitalisierung wie nötig – und dann
+          raus in den Garten.
+        </p>
+      </div>
     </div>
   </section>
 
