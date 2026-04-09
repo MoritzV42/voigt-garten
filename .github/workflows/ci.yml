@@ -1,11 +1,10 @@
-name: CI/CD
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-  workflow_dispatch: # erlaubt manuellen Trigger im GitHub-UI
 
 jobs:
   build:
@@ -21,62 +20,3 @@ jobs:
       - run: npm ci
 
       - run: npx astro build
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-  # NOTE: Playwright tests run against production (npx playwright test)
-  # and cannot run in CI without a server. Run locally or post-deploy.
-
-  deploy:
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-production
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Trigger rebuild on Hetzner
-        run: |
-          # SSH-Key aus Secret schreiben
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-          # Server Host-Key (kein blinder StrictHostKeyChecking=no)
-          echo "49.12.244.18 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGwJCBUl7LDw5AoL6rRU64whvf+0W6vzALw8wZuX1P6r" > ~/.ssh/known_hosts
-
-          # Rebuild-Script triggern (kehrt sofort zurueck, async)
-          ssh -i ~/.ssh/deploy_key -o ConnectTimeout=15 \
-            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-            "bash ~/voigt-garten/rebuild-voigt-garten.sh"
-
-      - name: Wait for deploy (verify commit)
-        run: |
-          HEALTH_URL="https://garten.infinityspace42.de/api/health"
-          EXPECTED="${GITHUB_SHA:0:7}"
-          echo "Waiting for commit $EXPECTED to go live..."
-
-          # Async Rebuild-Script braucht Zeit fuer docker build + recreate.
-          # Polle bis zu 5 Minuten.
-          for i in $(seq 1 60); do
-            RESP=$(curl -sf --max-time 5 "$HEALTH_URL" || echo "")
-            if [ -n "$RESP" ]; then
-              LIVE_COMMIT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('commit','?'))" 2>/dev/null || echo "?")
-              echo "Attempt $i: health OK, live commit = $LIVE_COMMIT"
-              if [ "$LIVE_COMMIT" = "$EXPECTED" ]; then
-                echo "✓ Deployment verified: commit $EXPECTED is live"
-                exit 0
-              fi
-            else
-              echo "Attempt $i: health not ready, retry in 5s..."
-            fi
-            sleep 5
-          done
-          echo "Timeout: commit $EXPECTED did not go live within 5 minutes"
-          curl -v "$HEALTH_URL" || true
-          exit 1
