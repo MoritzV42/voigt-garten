@@ -41,15 +41,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Trigger rebuild on Hetzner
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: 22
-          timeout: 60s
-          command_timeout: 5m
-          script: bash ~/voigt-garten/rebuild-voigt-garten.sh
+        run: |
+          # SSH-Key aus Secret schreiben
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Server Host-Key (kein blinder StrictHostKeyChecking=no)
+          echo "49.12.244.18 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGwJCBUl7LDw5AoL6rRU64whvf+0W6vzALw8wZuX1P6r" > ~/.ssh/known_hosts
+
+          # Rebuild-Script triggern (kehrt sofort zurueck, async)
+          ssh -i ~/.ssh/deploy_key -o ConnectTimeout=15 \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
+            "bash ~/voigt-garten/rebuild-voigt-garten.sh"
 
       - name: Wait for deploy (verify commit)
         run: |
