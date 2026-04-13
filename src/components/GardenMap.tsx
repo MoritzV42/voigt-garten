@@ -605,7 +605,7 @@ export default function GardenMap({
 
   const hoveredShape = shapes.find((s) => s.id === hoveredId);
 
-  const tooltipContent = hoveredShape ? (() => {
+  const tooltipContent = hoveredShape && mode !== 'fotos' ? (() => {
     const shapeCategory = getAreaCategory(hoveredShape.id);
     return (
       <div
@@ -763,10 +763,10 @@ export default function GardenMap({
               style={pickMode ? { cursor: 'crosshair' } : undefined}
             >
               {shapes.map(renderShape)}
-              {/* Labels with leader lines — only show labels matching current view */}
-              {labelPositions
+              {/* Labels with leader lines — hide in fotos mode (photo tooltips suffice) */}
+              {mode !== 'fotos' && labelPositions
                 .filter(({ id }) => {
-                  if (mode === 'alle' || mode === 'fotos') return true;
+                  if (mode === 'alle') return true;
                   return getAreaCategory(id) === mode;
                 })
                 .map(({ id, label, cx, cy, lx, ly }) => (
