@@ -10,37 +10,54 @@ const jahreGartenTradition = aktuellesJahr - gartenGruendung;
 ---
 
 <Layout title="Willkommen">
-  <!-- Hero Section -->
-  <VideoBackground page="startseite" className="bg-gradient-to-b from-garden-100 to-garden-50 py-20" client:load>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <h1 class="font-display text-5xl md:text-6xl font-bold text-garden-900 mb-6">
-        Willkommen im Refugium Etzdorf
-      </h1>
-      <p class="text-xl md:text-2xl text-garden-700 max-w-3xl mx-auto mb-2">
-        Ein Standort von <span class="font-semibold">Refugium Naturgärten</span>.
-      </p>
-      <p class="text-lg md:text-xl text-garden-700 max-w-3xl mx-auto mb-4 italic">
-        Opa Konrads Erbe: 5.300m² Südhang, autark mit Solar und Brunnen,<br />
-        verwurzelt in Tradition und mit leiser Technik ins Heute gebracht.
-      </p>
-      <div class="flex flex-col sm:flex-row gap-3 justify-center text-sm md:text-base mb-8">
-        <span class="inline-flex items-center gap-2 bg-white/80 text-garden-800 px-4 py-2 rounded-full shadow-sm">
-          <span>💻</span> <strong>Deep Work</strong> · Starlink · Stille · Fokus
-        </span>
-        <span class="inline-flex items-center gap-2 bg-white/80 text-garden-800 px-4 py-2 rounded-full shadow-sm">
-          <span>🍇</span> <strong>Romantik</strong> · Weinberg · Südhang · Abgeschiedenheit
-        </span>
-      </div>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="/buchen" class="bg-garden-600 hover:bg-garden-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition shadow-lg hover:shadow-xl">
-          Jetzt Buchen
-        </a>
-        <a href="/galerie" class="bg-white hover:bg-garden-50 text-garden-700 px-8 py-4 rounded-lg font-semibold text-lg transition border-2 border-garden-200">
-          Galerie ansehen
-        </a>
+  <!-- Hero Section mit Drohnenvideo -->
+  <div data-tutorial="hero-section">
+  <div class="relative overflow-hidden bg-black">
+    <!-- Google Drive Video Background -->
+    <div class="absolute inset-0">
+      <iframe
+        src="https://drive.google.com/file/d/1hqjBkxpTENN9hW4pX19XxtnD35volGJA/preview"
+        class="w-full h-full object-cover pointer-events-none"
+        style="border:0; min-height:100%; min-width:100%; transform:scale(1.2);"
+        allow="autoplay"
+        loading="eager"
+      ></iframe>
+    </div>
+    <!-- Dark Overlay -->
+    <div class="absolute inset-0 bg-black/45"></div>
+    <!-- Content -->
+    <div class="relative z-10 py-24 md:py-32">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h1 class="font-display text-5xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg">
+          Willkommen im Refugium Etzdorf
+        </h1>
+        <p class="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-2">
+          Ein Standort von <span class="font-semibold">Refugium Naturgärten</span>.
+        </p>
+        <p class="text-lg md:text-xl text-white/80 max-w-3xl mx-auto mb-4 italic">
+          Opa Konrads Erbe: 5.300m² Südhang, autark mit Solar und Brunnen,<br />
+          verwurzelt in Tradition und mit leiser Technik ins Heute gebracht.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center text-sm md:text-base mb-8">
+          <span class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-white/20">
+            <span>💻</span> <strong>Deep Work</strong> · Starlink · Stille · Fokus
+          </span>
+          <span class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-white/20">
+            <span>🍇</span> <strong>Romantik</strong> · Weinberg · Südhang · Abgeschiedenheit
+          </span>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/buchen" class="bg-white hover:bg-garden-50 text-garden-800 px-8 py-4 rounded-lg font-semibold text-lg transition shadow-lg hover:shadow-xl">
+            Jetzt Buchen
+          </a>
+          <a href="/galerie" class="bg-white/15 hover:bg-white/25 text-white px-8 py-4 rounded-lg font-semibold text-lg transition border-2 border-white/30 backdrop-blur-sm">
+            Galerie ansehen
+          </a>
+        </div>
       </div>
     </div>
-  </VideoBackground>
+  </div>
+  </div>
 
   <!-- Was dich erwartet - Erweitert -->
   <section class="py-16 bg-white">
