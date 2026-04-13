@@ -1,6 +1,8 @@
 ---
-import GlobalNavbar from '../components/GlobalNavbar';
-import LanguageToggle from '../components/LanguageToggle';
+import Sidebar from '../components/layout/Sidebar';
+import BottomNav from '../components/layout/BottomNav';
+import MobileHeader from '../components/layout/MobileHeader';
+import AppOverlays from '../components/AppOverlays';
 
 interface Props {
   title: string;
@@ -60,117 +62,52 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
     })} />
   </head>
   <body class="min-h-screen bg-garden-50 font-sans text-gray-800">
-    <nav class="bg-white shadow-sm border-b border-garden-100">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex items-center">
-            <a href="/" class="flex items-center gap-2">
-              <span class="text-3xl">🌳</span>
-              <span class="font-display text-xl font-semibold text-garden-800">Refugium Etzdorf</span>
-            </a>
-          </div>
-          <div class="hidden sm:flex sm:items-center sm:gap-6">
-            <a href="/" class="text-gray-600 hover:text-garden-700 transition">Start</a>
-            <a href="/ueber-den-garten" class="text-gray-600 hover:text-garden-700 transition">Der Garten</a>
-            <a href="/galerie" class="text-gray-600 hover:text-garden-700 transition">Galerie</a>
-            <a href="/buchen" class="text-gray-600 hover:text-garden-700 transition">Buchen</a>
-            <a href="/taskmanagement" class="text-gray-600 hover:text-garden-700 transition">Aufgaben</a>
-            <a href="/inventar" class="text-gray-600 hover:text-garden-700 transition">Inventar</a>
-            <a href="/gartenkarte" class="text-gray-600 hover:text-garden-700 transition">Karte</a>
-            <a href="/umgebung" class="text-gray-600 hover:text-garden-700 transition">Umgebung</a>
-            <a href="/jobs" class="text-gray-600 hover:text-garden-700 transition">Jobs</a>
-            <div class="border-l border-gray-200 h-6 mx-2"></div>
-            <LanguageToggle client:load />
-            <GlobalNavbar client:load />
-          </div>
-          <!-- Mobile menu button -->
-          <div class="sm:hidden flex items-center gap-2">
-            <LanguageToggle client:load />
-            <GlobalNavbar client:load />
-            <button id="mobile-menu-btn" class="text-gray-600 hover:text-garden-700 p-2">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-      <!-- Mobile menu -->
-      <div id="mobile-menu" class="hidden sm:hidden bg-white border-t border-garden-100">
-        <div class="px-4 py-3 space-y-2">
-          <a href="/" class="block py-2 text-gray-600 hover:text-garden-700">Start</a>
-          <a href="/ueber-den-garten" class="block py-2 text-gray-600 hover:text-garden-700">Der Garten</a>
-          <a href="/galerie" class="block py-2 text-gray-600 hover:text-garden-700">Galerie</a>
-          <a href="/buchen" class="block py-2 text-gray-600 hover:text-garden-700">Buchen</a>
-          <a href="/taskmanagement" class="block py-2 text-gray-600 hover:text-garden-700">Aufgaben</a>
-          <a href="/inventar" class="block py-2 text-gray-600 hover:text-garden-700">Inventar</a>
-          <a href="/gartenkarte" class="block py-2 text-gray-600 hover:text-garden-700">Karte</a>
-          <a href="/umgebung" class="block py-2 text-gray-600 hover:text-garden-700">Umgebung</a>
-          <a href="/jobs" class="block py-2 text-gray-600 hover:text-garden-700">Jobs</a>
-          <div class="border-t border-garden-100 pt-2 mt-2">
-            <LanguageToggle client:load />
-          </div>
-        </div>
-      </div>
-    </nav>
+    <div class="min-h-screen">
+      <!-- Desktop Sidebar -->
+      <Sidebar client:load />
 
-    <main>
-      <slot />
-    </main>
+      <!-- Mobile Header -->
+      <MobileHeader client:load />
 
-    <footer class="bg-garden-900 text-white mt-16">
-      <div class="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <h3 class="font-display text-lg font-semibold mb-4">Refugium Naturgärten</h3>
-            <p class="text-garden-200 text-sm">
-              Standort: Refugium Etzdorf<br />
-              Naturnahe Auszeit mit Tradition.
-            </p>
-          </div>
-          <div>
-            <h3 class="font-display text-lg font-semibold mb-4">Kontakt</h3>
-            <p class="text-garden-200 text-sm">
-              Refugium Naturgärten<br />
-              <!-- PLACEHOLDER: Adresse einfügen -->
-              <a href="mailto:garten@infinityspace42.de" class="hover:text-white transition">
+      <!-- Main Content -->
+      <main class="lg:pl-[264px]">
+        <div class="py-0 pb-24 lg:pb-8">
+          <slot />
+        </div>
+
+        <!-- Footer -->
+        <footer class="border-t border-garden-200 bg-garden-50">
+          <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+            <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-gray-500">
+              <a href="/impressum" class="hover:text-garden-700 transition">Impressum</a>
+              <span class="text-gray-300">·</span>
+              <a href="/datenschutz" class="hover:text-garden-700 transition">Datenschutz</a>
+              <span class="text-gray-300">·</span>
+              <a href="/agb" class="hover:text-garden-700 transition">AGB</a>
+              <span class="text-gray-300">·</span>
+              <a href="/hausordnung" class="hover:text-garden-700 transition">Hausordnung</a>
+            </div>
+            <div class="mt-3 text-center text-xs text-gray-400">
+              &copy; {new Date().getFullYear()} Refugium Naturgärten &middot;
+              <a href="mailto:garten@infinityspace42.de" class="hover:text-garden-600 transition">
                 garten@infinityspace42.de
               </a>
-            </p>
+              <span class="mx-1.5">·</span>
+              <a href="/admin" class="hover:text-garden-600 transition">Admin</a>
+            </div>
           </div>
-          <div>
-            <h3 class="font-display text-lg font-semibold mb-4">Familien-Rabatt</h3>
-            <p class="text-garden-200 text-sm">
-              Code: <span class="font-mono bg-garden-800 px-2 py-1 rounded">REFUGIUM-FAMILY</span><br />
-              50% Rabatt für Familienmitglieder
-            </p>
-          </div>
-        </div>
-        <div class="border-t border-garden-800 mt-8 pt-8 text-center text-garden-300 text-sm">
-          <div class="flex flex-wrap justify-center gap-x-4 gap-y-1 mb-3">
-            <a href="/jobs" class="hover:text-white transition">Jobs & Mitmachen</a>
-            <a href="/impressum" class="hover:text-white transition">Impressum</a>
-            <a href="/datenschutz" class="hover:text-white transition">Datenschutz</a>
-            <a href="/agb" class="hover:text-white transition">AGB</a>
-            <a href="/hausordnung" class="hover:text-white transition">Hausordnung</a>
-          </div>
-          &copy; {new Date().getFullYear()} Refugium Naturgärten. Mit Liebe gepflegt.
-          <span class="mx-2">|</span>
-          <a href="/admin" class="hover:text-white transition">Admin</a>
-          <div class="mt-2 text-xs text-garden-400">betrieben über Infinity Space</div>
-        </div>
-      </div>
-    </footer>
+        </footer>
+      </main>
+
+      <!-- Mobile Bottom Nav -->
+      <BottomNav client:load />
+
+      <!-- Tutorial Overlays & AI Assistant -->
+      <AppOverlays client:load />
+    </div>
 
     <script>
-      const menuBtn = document.getElementById('mobile-menu-btn');
-      const mobileMenu = document.getElementById('mobile-menu');
-
-      menuBtn?.addEventListener('click', () => {
-        mobileMenu?.classList.toggle('hidden');
-      });
-
-      // Phase 9: Mailto links open in new tab on desktop (hover-capable devices)
+      // Mailto links open in new tab on desktop
       if (window.matchMedia('(hover: hover)').matches) {
         document.querySelectorAll('a[href^="mailto:"]').forEach(link => {
           link.setAttribute('target', '_blank');
@@ -184,4 +121,15 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
   @tailwind base;
   @tailwind components;
   @tailwind utilities;
+
+  @keyframes fadeSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 </style>
