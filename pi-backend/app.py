@@ -114,7 +114,7 @@ def add_security_headers(response):
             "img-src 'self' data: blob:; "
             "font-src 'self'; "
             "connect-src 'self'; "
-            "frame-src 'none'"
+            "frame-src https://drive.google.com https://www.youtube.com https://cdn.pannellum.org"
         )
     return response
 
