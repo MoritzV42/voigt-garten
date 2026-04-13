@@ -19,6 +19,9 @@ interface GalleryItem {
 
 const CATEGORIES = [
   { id: 'all', name: 'Alle', emoji: '📸' },
+  { id: 'garten', name: 'Garten', emoji: '🌳' },
+  { id: 'gebaeude', name: 'Gebäude', emoji: '🏠' },
+  { id: 'leben', name: 'Leben', emoji: '🌞' },
   { id: 'haus', name: 'Gartenhaus', emoji: '🏡' },
   { id: 'terrasse', name: 'Terrasse', emoji: '🪴' },
   { id: 'luftaufnahmen', name: 'Luftaufnahmen', emoji: '🚁' },
