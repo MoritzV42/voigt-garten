@@ -29,7 +29,7 @@ export interface PhotoPoint {
   thumbnailUrl: string;
 }
 
-export type MapMode = 'gebaeude' | 'natur' | 'technik' | 'wasser' | 'alle';
+export type MapMode = 'gebaeude' | 'natur' | 'technik' | 'wasser' | 'fotos' | 'alle';
 
 interface GardenMapProps {
   mode?: MapMode;
@@ -351,6 +351,13 @@ export default function GardenMap({
         return { fill: shape.originalFill, opacity };
       }
 
+      if (mode === 'fotos') {
+        // Fotos mode: dim all shapes so photo points stand out
+        let opacity = 0.2;
+        if (hovered) opacity = 0.35;
+        return { fill: shape.originalFill, opacity };
+      }
+
       // Category filter mode
       const isInCategory = shapeCategory === mode;
 
@@ -374,10 +381,13 @@ export default function GardenMap({
     (shape: SvgShape, hovered: boolean) => {
       const active = isActive(shape.id);
       const shapeCategory = getAreaCategory(shape.id);
-      const isInCategory = mode === 'alle' || shapeCategory === mode;
+      const isInCategory = mode === 'alle' || mode === 'fotos' || shapeCategory === mode;
 
       if (!isInCategory) {
         return { stroke: 'none', strokeWidth: 0 };
+      }
+      if (mode === 'fotos') {
+        return { stroke: 'rgba(255,255,255,0.15)', strokeWidth: 0.5 };
       }
       if (hovered || active) return { stroke: 'white', strokeWidth: 2 };
       return { stroke: 'rgba(255,255,255,0.3)', strokeWidth: 0.5 };
@@ -680,6 +690,20 @@ export default function GardenMap({
                 {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
               </button>
             ))}
+            {showPhotoPoints && photoPoints.length > 0 && (
+              <button
+                key="fotos"
+                onClick={() => setMode('fotos')}
+                className={`px-3 py-1.5 font-medium transition ${
+                  mode === 'fotos'
+                    ? 'text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                style={mode === 'fotos' ? { backgroundColor: 'rgb(245, 158, 11)' } : {}}
+              >
+                📷 Fotos
+              </button>
+            )}
           </div>
         )}
 
@@ -742,7 +766,7 @@ export default function GardenMap({
               {/* Labels with leader lines — only show labels matching current view */}
               {labelPositions
                 .filter(({ id }) => {
-                  if (mode === 'alle') return true;
+                  if (mode === 'alle' || mode === 'fotos') return true;
                   return getAreaCategory(id) === mode;
                 })
                 .map(({ id, label, cx, cy, lx, ly }) => (
@@ -776,8 +800,8 @@ export default function GardenMap({
                 </g>
               ))}
 
-              {/* Photo Points Layer */}
-              {showPhotoPoints && photoPoints.map(point => (
+              {/* Photo Points Layer - visible in 'alle' and 'fotos' mode */}
+              {showPhotoPoints && (mode === 'alle' || mode === 'fotos') && photoPoints.map(point => (
                 <g key={`photo-${point.id}`}
                    style={{ cursor: 'pointer' }}
                    onMouseEnter={() => setHoveredPhotoPoint(point)}
