@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import PanoramaViewer from './PanoramaViewer';
+import LocationPickerModal from './LocationPickerModal';
 
 interface GalleryItem {
   id: string;
@@ -11,6 +12,9 @@ interface GalleryItem {
   type: 'image' | 'video' | 'panorama';
   uploadedAt: string;
   uploadedBy?: string;
+  map_area?: string;
+  map_x?: number;
+  map_y?: number;
 }
 
 const CATEGORIES = [
@@ -24,6 +28,8 @@ const CATEGORIES = [
   { id: 'sonstiges', name: 'Sonstiges', emoji: '📷' },
 ];
 
+const API_BASE = import.meta.env.DEV ? 'http://localhost:5055' : '';
+
 interface Props {
   refreshTrigger?: number;
 }
@@ -33,6 +39,23 @@ export default function GalleryGrid({ refreshTrigger }: Props) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [locationPickItem, setLocationPickItem] = useState<GalleryItem | null>(null);
+
+  // Check admin status from stored token
+  useEffect(() => {
+    const token = localStorage.getItem('voigt-garten-token');
+    if (token) {
+      fetch(`${API_BASE}/api/auth/verify`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.user?.role === 'admin') setIsAdmin(true);
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   // Fetch gallery items
   useEffect(() => {
@@ -166,8 +189,43 @@ export default function GalleryGrid({ refreshTrigger }: Props) {
           }}
           hasPrev={filteredItems.findIndex(i => i.id === selectedItem.id) > 0}
           hasNext={filteredItems.findIndex(i => i.id === selectedItem.id) < filteredItems.length - 1}
+          isAdmin={isAdmin}
+          onSetLocation={(item) => {
+            setSelectedItem(null);
+            setLocationPickItem(item);
+          }}
         />
       )}
+
+      {/* Location Picker Modal */}
+      <LocationPickerModal
+        isOpen={!!locationPickItem}
+        onClose={() => setLocationPickItem(null)}
+        onSave={async (x, y) => {
+          if (!locationPickItem) return;
+          const token = localStorage.getItem('voigt-garten-token');
+          try {
+            const res = await fetch(`${API_BASE}/api/admin/gallery/${locationPickItem.id}/map-area`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({ map_x: x, map_y: y, map_area: locationPickItem.map_area }),
+            });
+            if (res.ok) {
+              setItems(prev => prev.map(i =>
+                i.id === locationPickItem.id ? { ...i, map_x: x, map_y: y } : i
+              ));
+            }
+          } catch (e) {
+            console.error('Standort speichern fehlgeschlagen:', e);
+          }
+          setLocationPickItem(null);
+        }}
+        imageUrl={locationPickItem?.thumbnailUrl || locationPickItem?.url}
+        imageName={locationPickItem?.name}
+      />
     </div>
   );
 }
@@ -227,7 +285,9 @@ function Lightbox({
   onPrev,
   onNext,
   hasPrev,
-  hasNext
+  hasNext,
+  isAdmin = false,
+  onSetLocation,
 }: {
   item: GalleryItem;
   onClose: () => void;
@@ -235,6 +295,8 @@ function Lightbox({
   onNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
+  isAdmin?: boolean;
+  onSetLocation?: (item: GalleryItem) => void;
 }) {
   // Keyboard navigation
   useEffect(() => {
@@ -306,16 +368,34 @@ function Lightbox({
         )}
 
         {/* Info Bar */}
-        {(item.name || item.description) && (
-          <div className="mt-4 text-center text-white">
-            {item.name && (
-              <h3 className="text-xl font-semibold">{item.name}</h3>
+        <div className="mt-4 text-center text-white">
+          {item.name && (
+            <h3 className="text-xl font-semibold">{item.name}</h3>
+          )}
+          {item.description && (
+            <p className="text-white/70 mt-1">{item.description}</p>
+          )}
+
+          {/* Location info & button */}
+          <div className="mt-3 flex items-center justify-center gap-3">
+            {item.map_x != null && (
+              <span className="inline-flex items-center gap-1 text-sm bg-white/20 rounded-full px-3 py-1">
+                📍 Standort gesetzt
+              </span>
             )}
-            {item.description && (
-              <p className="text-white/70 mt-1">{item.description}</p>
+            {isAdmin && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSetLocation?.(item);
+                }}
+                className="inline-flex items-center gap-1 text-sm bg-amber-500/80 hover:bg-amber-500 rounded-full px-3 py-1 transition"
+              >
+                📍 {item.map_x != null ? 'Standort ändern' : 'Standort setzen'}
+              </button>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -34,6 +34,13 @@ except ImportError:
     print("Warning: pricing_service not available")
 
 try:
+    from assistant_service import process_message, refine_draft
+    ASSISTANT_AVAILABLE = True
+except ImportError:
+    ASSISTANT_AVAILABLE = False
+    print("Warning: assistant_service not available")
+
+try:
     from invoice_service import create_invoice_from_booking, generate_invoice_pdf, get_site_config
     INVOICE_AVAILABLE = True
 except ImportError:
@@ -102,8 +109,8 @@ def add_security_headers(response):
     if not request.path.startswith('/api/'):
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "img-src 'self' data: blob:; "
             "font-src 'self'; "
             "connect-src 'self'; "
@@ -661,6 +668,15 @@ def migrate_db():
         print("Migration: Added map_area column to gallery_images")
     except Exception:
         pass  # Column already exists
+
+    # Add map_x, map_y columns to gallery_images for precise photo locations on SVG map
+    for col in ['map_x REAL', 'map_y REAL']:
+        try:
+            conn.execute(f"ALTER TABLE gallery_images ADD COLUMN {col}")
+            conn.commit()
+            print(f"Migration: Added {col.split()[0]} column to gallery_images")
+        except Exception:
+            pass  # Column already exists
 
     # Garden costs table
     conn.execute('''
@@ -1598,20 +1614,26 @@ def get_gallery():
         cat = item.get('category', 'sonstiges')
         filename = item['filename']
 
-        # Main display URL - avoid double category prefix
-        # Some filenames include category (e.g. "sonstiges/test.webp"), some don't (e.g. "abc123.jpg")
-        if filename.startswith(f"{cat}/"):
+        # Build gallery URL - handle both layouts:
+        # 1. Category-prefixed: "sonstiges/test.webp" -> /images/gallery/sonstiges/test.webp
+        # 2. Flat (legacy): "abc123.webp" -> /images/gallery/abc123.webp (no category prefix!)
+        if '/' in filename:
+            # Already has a path prefix (category or other)
             item['url'] = f"/images/gallery/{filename}"
         else:
-            item['url'] = f"/images/gallery/{cat}/{filename}"
+            # Flat filename - file lives directly in gallery root
+            item['url'] = f"/images/gallery/{filename}"
 
         # Thumbnail URL - same logic
         if item.get('thumbnail_path'):
             thumb = item['thumbnail_path']
-            if thumb.startswith(f"{cat}/") or thumb.startswith('/'):
-                item['thumbnailUrl'] = f"/images/gallery/{thumb}" if not thumb.startswith('/') else thumb
+            if thumb.startswith('/'):
+                item['thumbnailUrl'] = thumb
+            elif '/' in thumb:
+                # Has path prefix (e.g. "thumbnails/abc_thumb.webp" or "sonstiges/abc_thumb.webp")
+                item['thumbnailUrl'] = f"/images/gallery/{thumb}"
             else:
-                item['thumbnailUrl'] = f"/images/gallery/{cat}/{thumb}"
+                item['thumbnailUrl'] = f"/images/gallery/{thumb}"
         else:
             item['thumbnailUrl'] = item['url']  # Fallback to main image
 
@@ -1620,10 +1642,8 @@ def get_gallery():
             orig_path = item['original_path']
             if orig_path.startswith('/images/gallery/'):
                 item['originalUrl'] = orig_path
-            elif orig_path.startswith(f"{cat}/"):
-                item['originalUrl'] = f"/images/gallery/{orig_path}"
             else:
-                item['originalUrl'] = f"/images/gallery/{cat}/{orig_path}"
+                item['originalUrl'] = f"/images/gallery/{orig_path}"
         formatted_items.append(item)
 
     # Filter by map_area if specified
@@ -4509,6 +4529,45 @@ def get_unified_tasks():
     })
 
 
+@app.route('/api/map/photo-points', methods=['GET'])
+def get_map_photo_points():
+    """Get gallery images with precise map coordinates for display on the garden map."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT id, name, category, type, map_x, map_y, map_area, thumbnail_path, filename "
+        "FROM gallery_images WHERE map_x IS NOT NULL AND map_y IS NOT NULL AND status = 'approved'"
+    ).fetchall()
+    conn.close()
+
+    points = []
+    for row in rows:
+        r = dict(row)
+        cat = r.get('category', 'sonstiges')
+        filename = r['filename']
+        # Build thumbnail URL (same logic as get_gallery)
+        if r.get('thumbnail_path'):
+            thumb = r['thumbnail_path']
+            if thumb.startswith('/'):
+                thumb_url = thumb
+            else:
+                thumb_url = f"/images/gallery/{thumb}"
+        else:
+            thumb_url = f"/images/gallery/{filename}"
+
+        points.append({
+            'id': r['id'],
+            'name': r.get('name') or 'Ohne Titel',
+            'category': cat,
+            'type': r.get('type', 'image'),
+            'map_x': r['map_x'],
+            'map_y': r['map_y'],
+            'map_area': r.get('map_area'),
+            'thumbnailUrl': thumb_url,
+        })
+
+    return jsonify({'points': points, 'total': len(points)})
+
+
 @app.route('/api/map/areas', methods=['GET'])
 def get_map_areas():
     """Get aggregated data per map area for the garden map."""
@@ -4612,9 +4671,15 @@ def update_area_description(user):
 @app.route('/api/admin/gallery/<item_id>/map-area', methods=['PATCH'])
 @require_admin
 def update_gallery_map_area(item_id, user):
-    """Admin: Assign a gallery item to a map area."""
+    """Admin: Assign a gallery item to a map area and/or precise location."""
     data = request.get_json()
     map_area = data.get('map_area')  # None or '' to remove
+    map_x = data.get('map_x')
+    map_y = data.get('map_y')
+
+    # Validate: both or neither
+    if (map_x is not None) != (map_y is not None):
+        return jsonify({'error': 'map_x und map_y müssen zusammen gesetzt werden'}), 400
 
     conn = get_db()
     item = conn.execute('SELECT id FROM gallery_images WHERE id = ?', (item_id,)).fetchone()
@@ -4623,8 +4688,8 @@ def update_gallery_map_area(item_id, user):
         return jsonify({'error': 'Bild nicht gefunden'}), 404
 
     conn.execute(
-        'UPDATE gallery_images SET map_area = ? WHERE id = ?',
-        (map_area if map_area else None, item_id)
+        'UPDATE gallery_images SET map_area = ?, map_x = ?, map_y = ? WHERE id = ?',
+        (map_area if map_area else None, map_x, map_y, item_id)
     )
     conn.commit()
     conn.close()
@@ -5632,6 +5697,45 @@ def get_preloaded_translations():
         'translations': {r['source_text']: r['translated_text'] for r in rows},
         'lang': target_lang
     })
+
+
+# ─── AI Assistant ─────────────────────────────────────────────
+
+@app.route('/api/assistant/chat', methods=['POST'])
+@limiter.limit("30 per hour")
+def assistant_chat():
+    """AI assistant chat endpoint."""
+    if not ASSISTANT_AVAILABLE:
+        return jsonify({'error': 'Assistant nicht verfügbar'}), 503
+
+    data = request.get_json()
+    if not data or not data.get('message'):
+        return jsonify({'error': 'Nachricht fehlt'}), 400
+
+    message = data['message'].strip()[:2000]
+    mode = data.get('mode')
+    draft = data.get('draft')
+
+    try:
+        if mode == 'refine' and draft:
+            result = refine_draft(message, draft)
+            return jsonify({
+                'intent': draft.get('type', 'feedback'),
+                'answer': result['answer'],
+                'draft': result['draft'],
+            })
+        else:
+            # Get context from request (client sends previous messages)
+            context = data.get('context', [])
+            result = process_message(message, context_messages=context if context else None)
+            return jsonify(result)
+
+    except Exception as e:
+        print(f"[assistant] Error: {e}")
+        return jsonify({
+            'intent': 'question',
+            'answer': 'Entschuldigung, es gab einen technischen Fehler. Bitte versuche es erneut.'
+        })
 
 
 # Initialize database on startup

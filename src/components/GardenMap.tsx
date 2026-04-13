@@ -19,6 +19,16 @@ interface AreaStatus {
   inventory_count?: number;
 }
 
+export interface PhotoPoint {
+  id: string;
+  name: string;
+  category: string;
+  type: string;
+  map_x: number;
+  map_y: number;
+  thumbnailUrl: string;
+}
+
 export type MapMode = 'gebaeude' | 'natur' | 'technik' | 'wasser' | 'alle';
 
 interface GardenMapProps {
@@ -29,6 +39,12 @@ interface GardenMapProps {
   selectable?: boolean;
   compact?: boolean;
   showModeSwitch?: boolean;
+  photoPoints?: PhotoPoint[];
+  showPhotoPoints?: boolean;
+  pickMode?: boolean;
+  onLocationPick?: (x: number, y: number) => void;
+  pickedLocation?: { x: number; y: number } | null;
+  onPhotoPointClick?: (photoId: string) => void;
 }
 
 function parseFillFromStyle(style: string | undefined): string {
@@ -246,6 +262,12 @@ export default function GardenMap({
   selectable = false,
   compact = false,
   showModeSwitch = false,
+  photoPoints = [],
+  showPhotoPoints = false,
+  pickMode = false,
+  onLocationPick,
+  pickedLocation,
+  onPhotoPointClick,
 }: GardenMapProps) {
   const [shapes, setShapes] = useState<SvgShape[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,6 +276,9 @@ export default function GardenMap({
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [areaStatuses, setAreaStatuses] = useState<Record<string, AreaStatus>>({});
+
+  const [hoveredPhotoPoint, setHoveredPhotoPoint] = useState<PhotoPoint | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   const labelPositions = useMemo(() => computeLabelPositions(shapes), [shapes]);
 
@@ -484,6 +509,20 @@ export default function GardenMap({
     setTranslate({ x: 0, y: 0 });
   }, []);
 
+  const handleSvgClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (!pickMode || !onLocationPick || !svgRef.current) return;
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = svgRef.current.getScreenCTM();
+    if (!ctm) return;
+    const svgPt = pt.matrixTransform(ctm.inverse());
+    onLocationPick(
+      Math.max(0, Math.min(1602, Math.round(svgPt.x))),
+      Math.max(0, Math.min(787, Math.round(svgPt.y)))
+    );
+  }, [pickMode, onLocationPick]);
+
   const renderShape = (shape: SvgShape) => {
     const hovered = hoveredId === shape.id;
     const active = isActive(shape.id);
@@ -692,9 +731,12 @@ export default function GardenMap({
 
             {/* SVG Overlay */}
             <svg
+              ref={svgRef}
               viewBox="0 0 1602 787"
               className="absolute inset-0 w-full h-full"
               preserveAspectRatio="xMidYMid meet"
+              onClick={handleSvgClick}
+              style={pickMode ? { cursor: 'crosshair' } : undefined}
             >
               {shapes.map(renderShape)}
               {/* Labels with leader lines — only show labels matching current view */}
@@ -733,6 +775,52 @@ export default function GardenMap({
                   </text>
                 </g>
               ))}
+
+              {/* Photo Points Layer */}
+              {showPhotoPoints && photoPoints.map(point => (
+                <g key={`photo-${point.id}`}
+                   style={{ cursor: 'pointer' }}
+                   onMouseEnter={() => setHoveredPhotoPoint(point)}
+                   onMouseLeave={() => setHoveredPhotoPoint(null)}
+                   onMouseMove={(e: React.MouseEvent) => {
+                     if (containerRef.current) {
+                       const rect = containerRef.current.getBoundingClientRect();
+                       setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+                     }
+                   }}
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     onPhotoPointClick?.(point.id);
+                   }}
+                >
+                  <circle cx={point.map_x} cy={point.map_y} r={10}
+                    fill="#f59e0b" stroke="white" strokeWidth={2.5}
+                    opacity={0.9}
+                  />
+                  <text x={point.map_x} y={point.map_y + 4}
+                    textAnchor="middle" fontSize="10" fill="white"
+                    className="pointer-events-none" fontWeight="bold"
+                  >
+                    {"\uD83D\uDCF7"}
+                  </text>
+                </g>
+              ))}
+
+              {/* Pick Mode: Selected Location Marker */}
+              {pickMode && pickedLocation && (
+                <g className="pointer-events-none">
+                  <circle cx={pickedLocation.x} cy={pickedLocation.y}
+                    r={14} fill="none" stroke="#ef4444" strokeWidth={3}
+                    opacity={0.8}
+                  >
+                    <animate attributeName="r" values="10;16;10" dur="1.5s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
+                  </circle>
+                  <circle cx={pickedLocation.x} cy={pickedLocation.y}
+                    r={5} fill="#ef4444" stroke="white" strokeWidth={2}
+                  />
+                </g>
+              )}
             </svg>
 
           </div>
@@ -740,6 +828,26 @@ export default function GardenMap({
 
         {/* Tooltip - outside transformed container */}
         {tooltipContent}
+
+        {/* Photo Point Tooltip */}
+        {hoveredPhotoPoint && !pickMode && (
+          <div
+            className="absolute bg-white/95 backdrop-blur rounded-lg shadow-lg p-1.5 pointer-events-none z-30"
+            style={{
+              left: mousePos.x + 16,
+              top: mousePos.y - 70,
+            }}
+          >
+            <img
+              src={hoveredPhotoPoint.thumbnailUrl}
+              alt={hoveredPhotoPoint.name}
+              className="w-20 h-20 object-cover rounded"
+            />
+            <div className="text-xs text-gray-800 font-medium mt-1 max-w-[80px] truncate">
+              {hoveredPhotoPoint.name}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Category Legend */}
