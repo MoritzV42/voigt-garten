@@ -13,18 +13,22 @@ export default function ScrollVideoPlayer({
   framePath,
   frameCount,
   format = 'webp',
-  scrollHeight = '250vh',
+  scrollHeight = '300vh',
   children,
-  overlayOpacity = 0.4,
+  overlayOpacity = 0.35,
 }: ScrollVideoPlayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const heroOverlayRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
+  const loadedCountRef = useRef(0);
   const currentFrameRef = useRef(0);
+  const targetFrameRef = useRef(0);
   const rafRef = useRef<number>(0);
+  const lerpRafRef = useRef<number>(0);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
 
   const getFrameSrc = useCallback(
     (index: number) => {
@@ -34,19 +38,35 @@ export default function ScrollVideoPlayer({
     [framePath, format]
   );
 
-  // Load images progressively
+  const drawFrame = useCallback((frameIndex: number) => {
+    const img = imagesRef.current[frameIndex];
+    const ctx = ctxRef.current;
+    const canvas = canvasRef.current;
+    if (!img || !ctx || !canvas) return;
+
+    if (canvas.width !== img.naturalWidth || canvas.height !== img.naturalHeight) {
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+    }
+    ctx.drawImage(img, 0, 0);
+  }, []);
+
   useEffect(() => {
     const images: (HTMLImageElement | null)[] = new Array(frameCount).fill(null);
     imagesRef.current = images;
+    loadedCountRef.current = 0;
 
     const loadImage = (index: number): Promise<void> => {
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
           images[index] = img;
+          loadedCountRef.current++;
+          const progress = loadedCountRef.current / frameCount;
+          setLoadProgress(progress);
+
           if (index === 0) {
             setIsLoading(false);
-            // Draw first frame immediately
             const canvas = canvasRef.current;
             if (canvas) {
               const ctx = canvas.getContext('2d');
@@ -65,18 +85,16 @@ export default function ScrollVideoPlayer({
       });
     };
 
-    // Load first 10 frames immediately
     const loadInitialBatch = async () => {
-      const initialCount = Math.min(10, frameCount);
+      const initialCount = Math.min(15, frameCount);
       const promises = [];
       for (let i = 0; i < initialCount; i++) {
         promises.push(loadImage(i));
       }
       await Promise.all(promises);
 
-      // Load rest in batches of 20
-      for (let batch = initialCount; batch < frameCount; batch += 20) {
-        const batchEnd = Math.min(batch + 20, frameCount);
+      for (let batch = initialCount; batch < frameCount; batch += 30) {
+        const batchEnd = Math.min(batch + 30, frameCount);
         const batchPromises = [];
         for (let i = batch; i < batchEnd; i++) {
           batchPromises.push(loadImage(i));
@@ -92,7 +110,34 @@ export default function ScrollVideoPlayer({
     };
   }, [frameCount, getFrameSrc]);
 
-  // Scroll handler — uses direct DOM manipulation to avoid React re-renders
+  useEffect(() => {
+    const lerpSpeed = 0.12;
+
+    const animateFrame = () => {
+      const target = targetFrameRef.current;
+      const current = currentFrameRef.current;
+
+      if (Math.abs(target - current) > 0.5) {
+        const next = current + (target - current) * lerpSpeed;
+        currentFrameRef.current = next;
+        const roundedFrame = Math.round(next);
+        const clampedFrame = Math.max(0, Math.min(roundedFrame, frameCount - 1));
+
+        if (imagesRef.current[clampedFrame]) {
+          drawFrame(clampedFrame);
+        }
+      }
+
+      lerpRafRef.current = requestAnimationFrame(animateFrame);
+    };
+
+    lerpRafRef.current = requestAnimationFrame(animateFrame);
+
+    return () => {
+      if (lerpRafRef.current) cancelAnimationFrame(lerpRafRef.current);
+    };
+  }, [frameCount, drawFrame]);
+
   useEffect(() => {
     const handleScroll = () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -105,26 +150,18 @@ export default function ScrollVideoPlayer({
         const containerHeight = container.offsetHeight;
         const viewportHeight = window.innerHeight;
 
-        // How far we've scrolled through the container (0 to 1)
         const scrolled = Math.max(
           0,
           Math.min(1, -rect.top / (containerHeight - viewportHeight))
         );
 
-        // Map scroll to frame index
-        const frameIndex = Math.min(
-          Math.floor(scrolled * (frameCount - 1)),
+        targetFrameRef.current = Math.min(
+          scrolled * (frameCount - 1),
           frameCount - 1
         );
 
-        // Staggered scroll reveal + fade out — direct DOM updates
         const overlay = heroOverlayRef.current;
         if (overlay) {
-          // Elements with data-scroll-reveal="0" are always visible (title)
-          // Elements with data-scroll-reveal="1" fade in at 3-10% scroll
-          // Elements with data-scroll-reveal="2" fade in at 6-13% scroll
-          // Elements with data-scroll-reveal="3" fade in at 9-16% scroll
-          // Everything fades out together after 50% scroll
           const fadeOut = scrolled > 0.5 ? 1 - Math.min(1, (scrolled - 0.5) / 0.2) : 1;
 
           const reveals = overlay.querySelectorAll<HTMLElement>('[data-scroll-reveal]');
@@ -144,27 +181,16 @@ export default function ScrollVideoPlayer({
               : 'translateY(0)';
           });
 
-          // Hide scroll indicator when scrolled
           const indicator = overlay.nextElementSibling as HTMLElement | null;
           if (indicator) {
             indicator.style.opacity = scrolled < 0.02 ? '1' : '0';
-          }
-        }
-
-        // Draw frame if changed
-        if (frameIndex !== currentFrameRef.current) {
-          currentFrameRef.current = frameIndex;
-          const img = imagesRef.current[frameIndex];
-          const ctx = ctxRef.current;
-          if (img && ctx) {
-            ctx.drawImage(img, 0, 0);
           }
         }
       });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial call
+    handleScroll();
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -211,6 +237,16 @@ export default function ScrollVideoPlayer({
           style={{ backgroundColor: `rgba(0,0,0,${overlayOpacity})` }}
         />
 
+        {/* Loading progress */}
+        {loadProgress < 1 && (
+          <div className="absolute bottom-0 left-0 right-0 z-30 h-0.5">
+            <div
+              className="h-full bg-white/40 transition-[width] duration-300 ease-out"
+              style={{ width: `${loadProgress * 100}%` }}
+            />
+          </div>
+        )}
+
         {/* Content overlay with fade — controlled via ref, no re-renders */}
         <div
           ref={heroOverlayRef}
@@ -235,11 +271,6 @@ export default function ScrollVideoPlayer({
               d="M19 14l-7 7m0 0l-7-7m7 7V3"
             />
           </svg>
-        </div>
-
-        {/* Test label */}
-        <div className="absolute top-4 right-4 z-20 bg-yellow-500/90 text-black text-xs font-bold px-3 py-1 rounded-full">
-          TEST — Drohnenvideo Scroll-Animation
         </div>
       </div>
     </div>
