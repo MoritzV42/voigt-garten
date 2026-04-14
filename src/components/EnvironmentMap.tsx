@@ -118,8 +118,8 @@ const POIS: POI[] = [
 
 // Garden location (Etzdorf im Rosental)
 const GARDEN_LOCATION = {
-  lat: 51.2200,
-  lng: 12.1300,
+  lat: 50.980431,
+  lng: 11.952956,
 };
 
 const CATEGORY_STYLES: Record<string, { icon: string; color: string; label: string }> = {
@@ -199,7 +199,7 @@ export default function EnvironmentMap() {
         <div style="text-align: center; padding: 10px; min-width: 180px;">
           <strong style="font-size: 16px;">Refugium Etzdorf</strong><br>
           <span style="color: #666; font-size: 13px;">Dein Ziel!</span><br><br>
-          <a href="https://www.google.com/maps/dir/?api=1&destination=51.2200,12.1300"
+          <a href="https://www.google.com/maps/dir/?api=1&destination=50.980431,11.952956"
              target="_blank"
              style="display: inline-block; background: #16a34a; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600;">
             🗺️ Route planen
@@ -318,7 +318,7 @@ export default function EnvironmentMap() {
       {/* Route Button - Prominent at top */}
       <div className="text-center">
         <a
-          href="https://www.google.com/maps/dir/?api=1&destination=51.2200,12.1300"
+          href="https://www.google.com/maps/dir/?api=1&destination=50.980431,11.952956"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-3 bg-garden-600 hover:bg-garden-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl"

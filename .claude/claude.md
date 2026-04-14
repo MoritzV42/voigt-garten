@@ -50,6 +50,13 @@ Volume Mounts -> Server Filesystem
 |       |-- VerifyPage.tsx      # Magic Link Verify Frontend
 |       |-- EditableTable.tsx   # Wiederverwendbare inline-editierbare Tabelle
 |       |-- AdminDashboard.tsx  # Admin-Dashboard (nutzt EditableTable für alle Tabs)
+|       |-- AppOverlays.tsx     # Tutorial + Hilfe-Button + KI-Assistent Wrapper
+|       |-- tutorial/
+|           |-- TutorialOverlay.tsx    # Spotlight-Overlay für Tour-Steps
+|           |-- TutorialWelcomeModal.tsx # Willkommens-Modal für neue Besucher
+|           |-- tour-definitions.ts    # Tour-Steps pro Seite
+|       |-- assistant/
+|           |-- GardenAssistant.tsx    # KI-Chat-Widget (OpenAI)
 |-- public/                 # Static Assets
 |   |-- images/gallery/     # Hochgeladene Bilder (Volume)
 |-- docs/                   # Dokumentation zum Garten
@@ -58,6 +65,7 @@ Volume Mounts -> Server Filesystem
 |   |-- kooperationsmodell.md      # Nutzungskonzept für Mitnutzer
 |-- pi-backend/
 |   |-- app.py              # Flask API + Static Serving
+|   |-- assistant_service.py # KI-Assistent (OpenAI Chat + Tool-Calls)
 |   |-- email_service.py    # Resend Email
 |   |-- telegram_service.py # Telegram Bot Moderation
 |   |-- telegram_agent.py   # Autonomer Telegram Bot Agent (@Garten_Bot)
@@ -248,6 +256,14 @@ GET /api/costs/summary
 Response: { "monthly": 49.0, "yearly": 100.0, "once": 0, "total_yearly": 688.0 }
 ```
 
+### KI-Assistent
+```
+POST /api/assistant/chat
+Body: { "message": "...", "mode": "refine" (optional), "draft": {...} (optional), "context": [...] (optional) }
+Response: { "intent": "question|mangel|bug|feature|feedback|unclear", "answer": "...", "draft": {...} (optional) }
+Note: OpenAI GPT-4o-mini, 30 req/hour Rate Limit. Env: OPENAI_API_KEY
+```
+
 ---
 
 ## Deployment
@@ -300,6 +316,8 @@ docker logs voigt-garten-app -f
 | `RESEND_API_KEY` | Resend API fur Emails | (required) |
 | `TELEGRAM_BOT_TOKEN` | Telegram Bot Token für Galerie-Moderation | (optional) |
 | `TELEGRAM_CHAT_ID` | Telegram Chat-ID für Moderations-Nachrichten | (optional) |
+| `OPENAI_API_KEY` | OpenAI API Key für KI-Assistent | (optional) |
+| `OPENAI_MODEL` | OpenAI Modell | `gpt-4o-mini` |
 | `DATA_DIR` | Pfad zur Datenbank | `/app/data` |
 | `STATIC_DIR` | Astro Build Output | `/app/static` |
 | `GALLERY_DIR` | Galerie-Bilder | `/app/public/images/gallery` |
@@ -635,6 +653,66 @@ Keyword-basierter Bot (kein LLM), verarbeitet Nachrichten im konfigurierten Chat
 - Laeuft als separater Thread im Gunicorn-Worker
 - Greift direkt auf SQLite-DB zu (read-only fuer Abfragen)
 - Konfiguration: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` in `.env`
+
+---
+
+## Garten-Agent (Autonomer virtueller Garten-Manager)
+
+### Architektur
+- **Chat-Widget** (Website): OpenRouter-kompatible API, rollenbasiertes Tool-Gating
+- **Autonomer Agent** (CLI im Container): Tägliche Checks, COO-Reporting, Email-Drafts
+- Beide teilen SQLite-DB + `email_draft_service.py` + `email_service.py`
+
+### Neue Backend-Dateien
+| Datei | Zweck |
+|-------|-------|
+| `pi-backend/agent_tools.py` | Rollenbasierte Tool-Definitionen (anonymous/guest/admin) |
+| `pi-backend/injection_guard.py` | Schützt CLI-Agent vor manipulierten DB-Inhalten |
+| `pi-backend/email_draft_service.py` | Email-Draft CRUD + Approval + Versand |
+| `pi-backend/coo_reporting.py` | Tägliche COO-Reports |
+| `pi-backend/agent_cron.sh` | Cron-Job für täglichen Agent-Check |
+| `src/components/assistant/EmailDraftCard.tsx` | Email-Draft UI im Chat |
+
+### Rollenbasiertes Tool-Gating
+
+| Rolle | Tools | Rate-Limit |
+|-------|-------|------------|
+| **Anonymous** | `get_garden_info`, `get_pricing_info`, `check_availability` | 10/h |
+| **Guest** | + `report_issue`, `search_inventory`, `get_open_tasks`, `get_gallery_stats`, `get_upcoming_bookings` | 30/h |
+| **Admin** | + `create_task`, `update_task`, `get_overdue_tasks`, `get_credits_summary`, `manage_inventory` | 100/h |
+
+### Neue API-Endpoints (Agent)
+```
+GET  /api/agent/status                    — Health-Check
+GET  /api/agent/daily-report              — COO holt Tagesbericht (Auth: X-Agent-Secret)
+POST /api/agent/trigger                   — COO sendet Anweisung (Auth: X-Agent-Secret)
+GET  /api/agent/actions                   — Agent-Actions-Log (Admin only)
+GET  /api/admin/email-drafts              — Email-Entwürfe
+POST /api/admin/email-drafts/:id/approve  — Email genehmigen & senden
+POST /api/admin/email-drafts/:id/reject   — Email ablehnen
+PATCH /api/admin/email-drafts/:id         — Email-Draft bearbeiten
+```
+
+### Neue DB-Tabellen
+- `agent_actions_log` — Audit-Logging (Chat + CLI-Agent)
+- `email_drafts` — Email-Entwürfe mit Approval-Workflow
+- `coo_instructions` — COO-Anweisungen Queue
+- `agent_memory` — Agent-Langzeitgedächtnis
+- `agent_conversations` — Server-Side Chat-History
+- `agent_messages` — Chat-Nachrichten
+
+### Neue Umgebungsvariablen
+| Variable | Beschreibung | Standard |
+|----------|--------------|----------|
+| `OPENAI_BASE_URL` | API-Base-URL (OpenRouter/OpenAI) | `https://openrouter.ai/api/v1` |
+| `COO_API_SECRET` | Shared Secret für Agent-API | (required für /api/agent/*) |
+| `AGENT_CC_EMAIL` | CC für Agent-Emails | `moritzvoigt42@gmail.com` |
+
+### Sicherheitskonzept
+1. **Chat** (harmlos): Rollenbasiertes Tool-Gating, kein Injection Guard nötig
+2. **CLI-Agent** (mächtig): Injection Guard sanitized DB-Inhalte VOR Verarbeitung
+3. **Regex-Patterns** erkennen: Prompt Override, Delimiter Injection, gefährliche Befehle
+4. **Alle Aktionen** werden in `agent_actions_log` protokolliert
 
 ---
 

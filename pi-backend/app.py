@@ -41,6 +41,23 @@ except ImportError:
     print("Warning: assistant_service not available")
 
 try:
+    from email_draft_service import create_draft, get_drafts, get_draft, approve_draft, reject_draft, update_draft
+    EMAIL_DRAFT_AVAILABLE = True
+except ImportError:
+    EMAIL_DRAFT_AVAILABLE = False
+    print("Warning: email_draft_service not available")
+
+try:
+    from coo_reporting import generate_daily_report, get_latest_report
+    COO_REPORTING_AVAILABLE = True
+except ImportError:
+    COO_REPORTING_AVAILABLE = False
+    print("Warning: coo_reporting not available")
+
+# COO API Secret
+COO_API_SECRET = os.environ.get('COO_API_SECRET', '')
+
+try:
     from invoice_service import create_invoice_from_booking, generate_invoice_pdf, get_site_config
     INVOICE_AVAILABLE = True
 except ImportError:
@@ -1177,6 +1194,123 @@ def migrate_db():
             conn.commit()
     except Exception as e:
         print(f"Impressum mode seed: {e}")
+
+    # ─── Garten-Agent Phase 1-3: Neue Tabellen ───
+
+    # Agent actions log (Audit-Logging für Chat + CLI-Agent)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS agent_actions_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_type TEXT NOT NULL,
+            source TEXT NOT NULL,
+            user_id INTEGER,
+            description TEXT,
+            details TEXT,
+            risk_score REAL DEFAULT 0,
+            success BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Email drafts (Agent erstellt Entwürfe, Admin genehmigt)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS email_drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider_id INTEGER,
+            recipient_email TEXT NOT NULL,
+            recipient_name TEXT,
+            subject TEXT NOT NULL,
+            body_html TEXT NOT NULL,
+            body_plain TEXT,
+            status TEXT DEFAULT 'pending',
+            approved_by TEXT,
+            approved_at DATETIME,
+            sent_at DATETIME,
+            cc_emails TEXT,
+            telegram_message_id TEXT,
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # COO-Anweisungen
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS coo_instructions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            instruction TEXT NOT NULL,
+            priority TEXT DEFAULT 'normal',
+            status TEXT DEFAULT 'pending',
+            result TEXT,
+            received_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            processed_at DATETIME
+        )
+    ''')
+
+    # Agent-Langzeitgedächtnis
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS agent_memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT,
+            expires_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(category, key)
+        )
+    ''')
+
+    # Chat-Konversationen (Server-Side History)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS agent_conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT UNIQUE NOT NULL,
+            user_id INTEGER,
+            ip_hash TEXT,
+            role TEXT DEFAULT 'anonymous',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_message_at DATETIME
+        )
+    ''')
+
+    # Chat-Nachrichten
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS agent_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER NOT NULL REFERENCES agent_conversations(id),
+            role TEXT NOT NULL,
+            content TEXT,
+            tool_name TEXT,
+            tool_args TEXT,
+            tool_result TEXT,
+            tokens_used INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Indices für Agent-Tabellen
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_actions_type ON agent_actions_log(action_type)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_actions_source ON agent_actions_log(source)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_actions_created ON agent_actions_log(created_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_email_drafts_status ON email_drafts(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_conversations_session ON agent_conversations(session_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_messages_conv ON agent_messages(conversation_id)")
+    conn.commit()
+
+    # Service-Provider Erweiterungen
+    for col_stmt in [
+        "ALTER TABLE service_providers ADD COLUMN hourly_rate REAL",
+        "ALTER TABLE service_providers ADD COLUMN availability TEXT",
+        "ALTER TABLE service_providers ADD COLUMN specializations TEXT",
+        "ALTER TABLE service_providers ADD COLUMN last_contacted_at DATETIME",
+        "ALTER TABLE service_providers ADD COLUMN preferred_contact TEXT DEFAULT 'email'",
+        "ALTER TABLE service_providers ADD COLUMN contact_notes TEXT",
+    ]:
+        try:
+            conn.execute(col_stmt)
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
 
     conn.close()
     print("Database migrations complete")
@@ -5701,10 +5835,20 @@ def get_preloaded_translations():
 
 # ─── AI Assistant ─────────────────────────────────────────────
 
+def _get_assistant_rate_limit():
+    """Dynamic rate limit based on user role."""
+    user = get_current_user()
+    if user and user.get('role') == 'admin':
+        return "100 per hour"
+    elif user:
+        return "30 per hour"
+    return "10 per hour"
+
+
 @app.route('/api/assistant/chat', methods=['POST'])
-@limiter.limit("30 per hour")
+@limiter.limit(_get_assistant_rate_limit)
 def assistant_chat():
-    """AI assistant chat endpoint."""
+    """AI assistant chat endpoint with role-based tools."""
     if not ASSISTANT_AVAILABLE:
         return jsonify({'error': 'Assistant nicht verfügbar'}), 503
 
@@ -5715,6 +5859,17 @@ def assistant_chat():
     message = data['message'].strip()[:2000]
     mode = data.get('mode')
     draft = data.get('draft')
+
+    # Determine user role from JWT
+    user = get_current_user()
+    if user and user.get('role') == 'admin':
+        user_role = 'admin'
+    elif user:
+        user_role = 'guest'
+    else:
+        user_role = 'anonymous'
+
+    user_email = user.get('email') if user else None
 
     try:
         if mode == 'refine' and draft:
@@ -5727,7 +5882,30 @@ def assistant_chat():
         else:
             # Get context from request (client sends previous messages)
             context = data.get('context', [])
-            result = process_message(message, context_messages=context if context else None)
+            result = process_message(
+                message,
+                context_messages=context if context else None,
+                user_role=user_role,
+                user_email=user_email
+            )
+
+            # Log to agent_actions_log
+            try:
+                conn = get_db()
+                conn.execute('''
+                    INSERT INTO agent_actions_log (action_type, source, user_id, description, details, created_at)
+                    VALUES ('chat', 'chat_widget', ?, ?, ?, ?)
+                ''', (
+                    user.get('id') if user else None,
+                    f'Chat ({user_role}): {message[:100]}',
+                    json.dumps({'role': user_role, 'intent': result.get('intent')}),
+                    datetime.now().isoformat()
+                ))
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+
             return jsonify(result)
 
     except Exception as e:
@@ -5736,6 +5914,163 @@ def assistant_chat():
             'intent': 'question',
             'answer': 'Entschuldigung, es gab einen technischen Fehler. Bitte versuche es erneut.'
         })
+
+
+# ─── Agent API (COO + CLI-Agent) ─────────────────────────────
+
+def require_agent_secret(f):
+    """Decorator to require COO API secret."""
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        secret = request.headers.get('X-Agent-Secret', '')
+        if not COO_API_SECRET or secret != COO_API_SECRET:
+            return jsonify({'error': 'Ungültiger Agent-Secret'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route('/api/agent/status', methods=['GET'])
+def agent_status():
+    """Agent health check."""
+    return jsonify({
+        'status': 'ok',
+        'assistant_available': ASSISTANT_AVAILABLE,
+        'email_draft_available': EMAIL_DRAFT_AVAILABLE,
+        'coo_reporting_available': COO_REPORTING_AVAILABLE,
+    })
+
+
+@app.route('/api/agent/daily-report', methods=['GET'])
+@require_agent_secret
+def agent_daily_report():
+    """COO fetches the daily report."""
+    if not COO_REPORTING_AVAILABLE:
+        return jsonify({'error': 'COO Reporting nicht verfügbar'}), 503
+
+    generate_new = request.args.get('generate', 'false').lower() == 'true'
+    if generate_new:
+        report = generate_daily_report()
+    else:
+        report = get_latest_report()
+        if not report:
+            report = generate_daily_report()
+
+    return jsonify(report)
+
+
+@app.route('/api/agent/trigger', methods=['POST'])
+@require_agent_secret
+def agent_trigger():
+    """COO sends an instruction to the agent."""
+    data = request.get_json()
+    if not data or not data.get('instruction'):
+        return jsonify({'error': 'Instruction fehlt'}), 400
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO coo_instructions (instruction, priority, status, received_at)
+        VALUES (?, ?, 'pending', ?)
+    ''', (
+        data['instruction'],
+        data.get('priority', 'normal'),
+        datetime.now().isoformat()
+    ))
+    conn.commit()
+    instruction_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.close()
+
+    return jsonify({'success': True, 'id': instruction_id})
+
+
+@app.route('/api/agent/actions', methods=['GET'])
+@require_admin
+def agent_actions_log_endpoint(user=None):
+    """Get recent agent actions (Admin only)."""
+    limit = min(int(request.args.get('limit', 50)), 200)
+    action_type = request.args.get('type')
+
+    conn = get_db()
+    if action_type:
+        rows = conn.execute(
+            'SELECT * FROM agent_actions_log WHERE action_type = ? ORDER BY created_at DESC LIMIT ?',
+            (action_type, limit)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            'SELECT * FROM agent_actions_log ORDER BY created_at DESC LIMIT ?',
+            (limit,)
+        ).fetchall()
+    conn.close()
+
+    return jsonify({'actions': [dict(r) for r in rows]})
+
+
+# ─── Email Drafts API ────────────────────────────────────────
+
+@app.route('/api/admin/email-drafts', methods=['GET'])
+@require_admin
+def get_email_drafts(user=None):
+    """Get email drafts (Admin only)."""
+    if not EMAIL_DRAFT_AVAILABLE:
+        return jsonify({'error': 'Email Draft Service nicht verfügbar'}), 503
+
+    status = request.args.get('status')
+    drafts = get_drafts(status)
+    return jsonify({'drafts': drafts})
+
+
+@app.route('/api/admin/email-drafts/<int:draft_id>', methods=['GET'])
+@require_admin
+def get_email_draft(draft_id, user=None):
+    """Get a single email draft."""
+    if not EMAIL_DRAFT_AVAILABLE:
+        return jsonify({'error': 'Email Draft Service nicht verfügbar'}), 503
+
+    draft_data = get_draft(draft_id)
+    if not draft_data:
+        return jsonify({'error': 'Draft nicht gefunden'}), 404
+    return jsonify(draft_data)
+
+
+@app.route('/api/admin/email-drafts/<int:draft_id>/approve', methods=['POST'])
+@require_admin
+def approve_email_draft(draft_id, user=None):
+    """Approve and send an email draft."""
+    if not EMAIL_DRAFT_AVAILABLE:
+        return jsonify({'error': 'Email Draft Service nicht verfügbar'}), 503
+
+    result = approve_draft(draft_id, approved_by=user.get('email', 'admin'))
+    if result['success']:
+        return jsonify(result)
+    return jsonify(result), 400
+
+
+@app.route('/api/admin/email-drafts/<int:draft_id>/reject', methods=['POST'])
+@require_admin
+def reject_email_draft(draft_id, user=None):
+    """Reject an email draft."""
+    if not EMAIL_DRAFT_AVAILABLE:
+        return jsonify({'error': 'Email Draft Service nicht verfügbar'}), 503
+
+    result = reject_draft(draft_id, rejected_by=user.get('email', 'admin'))
+    return jsonify(result)
+
+
+@app.route('/api/admin/email-drafts/<int:draft_id>', methods=['PATCH'])
+@require_admin
+def update_email_draft(draft_id, user=None):
+    """Update a pending email draft."""
+    if not EMAIL_DRAFT_AVAILABLE:
+        return jsonify({'error': 'Email Draft Service nicht verfügbar'}), 503
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Keine Daten'}), 400
+
+    result = update_draft(draft_id, **data)
+    if result['success']:
+        return jsonify(result)
+    return jsonify(result), 400
 
 
 # Initialize database on startup

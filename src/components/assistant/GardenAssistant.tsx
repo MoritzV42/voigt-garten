@@ -1,6 +1,8 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 
 // ─── Types ──────────────────────────────────────────────────
+
+type UserRole = "anonymous" | "guest" | "admin";
 
 type Message = {
   role: "user" | "assistant";
@@ -28,6 +30,18 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
   feedback: "Feedback",
 };
 
+const ROLE_LABELS: Record<UserRole, string> = {
+  anonymous: "Besucher",
+  guest: "Gast",
+  admin: "Admin-Modus",
+};
+
+const ROLE_COLORS: Record<UserRole, string> = {
+  anonymous: "text-gray-500",
+  guest: "text-garden-600",
+  admin: "text-amber-600",
+};
+
 // ─── Component ──────────────────────────────────────────────
 
 export default function GardenAssistant() {
@@ -41,6 +55,31 @@ export default function GardenAssistant() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Determine user role from token
+  const userRole: UserRole = useMemo(() => {
+    try {
+      const token = localStorage.getItem("voigt-garten-token");
+      if (!token) return "anonymous";
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      if (payload.role === "admin") return "admin";
+      return "guest";
+    } catch {
+      return "anonymous";
+    }
+  }, []);
+
+  // Quick-action suggestions based on role
+  const suggestions = useMemo(() => {
+    const base = ["Was gibt es hier?", "Wie buche ich?"];
+    if (userRole === "admin") {
+      return [...base, "Überfällige Aufgaben?", "Galerie-Status?"];
+    }
+    if (userRole === "guest") {
+      return [...base, "Etwas ist kaputt", "Ich habe eine Idee"];
+    }
+    return [...base, "Etwas ist kaputt", "Ich habe eine Idee"];
+  }, [userRole]);
 
   // Auto-scroll
   useEffect(() => {
@@ -257,8 +296,11 @@ export default function GardenAssistant() {
                   <h2 className="font-display text-base font-semibold text-gray-900">
                     Garten-Assistent
                   </h2>
-                  <p className="text-xs text-gray-500">
-                    Fragen, Mängel & Feedback
+                  <p className={`text-xs ${ROLE_COLORS[userRole]}`}>
+                    {ROLE_LABELS[userRole]}
+                    {userRole === "anonymous" && (
+                      <span className="text-gray-400"> · Einloggen für mehr</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -297,12 +339,7 @@ export default function GardenAssistant() {
                     Stelle eine Frage zum Garten, melde einen Mangel oder gib Feedback.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                    {[
-                      "Was gibt es hier?",
-                      "Wie buche ich?",
-                      "Etwas ist kaputt",
-                      "Ich habe eine Idee",
-                    ].map((suggestion) => (
+                    {suggestions.map((suggestion) => (
                       <button
                         key={suggestion}
                         type="button"
