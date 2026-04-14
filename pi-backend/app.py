@@ -1664,6 +1664,7 @@ def optimize_video(input_path, output_path):
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
+@limiter.exempt
 def serve_static(path):
     """Serve Astro static files."""
     # Default to index.html
@@ -1690,6 +1691,7 @@ def serve_static(path):
 
 
 @app.route('/images/gallery/<path:filename>')
+@limiter.exempt
 def serve_gallery_image(filename):
     """Serve gallery images."""
     return send_from_directory(GALLERY_DIR, filename)

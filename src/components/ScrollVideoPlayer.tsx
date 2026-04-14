@@ -19,11 +19,12 @@ export default function ScrollVideoPlayer({
 }: ScrollVideoPlayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const heroOverlayRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
   const currentFrameRef = useRef(0);
   const rafRef = useRef<number>(0);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [heroOpacity, setHeroOpacity] = useState(1);
 
   const getFrameSrc = useCallback(
     (index: number) => {
@@ -50,6 +51,7 @@ export default function ScrollVideoPlayer({
             if (canvas) {
               const ctx = canvas.getContext('2d');
               if (ctx) {
+                ctxRef.current = ctx;
                 canvas.width = img.naturalWidth;
                 canvas.height = img.naturalHeight;
                 ctx.drawImage(img, 0, 0);
@@ -90,15 +92,14 @@ export default function ScrollVideoPlayer({
     };
   }, [frameCount, getFrameSrc]);
 
-  // Scroll handler
+  // Scroll handler — uses direct DOM manipulation to avoid React re-renders
   useEffect(() => {
     const handleScroll = () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
       rafRef.current = requestAnimationFrame(() => {
         const container = containerRef.current;
-        const canvas = canvasRef.current;
-        if (!container || !canvas) return;
+        if (!container) return;
 
         const rect = container.getBoundingClientRect();
         const containerHeight = container.offsetHeight;
@@ -116,19 +117,25 @@ export default function ScrollVideoPlayer({
           frameCount - 1
         );
 
-        // Hero text fades out in first 30% of scroll
-        const fadeProgress = Math.min(1, scrolled / 0.3);
-        setHeroOpacity(1 - fadeProgress);
+        // Hero text fades out in first 30% of scroll — direct DOM update
+        const heroOpacity = 1 - Math.min(1, scrolled / 0.3);
+        const overlay = heroOverlayRef.current;
+        if (overlay) {
+          overlay.style.opacity = String(heroOpacity);
+          // Hide scroll indicator when scrolled
+          const indicator = overlay.nextElementSibling as HTMLElement | null;
+          if (indicator) {
+            indicator.style.opacity = heroOpacity > 0.8 ? '1' : '0';
+          }
+        }
 
         // Draw frame if changed
         if (frameIndex !== currentFrameRef.current) {
           currentFrameRef.current = frameIndex;
           const img = imagesRef.current[frameIndex];
-          if (img) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0);
-            }
+          const ctx = ctxRef.current;
+          if (img && ctx) {
+            ctx.drawImage(img, 0, 0);
           }
         }
       });
@@ -182,33 +189,31 @@ export default function ScrollVideoPlayer({
           style={{ backgroundColor: `rgba(0,0,0,${overlayOpacity})` }}
         />
 
-        {/* Content overlay with fade */}
+        {/* Content overlay with fade — controlled via ref, no re-renders */}
         <div
+          ref={heroOverlayRef}
           className="absolute inset-0 flex items-center justify-center z-10"
-          style={{ opacity: heroOpacity }}
         >
           {children}
         </div>
 
         {/* Scroll indicator */}
-        {heroOpacity > 0.8 && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce text-white/70 flex flex-col items-center gap-1">
-            <span className="text-xs tracking-widest uppercase">Scroll</span>
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 14l-7 7m0 0l-7-7m7 7V3"
-              />
-            </svg>
-          </div>
-        )}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce text-white/70 flex flex-col items-center gap-1 transition-opacity duration-300">
+          <span className="text-xs tracking-widest uppercase">Scroll</span>
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 14l-7 7m0 0l-7-7m7 7V3"
+            />
+          </svg>
+        </div>
 
         {/* Test label */}
         <div className="absolute top-4 right-4 z-20 bg-yellow-500/90 text-black text-xs font-bold px-3 py-1 rounded-full">
