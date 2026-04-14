@@ -22,7 +22,9 @@ export default function ScrollVideoPlayer({
   const heroOverlayRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
   const currentFrameRef = useRef(0);
+  const targetFrameRef = useRef(0);
   const rafRef = useRef<number>(0);
+  const lerpRafRef = useRef<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -139,6 +141,35 @@ export default function ScrollVideoPlayer({
   useEffect(() => {
     if (prefersReducedMotion) return;
 
+    const lerp = () => {
+      const current = currentFrameRef.current;
+      const target = targetFrameRef.current;
+
+      if (current !== target) {
+        const diff = target - current;
+        const step = Math.abs(diff) < 2
+          ? (diff > 0 ? 1 : -1)
+          : Math.round(diff * 0.12);
+        const next = current + step;
+
+        currentFrameRef.current = next;
+        const img = imagesRef.current[next];
+        if (img) drawFrame(img);
+      }
+
+      lerpRafRef.current = requestAnimationFrame(lerp);
+    };
+
+    lerpRafRef.current = requestAnimationFrame(lerp);
+
+    return () => {
+      if (lerpRafRef.current) cancelAnimationFrame(lerpRafRef.current);
+    };
+  }, [prefersReducedMotion, drawFrame]);
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+
     const handleScroll = () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
@@ -155,10 +186,16 @@ export default function ScrollVideoPlayer({
           Math.min(1, -rect.top / (containerHeight - viewportHeight))
         );
 
+        const eased = scrolled < 0.5
+          ? 2 * scrolled * scrolled
+          : 1 - Math.pow(-2 * scrolled + 2, 2) / 2;
+
         const frameIndex = Math.min(
-          Math.floor(scrolled * (frameCount - 1)),
+          Math.floor(eased * (frameCount - 1)),
           frameCount - 1
         );
+
+        targetFrameRef.current = frameIndex;
 
         const heroOpacity = 1 - Math.min(1, scrolled / 0.25);
         const overlay = heroOverlayRef.current;
@@ -168,14 +205,6 @@ export default function ScrollVideoPlayer({
           const indicator = overlay.nextElementSibling as HTMLElement | null;
           if (indicator) {
             indicator.style.opacity = heroOpacity > 0.8 ? '1' : '0';
-          }
-        }
-
-        if (frameIndex !== currentFrameRef.current) {
-          currentFrameRef.current = frameIndex;
-          const img = imagesRef.current[frameIndex];
-          if (img) {
-            drawFrame(img);
           }
         }
       });
@@ -188,7 +217,7 @@ export default function ScrollVideoPlayer({
       window.removeEventListener('scroll', handleScroll);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [frameCount, prefersReducedMotion, drawFrame]);
+  }, [frameCount, prefersReducedMotion]);
 
   if (prefersReducedMotion) {
     return (
@@ -250,21 +279,12 @@ export default function ScrollVideoPlayer({
           {children}
         </div>
 
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce text-white/70 flex flex-col items-center gap-1 transition-opacity duration-300">
-          <span className="text-xs tracking-widest uppercase">Scroll</span>
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 14l-7 7m0 0l-7-7m7 7V3"
-            />
-          </svg>
+        {/* Scroll indicator — Apple-style mouse wheel */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 text-white/60 flex flex-col items-center gap-2 transition-opacity duration-500">
+          <div className="w-6 h-10 border-2 border-white/40 rounded-full flex items-start justify-center pt-2">
+            <div className="w-1 h-2.5 bg-white/70 rounded-full animate-scroll-dot" />
+          </div>
+          <span className="text-[10px] tracking-[0.25em] uppercase font-light">Scrollen</span>
         </div>
 
         {isLoading && (

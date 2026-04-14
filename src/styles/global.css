@@ -3,9 +3,6 @@
 @tailwind utilities;
 
 /* Custom styles */
-html {
-  scroll-behavior: smooth;
-}
 
 body {
   @apply antialiased;
@@ -66,4 +63,15 @@ button:active:not(:disabled) {
 
 .card-hover:hover {
   @apply shadow-lg -translate-y-0.5;
+}
+
+/* Scroll indicator dot animation */
+@keyframes scroll-dot {
+  0% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(8px); opacity: 0.3; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-scroll-dot {
+  animation: scroll-dot 1.8s ease-in-out infinite;
 }
