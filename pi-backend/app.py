@@ -56,6 +56,7 @@ except ImportError:
 
 # COO API Secret
 COO_API_SECRET = os.environ.get('COO_API_SECRET', '')
+INFINILOOP_API_KEY = os.environ.get('INFINILOOP_API_KEY', '')
 
 try:
     from invoice_service import create_invoice_from_booking, generate_invoice_pdf, get_site_config
@@ -6003,6 +6004,124 @@ def agent_actions_log_endpoint(user=None):
     conn.close()
 
     return jsonify({'actions': [dict(r) for r in rows]})
+
+
+# ─── InfiniLoop API (IT-Task Automation) ─────────────────────
+
+# Status mapping: Garten (deutsch) ↔ InfiniLoop (englisch)
+INFINILOOP_STATUS_TO_GARTEN = {
+    'in_progress': 'in_arbeit',
+    'resolved': 'erledigt',
+    'closed': 'cancelled',
+    'open': 'offen',
+}
+GARTEN_STATUS_TO_INFINILOOP = {
+    'offen': 'open',
+    'in_arbeit': 'in_progress',
+    'erledigt': 'resolved',
+    'done': 'resolved',
+    'cancelled': 'closed',
+}
+
+
+def require_infiniloop_key(f):
+    """Decorator to require InfiniLoop API key."""
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        key = request.headers.get('X-API-Key', '')
+        if not INFINILOOP_API_KEY or key != INFINILOOP_API_KEY:
+            return jsonify({'error': 'Unauthorized'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route('/api/infiniloop/tasks', methods=['GET'])
+@require_infiniloop_key
+def infiniloop_list_tasks():
+    """List open IT tasks for InfiniLoop agent."""
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT id, title, description, category, priority, status, created_at, due_date
+        FROM projects
+        WHERE category = 'it' AND status = 'offen'
+        ORDER BY
+            CASE priority WHEN 'kritisch' THEN 0 WHEN 'hoch' THEN 1 WHEN 'mittel' THEN 2 ELSE 3 END,
+            created_at ASC
+    ''').fetchall()
+    conn.close()
+
+    tasks = []
+    for row in rows:
+        r = dict(row)
+        tasks.append({
+            'id': str(r['id']),
+            'title': r['title'],
+            'description': r.get('description', ''),
+            'category': 'it',
+            'priority': r.get('priority', 'normal'),
+            'status': GARTEN_STATUS_TO_INFINILOOP.get(r['status'], 'open'),
+            'created_at': r.get('created_at', ''),
+            'due_date': r.get('due_date', ''),
+        })
+
+    return jsonify({'data': tasks})
+
+
+@app.route('/api/infiniloop/tasks/<int:task_id>', methods=['GET'])
+@require_infiniloop_key
+def infiniloop_get_task(task_id):
+    """Get single IT task for InfiniLoop agent."""
+    conn = get_db()
+    row = conn.execute('''
+        SELECT id, title, description, category, priority, status, created_at, due_date
+        FROM projects WHERE id = ? AND category = 'it'
+    ''', (task_id,)).fetchone()
+    conn.close()
+
+    if not row:
+        return jsonify({'error': 'Task nicht gefunden'}), 404
+
+    r = dict(row)
+    return jsonify({
+        'id': str(r['id']),
+        'title': r['title'],
+        'description': r.get('description', ''),
+        'category': 'it',
+        'priority': r.get('priority', 'normal'),
+        'status': GARTEN_STATUS_TO_INFINILOOP.get(r['status'], 'open'),
+        'created_at': r.get('created_at', ''),
+        'due_date': r.get('due_date', ''),
+    })
+
+
+@app.route('/api/infiniloop/tasks/<int:task_id>/status', methods=['PATCH'])
+@require_infiniloop_key
+def infiniloop_update_task_status(task_id):
+    """Update IT task status from InfiniLoop agent."""
+    data = request.get_json()
+    if not data or 'status' not in data:
+        return jsonify({'error': 'Status fehlt'}), 400
+
+    new_status_en = data['status']
+    new_status_de = INFINILOOP_STATUS_TO_GARTEN.get(new_status_en)
+    if not new_status_de:
+        return jsonify({'error': f'Ungültiger Status: {new_status_en}'}), 400
+
+    conn = get_db()
+    # Verify task exists and is an IT task
+    row = conn.execute('SELECT id, status FROM projects WHERE id = ? AND category = ?', (task_id, 'it')).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({'error': 'IT-Task nicht gefunden'}), 404
+
+    conn.execute(
+        'UPDATE projects SET status = ?, updated_at = ? WHERE id = ?',
+        (new_status_de, datetime.now().isoformat(), task_id)
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'status': new_status_en})
 
 
 # ─── Email Drafts API ────────────────────────────────────────
