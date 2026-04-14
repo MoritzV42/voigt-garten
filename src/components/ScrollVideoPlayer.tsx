@@ -34,8 +34,9 @@ export default function ScrollVideoPlayer({
     [framePath, format]
   );
 
-  // Load images progressively
+  // Load all images sequentially in order, as fast as possible
   useEffect(() => {
+    let cancelled = false;
     const images: (HTMLImageElement | null)[] = new Array(frameCount).fill(null);
     imagesRef.current = images;
 
@@ -43,10 +44,10 @@ export default function ScrollVideoPlayer({
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
+          if (cancelled) return resolve();
           images[index] = img;
           if (index === 0) {
             setIsLoading(false);
-            // Draw first frame immediately
             const canvas = canvasRef.current;
             if (canvas) {
               const ctx = canvas.getContext('2d');
@@ -65,17 +66,16 @@ export default function ScrollVideoPlayer({
       });
     };
 
-    // Load first 10 frames immediately
-    const loadInitialBatch = async () => {
+    const loadAll = async () => {
+      // Load first 10 frames immediately so scrolling starts fast
       const initialCount = Math.min(10, frameCount);
-      const promises = [];
-      for (let i = 0; i < initialCount; i++) {
-        promises.push(loadImage(i));
-      }
-      await Promise.all(promises);
+      const initial = [];
+      for (let i = 0; i < initialCount; i++) initial.push(loadImage(i));
+      await Promise.all(initial);
 
-      // Load rest in batches of 20
+      // Load remaining in batches of 20, in order, no pauses
       for (let batch = initialCount; batch < frameCount; batch += 20) {
+        if (cancelled) return;
         const batchEnd = Math.min(batch + 20, frameCount);
         const batchPromises = [];
         for (let i = batch; i < batchEnd; i++) {
@@ -85,9 +85,10 @@ export default function ScrollVideoPlayer({
       }
     };
 
-    loadInitialBatch();
+    loadAll();
 
     return () => {
+      cancelled = true;
       imagesRef.current = [];
     };
   }, [frameCount, getFrameSrc]);
@@ -151,13 +152,20 @@ export default function ScrollVideoPlayer({
           }
         }
 
-        // Draw frame if changed
+        // Draw frame if changed — find nearest loaded frame as fallback
         if (frameIndex !== currentFrameRef.current) {
           currentFrameRef.current = frameIndex;
-          const img = imagesRef.current[frameIndex];
           const ctx = ctxRef.current;
-          if (img && ctx) {
-            ctx.drawImage(img, 0, 0);
+          if (ctx) {
+            let img = imagesRef.current[frameIndex];
+            if (!img) {
+              // Find nearest loaded frame
+              for (let offset = 1; offset < 10; offset++) {
+                img = imagesRef.current[frameIndex - offset] ?? imagesRef.current[frameIndex + offset] ?? null;
+                if (img) break;
+              }
+            }
+            if (img) ctx.drawImage(img, 0, 0);
           }
         }
       });
@@ -237,10 +245,6 @@ export default function ScrollVideoPlayer({
           </svg>
         </div>
 
-        {/* Test label */}
-        <div className="absolute top-4 right-4 z-20 bg-yellow-500/90 text-black text-xs font-bold px-3 py-1 rounded-full">
-          TEST — Drohnenvideo Scroll-Animation
-        </div>
       </div>
     </div>
   );
