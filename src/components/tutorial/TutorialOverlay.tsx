@@ -19,6 +19,7 @@ export default function TutorialOverlay({
 }: TutorialOverlayProps) {
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [scrollLocked, setScrollLocked] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const step = steps[currentStep];
@@ -30,7 +31,24 @@ export default function TutorialOverlay({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Find and scroll to target element
+  // Lock/unlock scroll on body
+  useEffect(() => {
+    if (scrollLocked) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [scrollLocked]);
+
+  // Unlock scroll when tutorial ends
+  useEffect(() => {
+    if (!isActive) setScrollLocked(false);
+  }, [isActive]);
+
+  // Find and scroll to target element, then lock scroll
   useEffect(() => {
     if (!isActive || !step?.target) {
       setTargetRect(null);
@@ -42,24 +60,44 @@ export default function TutorialOverlay({
     const maxAttempts = 30;
     const selector = `[data-tutorial="${step.target}"]`;
 
+    // Temporarily unlock scroll so scrollIntoView works
+    setScrollLocked(false);
+
     function findTarget() {
       if (cancelled) return;
       const el = document.querySelector(selector);
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Scroll to top of page for hero-section (so sticky canvas is visible)
+        if (step.target === "hero-section") {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
         setTimeout(() => {
           if (cancelled) return;
           requestAnimationFrame(() => {
             if (cancelled) return;
-            const rect = el.getBoundingClientRect();
+            let rect = el.getBoundingClientRect();
+            // For very tall elements (like scroll-video containers),
+            // clamp the highlight to the visible viewport portion
+            if (rect.height > window.innerHeight) {
+              rect = new DOMRect(
+                rect.left,
+                Math.max(rect.top, 0),
+                rect.width,
+                Math.min(rect.height, window.innerHeight)
+              );
+            }
             if (rect.width > 0 && rect.height > 0) {
               setTargetRect(rect);
+              // Lock scroll after positioning
+              setScrollLocked(true);
             } else if (attempts < maxAttempts) {
               attempts++;
               setTimeout(findTarget, 100);
             }
           });
-        }, 350);
+        }, 400);
       } else if (attempts < maxAttempts) {
         attempts++;
         setTimeout(findTarget, 100);
@@ -68,28 +106,8 @@ export default function TutorialOverlay({
 
     findTarget();
 
-    let rafId: number | null = null;
-    function updateRect() {
-      if (cancelled) return;
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        if (cancelled) return;
-        const el = document.querySelector(selector);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) setTargetRect(rect);
-        }
-      });
-    }
-
-    window.addEventListener("scroll", updateRect, true);
-    window.addEventListener("resize", updateRect);
-
     return () => {
       cancelled = true;
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      window.removeEventListener("scroll", updateRect, true);
-      window.removeEventListener("resize", updateRect);
     };
   }, [isActive, step?.target, currentStep]);
 
@@ -105,11 +123,23 @@ export default function TutorialOverlay({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isActive, onNext, onPrev, onSkip]);
 
+  // Block scroll events on the backdrop (wheel, touch)
+  useEffect(() => {
+    if (!isActive || !scrollLocked) return;
+    const prevent = (e: Event) => e.preventDefault();
+    window.addEventListener("wheel", prevent, { passive: false });
+    window.addEventListener("touchmove", prevent, { passive: false });
+    return () => {
+      window.removeEventListener("wheel", prevent);
+      window.removeEventListener("touchmove", prevent);
+    };
+  }, [isActive, scrollLocked]);
+
   if (!isActive || !step || !targetRect) return null;
 
   const padding = 8;
   const spotlightStyle: React.CSSProperties = {
-    position: "absolute",
+    position: "fixed",
     top: targetRect.top - padding,
     left: targetRect.left - padding,
     width: targetRect.width + padding * 2,
