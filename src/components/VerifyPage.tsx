@@ -147,7 +147,7 @@ export default function VerifyPage() {
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
             <div className="text-5xl mb-4">🎉</div>
             <h2 className="text-xl font-display font-semibold text-garden-700 mb-2">
-              Willkommen im Refugium Etzdorf!
+              Willkommen im Refugium Heideland!
             </h2>
             <p className="text-gray-600 mb-4">
               Du wirst gleich weitergeleitet...

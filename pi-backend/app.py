@@ -894,8 +894,8 @@ def migrate_db():
                 # Dachmarke (Firmenname für Rechnungen, Impressum etc.)
                 ('company_name', 'Refugium Naturgärten'),
                 # Standort-Name für Website-Titel, Email-Header etc.
-                ('site_name', 'Refugium Etzdorf'),
-                ('site_title', 'Refugium Etzdorf – Refugium Naturgärten'),
+                ('site_name', 'Refugium Heideland'),
+                ('site_title', 'Refugium Heideland – Refugium Naturgärten'),
                 ('footer_text', 'Refugium Naturgärten · betrieben über Infinity Space'),
                 # Bankverbindung: Platzhalter, müssen im Admin-UI befüllt werden.
                 # HINWEIS: Diese Werte dürfen NICHT falsch sein – lieber Platzhalter
@@ -903,10 +903,10 @@ def migrate_db():
                 ('account_holder', '[PLACEHOLDER]'),
                 ('iban', '[PLACEHOLDER]'),
                 ('bic', '[PLACEHOLDER]'),
-                ('address', 'Etzdorf im Rosental, Sachsen'),
+                ('address', 'Heideland, Thüringen'),
                 ('tax_number', '[PLACEHOLDER]'),
                 ('email', 'garten@infinityspace42.de'),
-                ('support_email_display', 'Refugium Etzdorf <garten@infinityspace42.de>'),
+                ('support_email_display', 'Refugium Heideland <garten@infinityspace42.de>'),
                 ('phone', '01652593763'),
                 ('first_year_discount', '42'),
                 ('week_discount', '10'),

@@ -15,7 +15,7 @@ export default function TutorialWelcomeModal({ onStartTour, onDismiss }: Props) 
             <span className="text-3xl">🌳</span>
           </div>
           <h2 className="font-display text-2xl text-gray-900">
-            Willkommen im Refugium Etzdorf!
+            Willkommen im Refugium Heideland!
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-gray-500">
             Schön, dass du hier bist! Möchtest du eine kurze Tour durch die

@@ -117,15 +117,37 @@ export default function ScrollVideoPlayer({
           frameCount - 1
         );
 
-        // Hero text fades out in first 30% of scroll — direct DOM update
-        const heroOpacity = 1 - Math.min(1, scrolled / 0.3);
+        // Staggered scroll reveal + fade out — direct DOM updates
         const overlay = heroOverlayRef.current;
         if (overlay) {
-          overlay.style.opacity = String(heroOpacity);
+          // Elements with data-scroll-reveal="0" are always visible (title)
+          // Elements with data-scroll-reveal="1" fade in at 3-10% scroll
+          // Elements with data-scroll-reveal="2" fade in at 6-13% scroll
+          // Elements with data-scroll-reveal="3" fade in at 9-16% scroll
+          // Everything fades out together after 50% scroll
+          const fadeOut = scrolled > 0.5 ? 1 - Math.min(1, (scrolled - 0.5) / 0.2) : 1;
+
+          const reveals = overlay.querySelectorAll<HTMLElement>('[data-scroll-reveal]');
+          reveals.forEach((el) => {
+            const step = parseInt(el.dataset.scrollReveal || '0', 10);
+            let revealOpacity: number;
+            if (step === 0) {
+              revealOpacity = 1;
+            } else {
+              const start = step * 0.03;
+              const end = start + 0.07;
+              revealOpacity = Math.max(0, Math.min(1, (scrolled - start) / (end - start)));
+            }
+            el.style.opacity = String(revealOpacity * fadeOut);
+            el.style.transform = revealOpacity < 1 && step > 0
+              ? `translateY(${(1 - revealOpacity) * 15}px)`
+              : 'translateY(0)';
+          });
+
           // Hide scroll indicator when scrolled
           const indicator = overlay.nextElementSibling as HTMLElement | null;
           if (indicator) {
-            indicator.style.opacity = heroOpacity > 0.8 ? '1' : '0';
+            indicator.style.opacity = scrolled < 0.02 ? '1' : '0';
           }
         }
 

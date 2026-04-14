@@ -1,5 +1,5 @@
 """
-Email Service for Refugium Naturgärten (Standort Refugium Etzdorf)
+Email Service for Refugium Naturgärten (Standort Refugium Heideland)
 Uses Resend API for transactional emails.
 """
 
@@ -12,7 +12,7 @@ from datetime import datetime
 resend.api_key = os.environ.get('RESEND_API_KEY', '')
 
 # Sender & Admin
-FROM_EMAIL = "Refugium Etzdorf <garten@infinityspace42.de>"
+FROM_EMAIL = "Refugium Heideland <garten@infinityspace42.de>"
 ADMIN_EMAIL = "moritz.infinityspace42@gmail.com"
 
 DATA_DIR = os.environ.get('DATA_DIR', os.path.join(os.path.dirname(__file__)))
@@ -40,7 +40,7 @@ def _email_header(title: str) -> str:
 <div style="background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);border-radius:16px 16px 0 0;padding:40px 30px;text-align:center;">
 <div style="font-size:48px;margin-bottom:10px;">🌳</div>
 <h1 style="color:white;margin:0;font-family:'Playfair Display',Georgia,serif;font-size:28px;font-weight:600;">{title}</h1>
-<p style="color:#bbf7d0;margin:8px 0 0 0;font-size:14px;">Refugium Naturgärten · Standort Etzdorf</p>
+<p style="color:#bbf7d0;margin:8px 0 0 0;font-size:14px;">Refugium Naturgärten · Standort Heideland</p>
 </div>
 <div style="background:white;padding:40px 30px;border-radius:0 0 16px 16px;box-shadow:0 4px 6px rgba(0,0,0,0.05);">"""
 
@@ -48,7 +48,7 @@ def _email_header(title: str) -> str:
 def _email_footer() -> str:
     return """</div>
 <div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:12px;">
-<p style="margin:0;">Refugium Naturgärten &middot; Standort Refugium Etzdorf im Rosental</p>
+<p style="margin:0;">Refugium Naturgärten &middot; Standort Refugium Heideland</p>
 <p style="margin:4px 0 0 0;"><a href="https://garten.infinityspace42.de" style="color:#16a34a;text-decoration:none;">garten.infinityspace42.de</a></p>
 <p style="margin:8px 0 0 0;color:#cbd5e1;font-size:11px;">betrieben über Infinity Space</p>
 </div></div></body></html>"""
@@ -73,8 +73,8 @@ def send_booking_confirmation(booking_data: dict) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [booking_data['email']],
-            "subject": "[Refugium Etzdorf] Buchungsanfrage eingegangen",
-            "html": f"""{_email_header('Refugium Etzdorf')}
+            "subject": "[Refugium Heideland] Buchungsanfrage eingegangen",
+            "html": f"""{_email_header('Refugium Heideland')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Hallo {booking_data['name']}!
                 </h2>
@@ -114,7 +114,7 @@ def send_booking_confirmation(booking_data: dict) -> bool:
 
                 <h3 style="color:#1a1a1a;">Anfahrt</h3>
                 <p style="color:#4a5568;font-size:14px;">
-                    Der Garten liegt in <strong>Etzdorf im Rosental</strong>, Sachsen (Südhang).<br>
+                    Der Garten liegt in <strong>Heideland, Thüringen</strong> (Südhang).<br>
                     Genauere Anfahrtsbeschreibung und Zugangsinformationen erhältst du mit der Buchungsbestätigung nach Zahlungseingang.
                 </p>
 
@@ -124,7 +124,7 @@ def send_booking_confirmation(booking_data: dict) -> bool:
                 </p>
 
                 <p style="color:#666;margin-top:30px;">
-                    Liebe Grüße,<br/>dein Team vom Refugium Etzdorf
+                    Liebe Grüße,<br/>dein Team vom Refugium Heideland
                 </p>
             {_email_footer()}""",
             "reply_to": ADMIN_EMAIL
@@ -206,7 +206,7 @@ def send_activity_notification(activity_type: str, details: dict) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [ADMIN_EMAIL],
-            "subject": f"[Refugium Etzdorf] {title}",
+            "subject": f"[Refugium Heideland] {title}",
             "html": f"""
                 <div style="font-family: sans-serif;">
                     <h2>{title}</h2>
@@ -284,13 +284,13 @@ def send_magic_link_email(email: str, token: str, name: str = None) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [email],
-            "subject": "[Refugium Etzdorf] Dein Zugang",
-            "html": f"""{_email_header('Refugium Etzdorf')}
+            "subject": "[Refugium Heideland] Dein Zugang",
+            "html": f"""{_email_header('Refugium Heideland')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     {greeting}!
                 </h2>
                 <p style="color:#4a5568;line-height:1.6;margin:0 0 24px 0;">
-                    Klicke auf den Button unten, um deinen Zugang zum Refugium Etzdorf zu aktivieren.
+                    Klicke auf den Button unten, um deinen Zugang zum Refugium Heideland zu aktivieren.
                     Damit kannst du Aufenthalte buchen, die Galerie nutzen und vieles mehr.
                 </p>
 
@@ -336,14 +336,14 @@ def send_welcome_email(email: str, name: str) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [email],
-            "subject": "[Refugium Etzdorf] Willkommen!",
-            "html": f"""{_email_header('Willkommen im Refugium Etzdorf!')}
+            "subject": "[Refugium Heideland] Willkommen!",
+            "html": f"""{_email_header('Willkommen im Refugium Heideland!')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Hallo {name}!
                 </h2>
                 <p style="color:#4a5568;line-height:1.6;margin:0 0 24px 0;">
                     Dein Account wurde erfolgreich erstellt. Willkommen im
-                    Refugium Etzdorf im Rosental – einem Standort von Refugium Naturgärten.
+                    Refugium Heideland – einem Standort von Refugium Naturgärten.
                 </p>
 
                 <div style="margin:24px 0;">
@@ -400,8 +400,8 @@ def send_feedback_request(email: str, name: str, booking_id: int) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [email],
-            "subject": "[Refugium Etzdorf] Wie war dein Aufenthalt?",
-            "html": f"""{_email_header('Refugium Etzdorf')}
+            "subject": "[Refugium Heideland] Wie war dein Aufenthalt?",
+            "html": f"""{_email_header('Refugium Heideland')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Hallo {name}!
                 </h2>
@@ -446,8 +446,8 @@ def send_google_review_followup(email: str, name: str) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [email],
-            "subject": "[Refugium Etzdorf] Danke für dein Feedback!",
-            "html": f"""{_email_header('Refugium Etzdorf')}
+            "subject": "[Refugium Heideland] Danke für dein Feedback!",
+            "html": f"""{_email_header('Refugium Heideland')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Danke, {name}!
                 </h2>
@@ -505,14 +505,14 @@ def send_application_confirmation(app_data: dict) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [app_data['email']],
-            "subject": "[Refugium Etzdorf] Deine Bewerbung ist bei uns angekommen",
-            "html": f"""{_email_header('Refugium Etzdorf')}
+            "subject": "[Refugium Heideland] Deine Bewerbung ist bei uns angekommen",
+            "html": f"""{_email_header('Refugium Heideland')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Hallo {first_name}!
                 </h2>
                 <p style="color:#4a5568;line-height:1.6;margin:0 0 16px 0;">
                     Vielen Dank für deine Bewerbung auf die Position
-                    <strong>{position_label}</strong> in unserem Refugium in Etzdorf im Rosental.
+                    <strong>{position_label}</strong> in unserem Refugium in Heideland, Thüringen.
                 </p>
                 <p style="color:#4a5568;line-height:1.6;margin:0 0 24px 0;">
                     Wir haben deine Unterlagen erhalten und schauen sie uns in Ruhe an.
@@ -632,7 +632,7 @@ def _email_footer_refugium() -> str:
     return """</div>
 <div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:12px;">
 <p style="margin:0;">Refugium Naturgärten &middot; betrieben über Infinity Space</p>
-<p style="margin:4px 0 0 0;">Etzdorf im Rosental, Sachsen</p>
+<p style="margin:4px 0 0 0;">Heideland, Thüringen</p>
 <p style="margin:4px 0 0 0;"><a href="https://garten.infinityspace42.de" style="color:#16a34a;text-decoration:none;">garten.infinityspace42.de</a></p>
 </div></div></body></html>"""
 
@@ -653,8 +653,8 @@ def send_payment_reminder(booking_data: dict, days_since: int = 7) -> bool:
         params = {
             "from": FROM_EMAIL,
             "to": [booking_data['email']],
-            "subject": "[Refugium Etzdorf] Zahlungserinnerung",
-            "html": f"""{_email_header('Refugium Etzdorf')}
+            "subject": "[Refugium Heideland] Zahlungserinnerung",
+            "html": f"""{_email_header('Refugium Heideland')}
                 <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
                     Hallo {booking_data['name']}!
                 </h2>
@@ -676,7 +676,7 @@ def send_payment_reminder(booking_data: dict, days_since: int = 7) -> bool:
                 </p>
 
                 <p style="color:#666;margin-top:30px;">
-                    Liebe Grüße,<br/>dein Team vom Refugium Etzdorf
+                    Liebe Grüße,<br/>dein Team vom Refugium Heideland
                 </p>
             {_email_footer()}""",
             "reply_to": ADMIN_EMAIL

@@ -97,8 +97,8 @@ import Layout from '../layouts/Layout.astro';
           <p>
             <strong>${data.operator_name}</strong><br />
             ${data.operator_note}<br />
-            Refugium Etzdorf · Refugium Naturgärten<br />
-            Etzdorf im Rosental, Sachsen<br />
+            Refugium Heideland · Refugium Naturgärten<br />
+            Heideland, Thüringen<br />
             E-Mail: <a href="mailto:${data.email}" class="text-garden-600 hover:text-garden-700">${data.email}</a>
           </p>
           <p class="text-sm text-gray-600 italic mt-4">${data.notice}</p>
@@ -107,7 +107,7 @@ import Layout from '../layouts/Layout.astro';
       .catch(() => {
         if (block) {
           block.innerHTML =
-            '<p>Refugium Naturgärten · Standort Refugium Etzdorf · Etzdorf im Rosental, Sachsen · garten@infinityspace42.de</p>';
+            '<p>Refugium Naturgärten · Standort Refugium Heideland · Heideland, Thüringen · garten@infinityspace42.de</p>';
         }
       });
   </script>

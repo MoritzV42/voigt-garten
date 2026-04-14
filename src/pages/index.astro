@@ -3,10 +3,11 @@ import Layout from '../layouts/Layout.astro';
 import ScrollVideoPlayer from '../components/ScrollVideoPlayer';
 import ReviewsWidget from '../components/ReviewsWidget';
 
-// Der Garten wurde ca. 1975 gegründet
-const gartenGruendung = 1975;
+// Garten gebaut ca. 1975, seit 2004 in Familienbesitz
+const gartenBau = 1975;
+const familienbesitzSeit = 2004;
 const aktuellesJahr = new Date().getFullYear();
-const jahreGartenTradition = aktuellesJahr - gartenGruendung;
+const jahreFamilienbesitz = aktuellesJahr - familienbesitzSeit;
 ---
 
 <Layout title="Willkommen">
@@ -19,25 +20,28 @@ const jahreGartenTradition = aktuellesJahr - gartenGruendung;
     client:load
   >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <h1 class="font-display text-5xl md:text-6xl font-bold text-white mb-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
-        Willkommen im Refugium Etzdorf
+      <h1 data-scroll-reveal="0" class="font-display text-5xl md:text-6xl font-bold text-white mb-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+        Willkommen im Refugium Heideland
       </h1>
-      <p class="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-2 drop-shadow-lg">
+      <p data-scroll-reveal="1" class="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-2 drop-shadow-lg" style="opacity:0">
         Ein Standort von <span class="font-semibold">Refugium Naturgärten</span>.
       </p>
-      <p class="text-lg md:text-xl text-white/80 max-w-3xl mx-auto mb-4 italic drop-shadow-lg">
+      <p data-scroll-reveal="2" class="text-lg md:text-xl text-white/80 max-w-3xl mx-auto mb-4 italic drop-shadow-lg" style="opacity:0">
         Opa Konrads Erbe: 5.300m² Südhang, autark mit Solar und Brunnen,<br />
         verwurzelt in Tradition und mit leiser Technik ins Heute gebracht.
       </p>
-      <div class="flex flex-col sm:flex-row gap-3 justify-center text-sm md:text-base mb-8">
+      <div data-scroll-reveal="3" class="flex flex-col sm:flex-row gap-3 justify-center text-sm md:text-base mb-8" style="opacity:0">
         <span class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-white/20">
           <span>💻</span> <strong>Deep Work</strong> · Starlink · Stille · Fokus
         </span>
         <span class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-white/20">
           <span>🍇</span> <strong>Romantik</strong> · Weinberg · Südhang · Abgeschiedenheit
         </span>
+        <span class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-white/20">
+          <span>👨‍👩‍👧‍👦</span> <strong>Familien, Feiern & Feste</strong> · Platz · Natur · Erinnerungen
+        </span>
       </div>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <div data-scroll-reveal="3" class="flex flex-col sm:flex-row gap-4 justify-center" style="opacity:0">
         <a href="/buchen" class="bg-white hover:bg-garden-50 text-garden-800 px-8 py-4 rounded-lg font-semibold text-lg transition shadow-lg hover:shadow-xl">
           Jetzt Buchen
         </a>
@@ -89,9 +93,9 @@ const jahreGartenTradition = aktuellesJahr - gartenGruendung;
           <p class="text-sm text-garden-600 mt-1">Sonne den ganzen Tag</p>
         </div>
         <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
-          <div class="text-4xl font-bold text-garden-600 mb-2">{jahreGartenTradition}</div>
-          <h3 class="font-display text-lg font-semibold text-garden-800">Jahre Tradition</h3>
-          <p class="text-sm text-garden-600 mt-1">Seit Opa Konrad</p>
+          <div class="text-4xl font-bold text-garden-600 mb-2">{jahreFamilienbesitz}</div>
+          <h3 class="font-display text-lg font-semibold text-garden-800">Jahre Familienbesitz</h3>
+          <p class="text-sm text-garden-600 mt-1">Erbaut 1975 · Seit 2004 in der Familie</p>
         </div>
         <div class="bg-garden-50 rounded-xl p-6 text-center hover:shadow-lg transition">
           <div class="text-4xl mb-2">⚙️</div>

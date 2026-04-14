@@ -139,7 +139,7 @@ export default function Sidebar() {
               Refugium
             </div>
             <div className="text-[11px] font-medium tracking-wide text-garden-400">
-              Etzdorf
+              Heideland
             </div>
           </div>
         </a>

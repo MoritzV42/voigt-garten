@@ -84,8 +84,8 @@ def execute_tool(name, args, role='anonymous'):
 )
 def get_garden_info(args):
     return json.dumps({
-        'name': 'Refugium Etzdorf',
-        'location': 'Etzdorf im Rosental, Sachsen (Südhang)',
+        'name': 'Refugium Heideland',
+        'location': 'Heideland, Thüringen (Südhang)',
         'size': '5.300 m²',
         'buildings': [
             'Gartenhaus (Holz)',

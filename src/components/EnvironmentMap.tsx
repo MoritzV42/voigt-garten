@@ -10,7 +10,7 @@ interface POI {
   distance?: string;
 }
 
-// POIs in der Umgebung von Etzdorf/Heideland
+// POIs in der Umgebung von Heideland
 const POIS: POI[] = [
   // Restaurants
   {
@@ -116,7 +116,7 @@ const POIS: POI[] = [
   },
 ];
 
-// Garden location (Etzdorf im Rosental)
+// Garden location (Heideland)
 const GARDEN_LOCATION = {
   lat: 50.980431,
   lng: 11.952956,
@@ -197,7 +197,7 @@ export default function EnvironmentMap() {
       .addTo(map)
       .bindPopup(`
         <div style="text-align: center; padding: 10px; min-width: 180px;">
-          <strong style="font-size: 16px;">Refugium Etzdorf</strong><br>
+          <strong style="font-size: 16px;">Refugium Heideland</strong><br>
           <span style="color: #666; font-size: 13px;">Dein Ziel!</span><br><br>
           <a href="https://www.google.com/maps/dir/?api=1&destination=50.980431,11.952956"
              target="_blank"

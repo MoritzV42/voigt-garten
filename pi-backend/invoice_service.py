@@ -165,7 +165,7 @@ def generate_invoice_pdf(
     y = height - 25*mm
     for line in [
         config.get('company_name', 'Refugium Naturgärten'),
-        config.get('address', 'Etzdorf im Rosental'),
+        config.get('address', 'Heideland, Thüringen'),
         f"Tel: {config.get('phone', '')}",
         config.get('email', 'garten@infinityspace42.de'),
     ]:
