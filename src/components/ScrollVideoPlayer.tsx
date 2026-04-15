@@ -20,10 +20,13 @@ export default function ScrollVideoPlayer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const heroOverlayRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
   const currentFrameRef = useRef(0);
+  const lastDrawnFrameRef = useRef<number>(-1);
   const rafRef = useRef<number>(0);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const loadedCountRef = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const getFrameSrc = useCallback(
@@ -46,6 +49,15 @@ export default function ScrollVideoPlayer({
         img.onload = () => {
           if (cancelled) return resolve();
           images[index] = img;
+          loadedCountRef.current++;
+          const progress = loadedCountRef.current / frameCount;
+          const bar = progressBarRef.current;
+          if (bar) {
+            bar.style.width = `${progress * 100}%`;
+            if (progress >= 1) {
+              bar.style.opacity = '0';
+            }
+          }
           if (index === 0) {
             setIsLoading(false);
             const canvas = canvasRef.current;
@@ -152,20 +164,16 @@ export default function ScrollVideoPlayer({
           }
         }
 
-        // Draw frame if changed — find nearest loaded frame as fallback
+        // Draw frame if changed — keep last drawn frame if target not yet loaded
         if (frameIndex !== currentFrameRef.current) {
           currentFrameRef.current = frameIndex;
           const ctx = ctxRef.current;
           if (ctx) {
-            let img = imagesRef.current[frameIndex];
-            if (!img) {
-              // Find nearest loaded frame
-              for (let offset = 1; offset < 10; offset++) {
-                img = imagesRef.current[frameIndex - offset] ?? imagesRef.current[frameIndex + offset] ?? null;
-                if (img) break;
-              }
+            const img = imagesRef.current[frameIndex];
+            if (img) {
+              ctx.drawImage(img, 0, 0);
+              lastDrawnFrameRef.current = frameIndex;
             }
-            if (img) ctx.drawImage(img, 0, 0);
           }
         }
       });
@@ -225,6 +233,15 @@ export default function ScrollVideoPlayer({
           className="absolute inset-0 flex items-center justify-center z-10"
         >
           {children}
+        </div>
+
+        {/* Load progress bar */}
+        <div className="absolute bottom-0 left-0 w-full h-[2px] z-20">
+          <div
+            ref={progressBarRef}
+            className="h-full bg-white/50 transition-opacity duration-500"
+            style={{ width: '0%' }}
+          />
         </div>
 
         {/* Scroll indicator */}
