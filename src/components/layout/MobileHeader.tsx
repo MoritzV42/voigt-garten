@@ -46,7 +46,13 @@ export default function MobileHeader() {
       <div className="flex h-14 items-center justify-between px-4">
         {/* Logo Mark */}
         <a href="/" className="flex items-center gap-2">
-          <span className="text-2xl leading-none">🌳</span>
+          <img
+            src="/images/logo-mark.png"
+            alt="Refugium Heideland"
+            width={32}
+            height={32}
+            className="h-8 w-8"
+          />
           <span className="font-display text-base font-semibold text-garden-800">Refugium</span>
         </a>
 

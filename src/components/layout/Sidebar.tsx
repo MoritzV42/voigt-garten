@@ -133,7 +133,13 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="px-6 pt-7 pb-6">
         <a href="/" className="flex items-center gap-2.5">
-          <span className="text-2xl leading-none">🌳</span>
+          <img
+            src="/images/logo-mark-white.png"
+            alt="Refugium Heideland"
+            width={36}
+            height={36}
+            className="h-9 w-9 shrink-0"
+          />
           <div>
             <div className="font-display text-lg font-semibold tracking-tight text-white">
               Refugium
