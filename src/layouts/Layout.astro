@@ -3,6 +3,7 @@ import Sidebar from '../components/layout/Sidebar';
 import BottomNav from '../components/layout/BottomNav';
 import MobileHeader from '../components/layout/MobileHeader';
 import AppOverlays from '../components/AppOverlays';
+import BugReportModal from '../components/feedback/BugReportModal';
 
 interface Props {
   title: string;
@@ -104,6 +105,9 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
 
       <!-- Tutorial Overlays & AI Assistant -->
       <AppOverlays client:load />
+
+      <!-- Auto-Error-Reporter: Bug-Report-Modal (SOP v2.0) -->
+      <BugReportModal client:load />
     </div>
 
     <script>
@@ -114,6 +118,17 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
         });
       }
     </script>
+
+    <!-- Auto-Error-Reporter Config + Scripts -->
+    <script is:inline>
+      window.AutoErrorReporter = {
+        enabled: true,
+        openFeedbackModal: true,
+        skipEndpoints: ['/api/health', '/api/bugreport'],
+      };
+    </script>
+    <script src="/js/html2canvas.min.js" defer></script>
+    <script src="/js/auto-error-reporter.js" defer></script>
   </body>
 </html>
 

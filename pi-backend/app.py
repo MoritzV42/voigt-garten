@@ -6126,6 +6126,104 @@ def infiniloop_update_task_status(task_id):
     return jsonify({'success': True, 'status': new_status_en})
 
 
+# ─── Bug Report API (Auto-Error-Reporter → IT-Task) ──────────
+
+BUGREPORTS_DIR = os.path.join(DATA_DIR, 'bugreports')
+
+
+@app.route('/api/bugreport', methods=['POST'])
+@limiter.limit("5 per 5 minutes")
+def create_bugreport():
+    """Auto-Error-Reporter Endpoint.
+
+    Legt einen Task in projects (category='it') an, den der InfiniLoop-Agent
+    automatisch abarbeitet. Kein Auth — Gäste/Nicht-eingeloggte User sollen
+    melden können. Schutz: Rate-Limit (5/5min via flask-limiter) + Honeypot
+    + Payload-Limits + Content-Type-Whitelist für Screenshot.
+    """
+    # Payload-Limit: 5 MB bei Multipart, 100 KB bei JSON
+    if request.content_length:
+        is_multipart = (request.content_type or '').startswith('multipart/')
+        max_bytes = 5 * 1024 * 1024 if is_multipart else 100 * 1024
+        if request.content_length > max_bytes:
+            return jsonify({'error': 'Payload zu gross'}), 413
+
+    # Accept both FormData (mit Screenshot) und JSON
+    data = request.form if request.form else (request.get_json(silent=True) or {})
+
+    # Honeypot — Bots füllen versteckte Felder aus
+    if data.get('website'):
+        return jsonify({'error': 'Invalid'}), 400
+
+    title_suffix = (data.get('title') or 'Unbekannter Fehler').strip()[:120]
+    description = (data.get('description') or '').strip()[:8000]
+    page_url = (data.get('page_url') or '').strip()[:500]
+    user_agent = (data.get('user_agent') or request.headers.get('User-Agent', ''))[:500]
+
+    if len(description) < 10:
+        return jsonify({'error': 'Beschreibung zu kurz'}), 400
+
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '0.0.0.0').split(',')[0].strip()
+
+    # Optional: Screenshot-Upload
+    screenshot_relpath = None
+    screenshot = request.files.get('screenshot') if request.files else None
+    if screenshot and screenshot.filename:
+        if not (screenshot.mimetype or '').startswith('image/'):
+            return jsonify({'error': 'Screenshot muss Bild sein'}), 400
+        os.makedirs(BUGREPORTS_DIR, exist_ok=True)
+        ext = (screenshot.mimetype or 'image/png').split('/')[-1].replace('jpeg', 'jpg')
+        if ext not in ('png', 'jpg', 'gif', 'webp'):
+            ext = 'png'
+        fname = f"{uuid.uuid4()}.{ext}"
+        screenshot.save(os.path.join(BUGREPORTS_DIR, fname))
+        screenshot_relpath = f"/uploads/bugreports/{fname}"
+
+    full_description = (
+        f"**Gemeldet via Auto-Error-Reporter**\n\n"
+        f"**URL:** {page_url}\n"
+        f"**User-Agent:** {user_agent}\n"
+        f"**IP:** {ip}\n\n"
+        f"---\n\n"
+        f"{description}"
+    )
+    if screenshot_relpath:
+        full_description += f"\n\n**Screenshot:** {screenshot_relpath}"
+
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO projects (title, description, category, status, priority, created_by)
+        VALUES (?, ?, 'it', 'offen', 'mittel', 'auto-error-reporter')
+    ''', (f"Bug Meldung: {title_suffix}", full_description))
+    project_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+    # Junction-Table für category (konsistent mit create_project)
+    cat_row = conn.execute("SELECT id FROM categories WHERE name = 'it'").fetchone()
+    if cat_row:
+        conn.execute(
+            'INSERT OR IGNORE INTO project_categories (project_id, category_id) VALUES (?, ?)',
+            (project_id, cat_row['id'])
+        )
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'projectId': project_id}), 201
+
+
+@app.route('/uploads/bugreports/<path:filename>', methods=['GET'])
+@require_admin
+def serve_bugreport_screenshot(filename, user=None):
+    """Serve bug report screenshots (admin only, path-traversal safe)."""
+    target_path = os.path.join(BUGREPORTS_DIR, filename)
+    real_target = os.path.realpath(target_path)
+    real_base = os.path.realpath(BUGREPORTS_DIR)
+    if not (real_target == real_base or real_target.startswith(real_base + os.sep)):
+        return jsonify({'error': 'Ungültiger Dateipfad'}), 400
+    if not os.path.isfile(real_target):
+        return jsonify({'error': 'Datei nicht gefunden'}), 404
+    return send_file(real_target)
+
+
 # ─── Email Drafts API ────────────────────────────────────────
 
 @app.route('/api/admin/email-drafts', methods=['GET'])
