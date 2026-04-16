@@ -125,12 +125,17 @@ export default function ScrollVideoPlayer({
         // Staggered scroll reveal + fade out — direct DOM updates
         const overlay = heroOverlayRef.current;
         if (overlay) {
-          // Elements with data-scroll-reveal="0" are always visible (title)
-          // Elements with data-scroll-reveal="1" fade in at 3-10% scroll
-          // Elements with data-scroll-reveal="2" fade in at 6-13% scroll
-          // Elements with data-scroll-reveal="3" fade in at 9-16% scroll
-          // Everything fades out together after 50% scroll
-          const fadeOut = scrolled > 0.5 ? 1 - Math.min(1, (scrolled - 0.5) / 0.2) : 1;
+          // Step 0: always visible (title).
+          // Steps 1..N: fade in at step*STEP_SPACING, over STEP_WINDOW.
+          // Fade-out starts at FADE_OUT_START and finishes at FADE_OUT_END.
+          const STEP_SPACING = 0.10;
+          const STEP_WINDOW = 0.08;
+          const FADE_OUT_START = 0.78;
+          const FADE_OUT_END = 0.95;
+
+          const fadeOut = scrolled > FADE_OUT_START
+            ? 1 - Math.min(1, (scrolled - FADE_OUT_START) / (FADE_OUT_END - FADE_OUT_START))
+            : 1;
 
           const reveals = overlay.querySelectorAll<HTMLElement>('[data-scroll-reveal]');
           reveals.forEach((el) => {
@@ -139,8 +144,8 @@ export default function ScrollVideoPlayer({
             if (step === 0) {
               revealOpacity = 1;
             } else {
-              const start = step * 0.03;
-              const end = start + 0.07;
+              const start = step * STEP_SPACING;
+              const end = start + STEP_WINDOW;
               revealOpacity = Math.max(0, Math.min(1, (scrolled - start) / (end - start)));
             }
             el.style.opacity = String(revealOpacity * fadeOut);
