@@ -9,9 +9,8 @@ function NavIcon({ name, className }: { name: IconName; className?: string }) {
   return <Cmp className={className} aria-hidden="true" />;
 }
 
-export default function BottomNav() {
+export default function BottomNav({ pathname = "/" }: { pathname?: string }) {
   const [moreOpen, setMoreOpen] = useState(false);
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
 
   // Close drawer on Escape
   useEffect(() => {

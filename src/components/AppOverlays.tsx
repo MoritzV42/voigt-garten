@@ -12,16 +12,13 @@ import {
 const ONBOARDING_KEY = "garten-onboarding-done";
 const TOUR_STATE_KEY = "garten-tour-state";
 
-export default function AppOverlays() {
+export default function AppOverlays({ pathname = "/" }: { pathname?: string }) {
   // ─── Tutorial State ─────────────────────────────────────────
   const [showWelcome, setShowWelcome] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   const [tourSteps, setTourSteps] = useState<TourStep[]>([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
-
-  const pathname =
-    typeof window !== "undefined" ? window.location.pathname : "/";
 
   // Check if onboarding should be shown
   useEffect(() => {

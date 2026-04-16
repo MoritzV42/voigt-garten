@@ -12,6 +12,7 @@ interface Props {
 
 const { title, description = "Refugium Heideland – Naturgarten mit Übernachtungsmöglichkeit in Thüringen. 5.300m² Südhang, Solar-Autarkie, eigener Brunnen. Betrieben von Refugium Naturgärten." } = Astro.props;
 const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
+const pathname = Astro.url.pathname;
 ---
 
 <!doctype html>
@@ -69,7 +70,7 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
   <body class="min-h-screen bg-garden-50 font-sans text-gray-800">
     <div class="min-h-screen">
       <!-- Desktop Sidebar -->
-      <Sidebar client:load />
+      <Sidebar client:load pathname={pathname} />
 
       <!-- Mobile Header -->
       <MobileHeader client:load />
@@ -117,10 +118,10 @@ const canonicalUrl = `https://garten.infinityspace42.de${Astro.url.pathname}`;
       </main>
 
       <!-- Mobile Bottom Nav -->
-      <BottomNav client:load />
+      <BottomNav client:load pathname={pathname} />
 
       <!-- Tutorial Overlays & AI Assistant -->
-      <AppOverlays client:load />
+      <AppOverlays client:load pathname={pathname} />
 
       <!-- Auto-Error-Reporter: Bug-Report-Modal (SOP v2.0) -->
       <BugReportModal client:load />

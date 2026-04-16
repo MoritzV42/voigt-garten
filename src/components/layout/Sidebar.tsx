@@ -70,10 +70,9 @@ function SidebarSection({
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ pathname = "/" }: { pathname?: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [lang, setLang] = useState("de");
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
 
   useEffect(() => {
     const storedUser = localStorage.getItem("voigt-garten-user");
