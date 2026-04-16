@@ -1662,6 +1662,28 @@ def optimize_video(input_path, output_path):
 
 # ============ Static File Serving ============
 
+# Long-cache prefixes: hashed Astro assets + immutable image/video frames.
+# These are safe to cache aggressively because they either contain a content
+# hash in the filename (Astro) or are versioned by the deploy itself.
+_IMMUTABLE_PREFIXES = ('_astro/', 'images/scroll/', 'images/')
+_IMMUTABLE_EXTS = ('.webp', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico',
+                   '.woff', '.woff2', '.ttf', '.mp4', '.webm', '.js', '.css')
+
+
+def _apply_cache_headers(response, path: str):
+    """Set Cache-Control so Cloudflare caches static assets at the edge."""
+    lower = path.lower()
+    is_immutable_prefix = any(lower.startswith(p) for p in _IMMUTABLE_PREFIXES)
+    is_immutable_ext = lower.endswith(_IMMUTABLE_EXTS)
+    if is_immutable_prefix or is_immutable_ext:
+        # 1 year, immutable -> Cloudflare CDN caches at edge, no origin hits
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    elif lower.endswith('.html') or path == '' or path.endswith('/'):
+        # HTML must revalidate so deploys are picked up immediately
+        response.headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
+    return response
+
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 @limiter.exempt
@@ -1675,26 +1697,35 @@ def serve_static(path):
     static_path = os.path.join(STATIC_DIR, path)
 
     if os.path.isfile(static_path):
-        return send_from_directory(STATIC_DIR, path)
+        return _apply_cache_headers(send_from_directory(STATIC_DIR, path), path)
 
     # Try with .html extension (Astro pages)
     if not path.endswith('.html') and os.path.isfile(static_path + '.html'):
-        return send_from_directory(STATIC_DIR, path + '.html')
+        return _apply_cache_headers(
+            send_from_directory(STATIC_DIR, path + '.html'), path + '.html'
+        )
 
     # Check for index.html in directory
     index_path = os.path.join(static_path, 'index.html')
     if os.path.isdir(static_path) and os.path.isfile(index_path):
-        return send_from_directory(os.path.join(STATIC_DIR, path), 'index.html')
+        return _apply_cache_headers(
+            send_from_directory(os.path.join(STATIC_DIR, path), 'index.html'),
+            'index.html',
+        )
 
     # Fallback to index.html for SPA routing
-    return send_from_directory(STATIC_DIR, 'index.html')
+    return _apply_cache_headers(
+        send_from_directory(STATIC_DIR, 'index.html'), 'index.html'
+    )
 
 
 @app.route('/images/gallery/<path:filename>')
 @limiter.exempt
 def serve_gallery_image(filename):
     """Serve gallery images."""
-    return send_from_directory(GALLERY_DIR, filename)
+    return _apply_cache_headers(
+        send_from_directory(GALLERY_DIR, filename), filename
+    )
 
 
 # ============ API Routes ============
