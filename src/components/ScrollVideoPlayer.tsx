@@ -34,14 +34,18 @@ export default function ScrollVideoPlayer({
     [framePath, format]
   );
 
-  // Load all images sequentially in order, as fast as possible
+  // Load all images with bounded concurrency + retry on transient failures
   useEffect(() => {
     let cancelled = false;
     const images: (HTMLImageElement | null)[] = new Array(frameCount).fill(null);
     imagesRef.current = images;
 
-    const loadImage = (index: number): Promise<void> => {
+    const CONCURRENCY = 4;
+    const MAX_RETRIES = 2;
+
+    const loadImage = (index: number, attempt = 0): Promise<void> => {
       return new Promise((resolve) => {
+        if (cancelled) return resolve();
         const img = new Image();
         img.onload = () => {
           if (cancelled) return resolve();
@@ -61,28 +65,28 @@ export default function ScrollVideoPlayer({
           }
           resolve();
         };
-        img.onerror = () => resolve();
+        img.onerror = () => {
+          if (cancelled || attempt >= MAX_RETRIES) return resolve();
+          // Exponential backoff: 400ms, 1200ms
+          const delay = 400 * Math.pow(3, attempt);
+          setTimeout(() => loadImage(index, attempt + 1).then(resolve), delay);
+        };
         img.src = getFrameSrc(index);
       });
     };
 
     const loadAll = async () => {
-      // Load first 10 frames immediately so scrolling starts fast
-      const initialCount = Math.min(10, frameCount);
-      const initial = [];
-      for (let i = 0; i < initialCount; i++) initial.push(loadImage(i));
-      await Promise.all(initial);
-
-      // Load remaining in batches of 20, in order, no pauses
-      for (let batch = initialCount; batch < frameCount; batch += 20) {
-        if (cancelled) return;
-        const batchEnd = Math.min(batch + 20, frameCount);
-        const batchPromises = [];
-        for (let i = batch; i < batchEnd; i++) {
-          batchPromises.push(loadImage(i));
+      // Worker-pool pattern: bounded concurrency, in-order start
+      let next = 0;
+      const worker = async () => {
+        while (!cancelled) {
+          const i = next++;
+          if (i >= frameCount) return;
+          await loadImage(i);
         }
-        await Promise.all(batchPromises);
-      }
+      };
+      const workers = Array.from({ length: Math.min(CONCURRENCY, frameCount) }, worker);
+      await Promise.all(workers);
     };
 
     loadAll();
