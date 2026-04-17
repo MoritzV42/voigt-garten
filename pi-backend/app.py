@@ -117,6 +117,14 @@ os.makedirs(DATA_DIR, exist_ok=True)
 # Storage backend
 storage = LocalStorage(GALLERY_DIR)
 
+# Garten-Agent Blueprint
+try:
+    from agent_routes import agent_bp
+    app.register_blueprint(agent_bp)
+    print("[app] garten-agent blueprint registered")
+except ImportError as e:
+    print(f"[app] Warning: garten-agent not available: {e}")
+
 
 @app.after_request
 def add_security_headers(response):

@@ -752,3 +752,88 @@ def send_payment_reminder(booking_data: dict, days_since: int = 7) -> bool:
     except Exception as e:
         print(f"Email error: {e}")
         return False
+
+
+def send_provider_reminder(provider: dict, task: dict, days_overdue: int) -> bool:
+    """Stage-2 escalation email from Garten-Agent to an external service provider.
+
+    Template-based (no LLM content) to avoid prompt-injection risk.
+    Contact info (Konny's phone) is included for questions.
+    """
+    if not resend.api_key:
+        print("RESEND_API_KEY not configured — skipping provider reminder")
+        return False
+
+    if not provider.get('email'):
+        print(f"Provider #{provider.get('id')} has no email — skipping")
+        return False
+
+    title = task.get('title', 'Ohne Titel')
+    description = (task.get('description') or '').strip()
+    category = task.get('category', '—')
+    due_date = task.get('due_date', '—')
+    provider_name = provider.get('name', 'Dienstleister')
+
+    greeting = f"Hallo,"
+    if provider_name:
+        greeting = f"Hallo Team {provider_name},"
+
+    description_block = ''
+    if description:
+        safe_desc = description.replace('<', '&lt;').replace('>', '&gt;')
+        description_block = (
+            f"<p style='margin:0 0 8px 0;'><strong>Details:</strong></p>"
+            f"<div style='background:#f9fafb;border-left:3px solid #16a34a;"
+            f"padding:12px 16px;border-radius:6px;white-space:pre-wrap;"
+            f"color:#334155;font-size:14px;line-height:1.55;'>{safe_desc}</div>"
+        )
+
+    try:
+        params = {
+            "from": FROM_EMAIL,
+            "to": [provider['email']],
+            "subject": f"[Refugium Heideland] Erinnerung: {title} ({days_overdue} Tage überfällig)",
+            "reply_to": ADMIN_EMAIL,
+            "html": f"""{_email_header('Freundliche Erinnerung')}
+                <p style="color:#334155;font-size:16px;margin:0 0 18px 0;">{greeting}</p>
+                <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 18px 0;">
+                    wir möchten freundlich an eine offene Aufgabe im Refugium Heideland erinnern.
+                    Sie wurde in unserer Aufgabenliste als überfällig markiert und ist für die
+                    Kategorie <strong>{category}</strong> hinterlegt.
+                </p>
+
+                <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;
+                            padding:16px 20px;margin:0 0 18px 0;">
+                    <p style="margin:0 0 6px 0;color:#065f46;font-size:14px;"><strong>Aufgabe:</strong></p>
+                    <p style="margin:0 0 12px 0;color:#064e3b;font-size:16px;font-weight:600;">{title}</p>
+                    <p style="margin:0;color:#065f46;font-size:13px;">
+                        Fällig war: <strong>{due_date}</strong> &middot;
+                        Überfällig seit: <strong>{days_overdue} Tag{'' if days_overdue == 1 else 'en'}</strong>
+                    </p>
+                </div>
+
+                {description_block}
+
+                <p style="color:#334155;font-size:15px;line-height:1.6;margin:18px 0;">
+                    Bitte melden Sie sich kurz per Email-Antwort, ob und wann die Arbeiten ausgeführt
+                    werden können. Für Rückfragen erreichen Sie uns gerne:
+                </p>
+
+                <ul style="color:#334155;font-size:14px;line-height:1.8;padding-left:20px;margin:0 0 18px 0;">
+                    <li><strong>Telefon (Konny Voigt):</strong> 01652593763</li>
+                    <li><strong>Email (Antwort geht an Moritz):</strong> {ADMIN_EMAIL}</li>
+                </ul>
+
+                <p style="color:#64748b;font-size:13px;font-style:italic;margin:24px 0 0 0;">
+                    Diese Erinnerung wurde vom Eskalations-Agent des Refugium Heideland automatisch
+                    versendet. Bei Fragen antworten Sie einfach auf diese Email.
+                </p>
+            {_email_footer()}"""
+        }
+
+        resend.Emails.send(params)
+        print(f"Provider reminder sent to {provider['email']} for task {task.get('id')}")
+        return True
+    except Exception as e:
+        print(f"send_provider_reminder error: {e}")
+        return False
