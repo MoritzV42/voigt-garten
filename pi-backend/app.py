@@ -57,6 +57,7 @@ except ImportError:
 # COO API Secret
 COO_API_SECRET = os.environ.get('COO_API_SECRET', '')
 INFINILOOP_API_KEY = os.environ.get('INFINILOOP_API_KEY', '')
+INFINILOOP_URL = os.environ.get('INFINILOOP_URL', 'https://infiniloop.infinityspace42.de').rstrip('/')
 
 try:
     from invoice_service import create_invoice_from_booking, generate_invoice_pdf, get_site_config
@@ -4291,6 +4292,39 @@ def get_issues():
     })
 
 
+def notify_infiniloop_feedback_submitted(app_task_id, reporter_email, reporter_name, title, description, category=None, priority=None):
+    """Call InfiniLoop synchron nach Feedback-Submit. Gibt Flow-Hint zurueck oder None bei Fehler."""
+    if not INFINILOOP_API_KEY or not INFINILOOP_URL:
+        return None
+    try:
+        import requests as _req
+        payload = {
+            'project_key': 'voigt-garten',
+            'app_task_id': str(app_task_id),
+            'reporter_email': reporter_email or '',
+            'reporter_name': reporter_name or '',
+            'title': title or '',
+            'description': description or '',
+        }
+        if category:
+            payload['category'] = category
+        if priority:
+            payload['priority'] = priority
+        resp = _req.post(
+            f'{INFINILOOP_URL}/api/external/feedback_submitted',
+            headers={'X-API-Key': INFINILOOP_API_KEY, 'Content-Type': 'application/json'},
+            json=payload,
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            app.logger.warning('InfiniLoop feedback_submitted: HTTP %s', resp.status_code)
+            return None
+        return resp.json()
+    except Exception as e:
+        app.logger.warning('InfiniLoop feedback_submitted fehlgeschlagen: %s', e)
+        return None
+
+
 @app.route('/api/issues', methods=['POST'])
 @require_auth
 def create_issue(user):
@@ -4351,11 +4385,23 @@ def create_issue(user):
         'Foto': 'Ja' if photo_path else 'Nein'
     })
 
-    return jsonify({
+    infiniloop_hint = notify_infiniloop_feedback_submitted(
+        app_task_id=issue_id,
+        reporter_email=user.get('email') or '',
+        reporter_name=user.get('name') or '',
+        title=title,
+        description=description or '',
+        category=category,
+    )
+
+    response = {
         'success': True,
         'issueId': issue_id,
         'message': 'Meldung eingereicht. Ein Admin wird sich das ansehen.'
-    })
+    }
+    if infiniloop_hint:
+        response['infiniloop'] = infiniloop_hint
+    return jsonify(response)
 
 
 @app.route('/api/admin/issues', methods=['GET'])

@@ -1,5 +1,15 @@
 import { useState, useRef } from 'react';
 import { useCategories } from '../hooks/useCategories';
+import InfiniLoopFollowUp from './feedback/InfiniLoopFollowUp';
+
+interface InfiniLoopHint {
+  reporter_in_channel?: boolean;
+  ui_flow?: 'ack_only' | 'polling';
+  item_id?: number;
+  token?: string;
+  poll_interval_seconds?: number;
+  max_wait_seconds?: number;
+}
 
 interface Props {
   isOpen: boolean;
@@ -68,7 +78,10 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [infiniloopHint, setInfiniloopHint] = useState<InfiniLoopHint | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const INFINILOOP_URL = import.meta.env.PUBLIC_INFINILOOP_URL || 'https://infiniloop.infinityspace42.de';
 
   if (!isOpen) return null;
 
@@ -146,11 +159,17 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
       const data = await response.json();
 
       if (response.ok && data.success) {
+        const hint: InfiniLoopHint | null = data.infiniloop || null;
+        setInfiniloopHint(hint);
         setSuccess(true);
-        setTimeout(() => {
-          onSuccess();
-          resetForm();
-        }, 2000);
+        if (hint?.ui_flow === 'polling' && hint.item_id && hint.token) {
+          // Polling-UI bleibt offen, bis der User schliesst
+        } else {
+          setTimeout(() => {
+            onSuccess();
+            resetForm();
+          }, 2000);
+        }
       } else {
         setError(data.error || 'Fehler beim Senden der Meldung');
       }
@@ -170,6 +189,12 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
     setPhotoPreview(null);
     setError('');
     setSuccess(false);
+    setInfiniloopHint(null);
+  };
+
+  const handlePollingClose = () => {
+    onSuccess();
+    resetForm();
   };
 
   const handleClose = () => {
@@ -201,13 +226,24 @@ export default function IssueReportModal({ isOpen, onClose, onSuccess }: Props) 
 
         {/* Success State */}
         {success ? (
-          <div className="p-8 text-center">
-            <div className="text-6xl mb-4">✅</div>
-            <h3 className="text-xl font-bold text-green-700 mb-2">Vielen Dank!</h3>
-            <p className="text-gray-600">
-              Deine Meldung wurde eingereicht. Ein Admin wird sich das ansehen.
-            </p>
-          </div>
+          infiniloopHint?.ui_flow === 'polling' && infiniloopHint.item_id && infiniloopHint.token ? (
+            <InfiniLoopFollowUp
+              itemId={infiniloopHint.item_id}
+              token={infiniloopHint.token}
+              pollIntervalSeconds={infiniloopHint.poll_interval_seconds ?? 2}
+              maxWaitSeconds={infiniloopHint.max_wait_seconds ?? 30}
+              infiniloopUrl={INFINILOOP_URL}
+              onClose={handlePollingClose}
+            />
+          ) : (
+            <div className="p-8 text-center">
+              <div className="text-6xl mb-4">✅</div>
+              <h3 className="text-xl font-bold text-green-700 mb-2">Vielen Dank!</h3>
+              <p className="text-gray-600">
+                Deine Meldung wurde eingereicht. Ein Admin wird sich das ansehen.
+              </p>
+            </div>
+          )
         ) : (
           /* Form */
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
