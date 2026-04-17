@@ -760,14 +760,77 @@ PATCH /api/admin/email-drafts/:id         — Email-Draft bearbeiten
 - 34 benannte Areas passend zu den map_area_descriptions in der DB
 - Neue Areas: 4 Regentonnen (wasser), unterirdischer Wasserbehälter (wasser), Solaranlage mit Speicher (technik), unterer Kompost (natur)
 
+---
+
+## Garten-Agent (Eskalations-Worker, Phase 1 - April 2026)
+
+Autonomer 3-Stufen-Worker für operative Tasks (Kategorie `!= 'it'`). Läuft als Cron-Job alle 6 h im Voigt-Garten-Container und eskaliert überfällige Tasks bis hoch zur Slack-DM an Moritz. IT-Tasks ignoriert der Agent komplett — die laufen über InfiniLoop.
+
+### Eskalations-Stufen
+| Stufe | Standard | Notfall (`wasser`, `elektrik`) | Aktion |
+|---|---|---|---|
+| 1 | Tag 1 überfällig | Tag 0 | Slack-Channel-Post `@GartenBot` → `#refugium-heideland-management` |
+| 2 | Tag 3 überfällig | Tag 1 | Email an Dienstleister (`service_providers.default_for_categories` Match) via Resend |
+| 3 | Tag 7 überfällig | Tag 2 | Slack-DM an Moritz + optional Telegram-Fallback + Channel-Post |
+
+Stufe 4 (Voice-Call) ist Phase 2 — Task #101.
+
+### Neue Dateien (pi-backend/)
+| Datei | Zweck |
+|---|---|
+| `agent_worker.py` | Cron-Worker (alle 6 h), scannt überfällige Tasks, max 10 Aktionen/Run, ≤ 30 s |
+| `agent_escalation.py` | Stufen-Logik, Trigger-Berechnung, Rate-Limits (3 Mails/Provider/7 d) |
+| `slack_service.py` | `@GartenBot` WebClient via `GARTEN_BOT_TOKEN`, Channel+DM, Block-Kit |
+| `agent_routes.py` | Flask-Blueprint `/api/garten/agent/*` (alle `X-COO-Secret`-geschützt) |
+| `email_service.send_provider_reminder()` | Template-basierte Erinnerungs-Mail an Dienstleister |
+
+### API-Endpoints
+```
+GET  /api/garten/agent/status                     — Auth: X-COO-Secret
+POST /api/garten/agent/trigger-escalation/<task_id>
+POST /api/garten/agent/cancel-escalation/<escalation_id>
+POST /api/garten/agent/run-now                    — Manueller Worker-Run (Smoke-Test)
+```
+
+### Neue/erweiterte Tabellen
+- `service_providers` + `default_for_categories` (JSON-Array), `agent_disabled` (BOOLEAN), `last_agent_action_at`
+- `agent_escalation_state` (NEU) — aktive Eskalationen pro Task, mit `cancelled`-Flag
+- `projects` + `escalation_state` (TEXT), `last_escalation_at` (TIMESTAMP)
+- `agent_actions_log` (bestehend) — Audit-Log, `source='garten_agent'`
+
+### Neue Umgebungsvariablen (`.env` + `docker-compose.yml`)
+| Variable | Beschreibung |
+|---|---|
+| `GARTEN_BOT_TOKEN` | `xoxb-…` — Slack-App `GartenBot` (App-ID `A0ATNG554JJ`) |
+| `GARTEN_SLACK_CHANNEL_ID` | `C0AUAD6QY2U` (#refugium-heideland-management) |
+| `GARTEN_MORITZ_SLACK_USER_ID` | `U0ASYE5UPQR` (Moritz' Slack-User) |
+| `COO_API_SECRET` | Shared Secret für `/api/garten/agent/*` — muss in COO/Doku-App ebenfalls gesetzt sein |
+
+### Cron-Setup
+Crontab-Eintrag (alle 6 h, loggt nach `~/logs/garten-agent.log`):
+```
+0 */6 * * * docker exec voigt-garten-app python3 /app/pi-backend/agent_worker.py >> ~/logs/garten-agent.log 2>&1
+```
+
+### COO-Integration
+`Dokumentation/app/coo/prompts.py:get_voigt_garten_items()` liest `agent_escalation_state` direkt aus der Garten-DB und rendert den Block "🚨 Aktive Garten-Agent Eskalationen" im Tagesplan. Kein HTTP-Call nötig — die Doku-App hat bereits Read-Only-Zugriff auf `garten.db`.
+
+### Stolperfallen
+- **WAL-Mode + `immutable=1`:** Der COO liest die DB mit `file:...?mode=ro&immutable=1`. Neu geschriebene Daten werden erst nach WAL-Checkpoint sichtbar. Der Worker committed nach jeder Eskalation — reicht in der Praxis.
+- **Max 10 Eskalationen pro Run:** Runaway-Schutz. Bei grossem Backlog kommt der Agent über mehrere Runs durch.
+- **Rate-Limit Email:** Max 3 Auto-Mails pro Dienstleister pro 7 Tage — siehe `provider_rate_limit_ok()` in `agent_escalation.py`.
+- **Test-Provider:** Die drei Seed-Provider (Ranghofer/Mueller/Schmidt) haben erfundene Emails — müssen vor Produktiv-Einsatz durch echte Dienstleister-Daten ersetzt oder `agent_disabled=1` gesetzt werden.
+
+---
+
 ## Coding Standards
 
 **Deutsche Texte:** Alle User-facing Strings müssen korrekte Umlaute verwenden (ä, ö, ü, ß). Keine ae/oe/ue/ss-Ersetzungen. Ausnahme: DB-Slugs und Variablennamen dürfen ASCII bleiben.
 
 ---
 
-**Version:** 2.1
+**Version:** 2.2
 **Erstellt:** 2026-01-26
-**Aktualisiert:** 2026-04-04
+**Aktualisiert:** 2026-04-17
 **Hosting:** Hetzner CX32 Cloud Server (4 vCPU, 8GB RAM, 80GB SSD, Debian 13, Falkenstein) via Cloudflare Tunnel
 **SSH:** `ssh is42` (moritz@49.12.244.18)
