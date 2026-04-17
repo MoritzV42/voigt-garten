@@ -138,6 +138,70 @@ def send_booking_confirmation(booking_data: dict) -> bool:
         return False
 
 
+def send_infiniloop_magic_link(
+    email: str, token_url: str, task_title: str, task_description: str,
+) -> bool:
+    """Phase 13: Magic-Link fuer InfiniLoop-Web-Rueckfrage-UI.
+
+    InfiniLoop hat eine Task erkannt, kann aber den Reporter nicht im Slack-Channel
+    erreichen. Die App verschickt die Mail mit dem Magic-Link, damit der Reporter
+    Rueckfragen beantworten kann, ohne einen Slack-Account zu brauchen.
+    """
+    if not resend.api_key:
+        print("RESEND_API_KEY not configured – infiniloop magic link nicht verschickt")
+        return False
+
+    safe_title = (task_title or "Aufgabe")[:120]
+    safe_desc = (task_description or "")[:800]
+
+    try:
+        params = {
+            "from": FROM_EMAIL,
+            "to": [email],
+            "subject": f"Rueckfrage zu deiner Meldung: {safe_title}",
+            "html": f"""{_email_header('Rueckfrage zu deiner Meldung')}
+                <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:22px;">
+                    Rueckfrage zu deiner Meldung
+                </h2>
+                <p style="color:#4a5568;line-height:1.6;">
+                    Unser Assistent hat deine Meldung erhalten und moechte noch
+                    eine Rueckfrage klaeren, bevor wir weitermachen. Oeffne den
+                    Link unten, um kurz zu antworten. Kein Slack-Konto noetig.
+                </p>
+
+                <div style="background:#f0fdf4;padding:20px;border-radius:10px;margin:20px 0;border:1px solid #dcfce7;">
+                    <p style="margin:0 0 8px 0;"><strong>Deine Meldung:</strong></p>
+                    <p style="margin:0 0 8px 0;color:#1a1a1a;"><em>{safe_title}</em></p>
+                    {f'<p style="margin:0;color:#4a5568;font-size:13px;">{safe_desc}</p>' if safe_desc else ''}
+                </div>
+
+                <div style="text-align:center;margin:32px 0;">
+                    <a href="{token_url}"
+                       style="display:inline-block;padding:14px 28px;background:#16a34a;color:white;
+                              text-decoration:none;border-radius:8px;font-weight:600;">
+                        Rueckfrage beantworten
+                    </a>
+                </div>
+
+                <p style="color:#6b7280;font-size:13px;line-height:1.5;">
+                    Der Link ist 7 Tage gueltig. Falls du die Meldung nicht
+                    kennst, kannst du diese Mail ignorieren.
+                </p>
+
+                <p style="color:#666;margin-top:30px;">
+                    Liebe Gruesse,<br/>dein Team vom Refugium Heideland
+                </p>
+            {_email_footer()}""",
+            "reply_to": ADMIN_EMAIL,
+        }
+        resend.Emails.send(params)
+        print(f"InfiniLoop magic link sent to {email}")
+        return True
+    except Exception as e:
+        print(f"InfiniLoop magic link email error: {e}")
+        return False
+
+
 def send_booking_notification_to_admin(booking_data: dict) -> bool:
     """Notify admin about new booking."""
     if not resend.api_key:

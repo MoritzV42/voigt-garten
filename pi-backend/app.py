@@ -6157,6 +6157,36 @@ def infiniloop_update_task_status(task_id):
     return jsonify({'success': True, 'status': new_status_en})
 
 
+@app.route('/api/infiniloop/notify_reporter', methods=['POST'])
+@require_infiniloop_key
+def infiniloop_notify_reporter():
+    """Phase 13: Magic-Link-Mail an Reporter, der nicht im Slack-Channel ist.
+
+    InfiniLoop ruft diesen Endpoint, sobald eine Task fuer einen nicht im
+    Channel anwesenden Reporter angelegt wird. Wir verschicken die Mail mit
+    dem Rueckfrage-Link ueber unser eigenes Resend-Setup (eigenes Branding).
+    """
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip()
+    token_url = (data.get('token_url') or '').strip()
+    task_title = (data.get('task_title') or '').strip()
+    task_description = (data.get('task_description') or '').strip()
+
+    if not email or '@' not in email:
+        return jsonify({'error': 'email fehlt/ungueltig'}), 400
+    if not token_url or not token_url.startswith(('http://', 'https://')):
+        return jsonify({'error': 'token_url fehlt/ungueltig'}), 400
+
+    try:
+        from email_service import send_infiniloop_magic_link
+        sent = send_infiniloop_magic_link(email, token_url, task_title, task_description)
+    except Exception as e:
+        app.logger.exception('infiniloop_notify_reporter failed: %s', e)
+        return jsonify({'ok': False, 'error': 'send_failed'}), 500
+
+    return jsonify({'ok': True, 'sent': sent})
+
+
 # ─── Bug Report API (Auto-Error-Reporter → IT-Task) ──────────
 
 BUGREPORTS_DIR = os.path.join(DATA_DIR, 'bugreports')
