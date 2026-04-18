@@ -1022,6 +1022,15 @@ CREATE TABLE web_help_requests (
 )
 ```
 
+### Env-Vars (`docker-compose.yml`)
+| Variable | Default | Quelle |
+|---|---|---|
+| `OPENAI_API_KEY` | (required) | OpenRouter sk-or-v1-… (geteilt mit doku-app) |
+| `OPENAI_BASE_URL` | `https://openrouter.ai/api/v1` | — |
+| `OPENAI_MODEL` | `anthropic/claude-sonnet-4-6` | OpenRouter Model-ID |
+
+Ohne `OPENAI_API_KEY` läuft der Chat im Demo-Modus mit statischen Antworten.
+
 ### Sicherheit
 - Web-Chat selbst läuft NUR über OpenRouter (anonyme/öffentliche User dürfen Claude-CLI nicht direkt ansprechen). Claude-CLI wird ausschliesslich von Backend-Code getriggert.
 - Auth-Pflicht für Chat-Endpoint (kein anonymer Zugriff)
