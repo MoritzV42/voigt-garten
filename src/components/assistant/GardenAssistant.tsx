@@ -181,7 +181,13 @@ export default function GardenAssistant() {
 
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
-          throw new Error(json.error ?? `Fehler (${res.status})`);
+          const msg = json.detail || json.error || `Fehler (${res.status})`;
+          const err = new Error(`[chat ${res.status}] ${msg}`);
+          // @ts-expect-error attach response payload for error report
+          err.response = json;
+          // @ts-expect-error attach status for error report
+          err.status = res.status;
+          throw err;
         }
 
         const result: ChatResult = await res.json();
@@ -192,6 +198,11 @@ export default function GardenAssistant() {
 
         if (result.draft) setDraft(result.draft);
       } catch (err) {
+        // console.error triggert das globale Error-Reporting-System.
+        console.error("[GardenAssistant] chat failed:", err);
+        if (err && typeof err === "object" && "stack" in err) {
+          console.error((err as Error).stack);
+        }
         setError(err instanceof Error ? err.message : "Unbekannter Fehler.");
       } finally {
         setLoading(false);
@@ -246,6 +257,7 @@ export default function GardenAssistant() {
       ]);
       setDraft(null);
     } catch (err) {
+      console.error("[GardenAssistant] submitDraft failed:", err);
       setError(err instanceof Error ? err.message : "Einreichen fehlgeschlagen.");
     } finally {
       setSubmitting(false);
@@ -404,6 +416,7 @@ export default function GardenAssistant() {
                         }
                         setLoginSent(true);
                       } catch (err) {
+                        console.error("[GardenAssistant] magic-link failed:", err);
                         setError(
                           err instanceof Error
                             ? err.message

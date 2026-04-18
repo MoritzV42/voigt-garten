@@ -6112,11 +6112,31 @@ def assistant_chat():
             return jsonify(result)
 
     except Exception as e:
-        print(f"[assistant] Error: {e}")
+        import traceback
+        err_str = str(e)
+        tb_str = traceback.format_exc()
+        print(f"[assistant] Error: {err_str}\n{tb_str}")
+        try:
+            log_conn = get_db()
+            log_conn.execute(
+                "INSERT INTO agent_actions_log (action_type, source, user_id, description, details, success, created_at) "
+                "VALUES ('chat_error', 'chat_widget', ?, ?, ?, 0, ?)",
+                (user.get('id') if user else None,
+                 f"Chat error ({user_role}): {err_str[:300]}",
+                 json.dumps({"error": err_str[:1000], "role": user_role},
+                            ensure_ascii=False),
+                 datetime.now().isoformat()),
+            )
+            log_conn.commit()
+            log_conn.close()
+        except Exception:
+            pass
         return jsonify({
-            'intent': 'question',
-            'answer': 'Entschuldigung, es gab einen technischen Fehler. Bitte versuche es erneut.'
-        })
+            'error': 'Chat-Backend-Fehler',
+            'detail': err_str[:400],
+            'hint': ('Bitte pruefe die OpenRouter-Konfiguration (OPENAI_API_KEY, '
+                     'OPENAI_MODEL) und versuche es erneut.'),
+        }), 502
 
 
 # ─── Agent API (COO + CLI-Agent) ─────────────────────────────
