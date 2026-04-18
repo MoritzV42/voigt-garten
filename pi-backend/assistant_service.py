@@ -311,7 +311,8 @@ def openai_chat(messages, tools=None):
 
 # ─── Process Message ────────────────────────────────────────
 
-def process_message(user_message, context_messages=None, user_role='anonymous', user_email=None):
+def process_message(user_message, context_messages=None, user_role='anonymous',
+                    user_email=None, user_name=None):
     """Process a user message and return an assistant response.
 
     Args:
@@ -319,6 +320,7 @@ def process_message(user_message, context_messages=None, user_role='anonymous', 
         context_messages: Previous conversation messages
         user_role: 'anonymous', 'guest', or 'admin'
         user_email: User's email (for guest-specific queries)
+        user_name: User's display name (passed to tools as _user_name)
     """
 
     if is_mock_mode():
@@ -372,6 +374,10 @@ def process_message(user_message, context_messages=None, user_role='anonymous', 
                     # Pass user context for role-aware tools
                     if user_email:
                         args['_user_email'] = user_email
+                    if user_name:
+                        args['_user_name'] = user_name
+                    if context_messages:
+                        args['_chat_context'] = list(context_messages)
                     tool_result = execute_tool(tool_name, args, role=user_role)
                 else:
                     tool_result = execute_tool_call(tool_name, args)

@@ -1352,6 +1352,27 @@ def migrate_db():
         )
     ''')
 
+    # F.5 Web-Chat Hilfe-Anfragen (Customer-Support-Eskalation)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS web_help_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT NOT NULL,
+            user_name TEXT,
+            user_phone TEXT,
+            topic TEXT,
+            urgency TEXT DEFAULT 'normal',
+            chat_context_json TEXT,
+            status TEXT DEFAULT 'pending',
+            email_draft_id INTEGER,
+            slack_card_channel TEXT,
+            slack_card_ts TEXT,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            analyzed_at TEXT,
+            decided_at TEXT,
+            decided_by TEXT
+        )
+    ''')
+
     # Indices für Agent-Tabellen
     conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_actions_type ON agent_actions_log(action_type)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_actions_source ON agent_actions_log(source)")
@@ -1360,6 +1381,8 @@ def migrate_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_conversations_session ON agent_conversations(session_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_messages_conv ON agent_messages(conversation_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_pending_status ON agent_pending_actions(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_web_help_status ON web_help_requests(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_web_help_user_email ON web_help_requests(user_email)")
     conn.commit()
 
     # Service-Provider Erweiterungen
@@ -6023,7 +6046,12 @@ def _get_assistant_rate_limit():
 @app.route('/api/assistant/chat', methods=['POST'])
 @limiter.limit(_get_assistant_rate_limit)
 def assistant_chat():
-    """AI assistant chat endpoint with role-based tools."""
+    """AI assistant chat endpoint with role-based tools.
+
+    F.5: Auth ist jetzt Pflicht — anonyme Nutzer bekommen 401. Grund: Wir
+    wollen bei einer Hilfe-Anfrage immer eine bestaetigte Email-Adresse
+    haben, damit Moritz antworten kann.
+    """
     if not ASSISTANT_AVAILABLE:
         return jsonify({'error': 'Assistant nicht verfügbar'}), 503
 
@@ -6035,16 +6063,15 @@ def assistant_chat():
     mode = data.get('mode')
     draft = data.get('draft')
 
-    # Determine user role from JWT
     user = get_current_user()
-    if user and user.get('role') == 'admin':
-        user_role = 'admin'
-    elif user:
-        user_role = 'guest'
-    else:
-        user_role = 'anonymous'
+    if not user:
+        return jsonify({
+            'error': 'Bitte logge dich ein, um den Chat zu nutzen.',
+            'requires_login': True,
+        }), 401
 
-    user_email = user.get('email') if user else None
+    user_role = 'admin' if user.get('role') == 'admin' else 'guest'
+    user_email = user.get('email')
 
     try:
         if mode == 'refine' and draft:
@@ -6061,7 +6088,8 @@ def assistant_chat():
                 message,
                 context_messages=context if context else None,
                 user_role=user_role,
-                user_email=user_email
+                user_email=user_email,
+                user_name=user.get('name') if user else None,
             )
 
             # Log to agent_actions_log

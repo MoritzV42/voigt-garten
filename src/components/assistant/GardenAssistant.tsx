@@ -52,6 +52,9 @@ export default function GardenAssistant() {
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginSent, setLoginSent] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -325,6 +328,85 @@ export default function GardenAssistant() {
               </div>
             </div>
 
+            {/* Login-Gate (F.5) — Chat ist eingeloggten Nutzern vorbehalten */}
+            {userRole === "anonymous" ? (
+              <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col items-center justify-center text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-garden-50">
+                  <span className="text-3xl">🔐</span>
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-2">
+                  Chat nur für eingeloggte Nutzer
+                </h3>
+                <p className="text-sm text-gray-600 mb-5 max-w-[280px]">
+                  Damit Moritz dich bei Bedarf erreichen kann, brauchst du einen
+                  Magic-Link zum Einloggen.
+                </p>
+                {loginSent ? (
+                  <div className="rounded-xl border border-garden-200 bg-garden-50 px-4 py-3 text-sm text-garden-800 max-w-[280px]">
+                    Wir haben dir einen Login-Link an{" "}
+                    <strong>{loginEmail}</strong> gesendet. Bitte schaue in deine
+                    Inbox (auch Spam) und klicke den Link.
+                  </div>
+                ) : (
+                  <form
+                    className="w-full max-w-[280px] flex flex-col gap-2"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!loginEmail.trim()) return;
+                      setLoginLoading(true);
+                      setError(null);
+                      try {
+                        const res = await fetch(
+                          `${API_URL}/api/auth/request-magic-link`,
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: loginEmail.trim() }),
+                          }
+                        );
+                        if (!res.ok) {
+                          const json = await res.json().catch(() => ({}));
+                          throw new Error(
+                            json.error ?? `Fehler (${res.status})`
+                          );
+                        }
+                        setLoginSent(true);
+                      } catch (err) {
+                        setError(
+                          err instanceof Error
+                            ? err.message
+                            : "Magic-Link konnte nicht gesendet werden."
+                        );
+                      } finally {
+                        setLoginLoading(false);
+                      }
+                    }}
+                  >
+                    <input
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      placeholder="deine@email.de"
+                      disabled={loginLoading}
+                      className="rounded-xl border border-garden-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-garden-500 focus:outline-none focus:ring-2 focus:ring-garden-500/40 disabled:opacity-50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={loginLoading || !loginEmail.trim()}
+                      className="rounded-xl bg-garden-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-garden-700 disabled:opacity-50"
+                    >
+                      {loginLoading ? "Sende ..." : "Magic-Link senden"}
+                    </button>
+                    {error && (
+                      <p className="text-xs text-red-600 mt-1">{error}</p>
+                    )}
+                  </form>
+                )}
+              </div>
+            ) : (
+            <>
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               {messages.length === 0 && !draft && (
@@ -494,6 +576,8 @@ export default function GardenAssistant() {
                 </button>
               </form>
             </div>
+            </>
+            )}
           </div>
         </div>
       )}

@@ -19,6 +19,30 @@ DATA_DIR = os.environ.get('DATA_DIR', os.path.join(os.path.dirname(__file__)))
 DB_PATH = os.path.join(DATA_DIR, 'garten.db')
 
 
+def send_email_via_resend(to: str, subject: str, html: str,
+                          text: str | None = None,
+                          reply_to: str | None = None) -> bool:
+    """Generic Resend wrapper used by web_help_service (F.5)."""
+    if not resend.api_key:
+        print("RESEND_API_KEY not configured")
+        return False
+    try:
+        params = {
+            "from": FROM_EMAIL,
+            "to": [to],
+            "subject": subject,
+            "html": html,
+            "reply_to": reply_to or ADMIN_EMAIL,
+        }
+        if text:
+            params["text"] = text
+        resend.Emails.send(params)
+        return True
+    except Exception as e:
+        print(f"send_email_via_resend error: {e}")
+        return False
+
+
 def _get_site_config() -> dict:
     """Get site configuration from DB."""
     try:

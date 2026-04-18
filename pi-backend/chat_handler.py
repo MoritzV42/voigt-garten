@@ -200,6 +200,34 @@ def _process_mention(event: dict) -> None:
     except Exception:
         pass
 
+    # F.5: Mention im Email-Approval-Thread → refine_email statt normaler Chat
+    if thread_ts:
+        try:
+            import web_help_service
+            help_req = web_help_service.get_request_by_thread(channel, thread_ts)
+        except Exception as e:
+            print(f"[chat_handler] web_help lookup failed: {e}")
+            help_req = None
+        if help_req:
+            result = web_help_service.refine_email(
+                help_req["id"], cleaned_text, user_id)
+            if result.get("ok"):
+                _reply(channel, thread_ts,
+                       f":pencil2: Entwurf ueberarbeitet — neue Karte folgt. "
+                       f"(Subject: {result.get('subject', '?')})")
+            else:
+                _reply(channel, thread_ts,
+                       f":warning: Refine fehlgeschlagen: `{result.get('error', '?')}`")
+            _log_chat_action(
+                "web_help_refine",
+                f"Refine for help_request #{help_req['id']}",
+                {"user_id": user_id, "request_id": help_req["id"],
+                 "ok": result.get("ok"),
+                 "error": result.get("error")},
+                success=bool(result.get("ok")),
+            )
+            return
+
     scope_label, ctx_block = chat_context.fetch_context(channel, thread_ts, bot_id)
 
     conn = _db()

@@ -962,8 +962,78 @@ Dockerfile installiert nun Node.js 20 + `@anthropic-ai/claude-code` global (Imag
 ### API-Endpoints
 ```
 POST /api/garten/agent/slack-events          (Slack-signed, kein X-COO-Secret)
-POST /api/garten/slack/interactivity         (bestehend, F.4 + F.3 share)
+POST /api/garten/slack/interactivity         (bestehend, F.4 + F.3 + F.5 share)
 ```
+
+---
+
+## F.5 Web-Chat-Eskalation (Customer-Support, April 2026)
+
+Der Web-Chat (`GardenAssistant.tsx`) bleibt OpenRouter-basiert (anonyme/eingeloggte Nutzer, kostenguenstig), aber kann eine **Hilfe-Anfrage** an Moritz eskalieren. Daraufhin analysiert Claude-CLI im Hintergrund den ganzen Chatverlauf und postet einen Email-Entwurf als Slack-Approval-Card. Moritz kann mit `@GartenBot` im Approval-Thread Aenderungen verlangen, dann Email senden via Button.
+
+### Auth-Pflicht
+`/api/assistant/chat` returns **401** ohne JWT-Token. Anonyme Web-Besucher sehen im Widget einen Login-Block (Magic-Link-Form). Damit hat Moritz immer eine bestaetigte Email-Adresse zum Antworten.
+
+### Komponenten
+| Datei | Zweck |
+|---|---|
+| `pi-backend/web_help_service.py` | create_help_request, _background_analyze (Claude-CLI), post_email_approval_card, send_email, reject_request, refine_email |
+| `pi-backend/agent_tools.py::request_human_help` | Tool, das der OpenRouter-Bot ruft. Args: `topic`, `urgency`, `phone?`. Email kommt aus `_user_email`. |
+| `pi-backend/email_service.py::send_email_via_resend` | Generic Resend-Wrapper |
+| `pi-backend/slack_interactivity.py` | Buttons `web_help_send/reject/edit_hint:<request_id>` |
+| `pi-backend/chat_handler.py` | Mention im Approval-Thread → `web_help_service.refine_email()` (statt normalem Chat) |
+| `src/components/assistant/GardenAssistant.tsx` | Login-Gate: Anonyme sehen Magic-Link-Form, eingeloggte normales Chat-UI |
+
+### Datenfluss
+```
+[Web-User eingeloggt] → /api/assistant/chat → OpenRouter
+   ↳ Tool request_human_help(topic, urgency)
+        ↓ synchron
+   1. INSERT web_help_requests (status='pending')
+   2. Slack-Vorab-Notiz an #refugium-heideland-management
+   3. Background-Thread: Claude-CLI analyze
+   4. Tool returns: "Moritz wurde benachrichtigt..."
+        ↓ async (5–30s)
+   Claude-CLI erstellt Email-Draft → INSERT email_drafts
+   → Slack-Approval-Card mit Subject+Body+Buttons (Senden / Im Thread bearbeiten / Verwerfen)
+        ↓ Moritz Optionen
+   A) Klick "Senden" → web_help_service.send_email() → Resend → Card ✅
+   B) Klick "Im Thread bearbeiten" → ephemeral Hint → Moritz: @GartenBot mach freundlicher
+       → chat_handler erkennt Approval-Thread → web_help_service.refine_email()
+       → Claude-CLI ueberarbeitet → neue Card im selben Thread
+   C) Klick "Verwerfen" → status=rejected, kein Email
+```
+
+### Neue DB-Tabelle
+```sql
+CREATE TABLE web_help_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_email TEXT NOT NULL,
+    user_name TEXT,
+    user_phone TEXT,
+    topic TEXT,
+    urgency TEXT DEFAULT 'normal',
+    chat_context_json TEXT,
+    status TEXT DEFAULT 'pending',  -- pending, analyzed, sent, rejected
+    email_draft_id INTEGER,
+    slack_card_channel TEXT,
+    slack_card_ts TEXT,
+    created_at TEXT, analyzed_at TEXT, decided_at TEXT, decided_by TEXT
+)
+```
+
+### Sicherheit
+- Web-Chat selbst läuft NUR über OpenRouter (anonyme/öffentliche User dürfen Claude-CLI nicht direkt ansprechen). Claude-CLI wird ausschliesslich von Backend-Code getriggert.
+- Auth-Pflicht für Chat-Endpoint (kein anonymer Zugriff)
+- `request_human_help` ist `role_required='guest'` (eingeloggt)
+- Chat-Context in DB wird beim CLI-Call durch `injection_guard.sanitize_for_agent()` gesäubert (gleicher Pfad wie F.3)
+- Email-Versand erst NACH Slack-Button-Klick von Moritz — kein Auto-Send
+- Refine-Funktion ist ebenfalls auf Whitelist `GARTEN_MORITZ_SLACK_USER_ID` beschraenkt (kommt aus chat_handler)
+
+### Stolperfallen
+- Wenn Claude-CLI down ist, bleibt `web_help_request.status='pending'` und es kommt eine Slack-Failure-Notiz. Moritz muss manuell antworten oder `/api/garten/agent/run-now` triggern.
+- `email_drafts.notes` enthaelt `web_help_request_id=X` — Verknuepfung in beide Richtungen ueber `web_help_requests.email_draft_id` + diesen Tag.
+- Wenn Moritz im Thread mit `@GartenBot` ohne Aenderungs-Hinweis fragt (z.B. "warum ist das so?"), interpretiert refine_email das trotzdem als Edit-Anweisung — Edge-Case, am besten dann direkt "Sende so" oder im Thread konkret formulieren.
 
 ---
 
@@ -973,8 +1043,8 @@ POST /api/garten/slack/interactivity         (bestehend, F.4 + F.3 share)
 
 ---
 
-**Version:** 2.4
+**Version:** 2.5
 **Erstellt:** 2026-01-26
-**Aktualisiert:** 2026-04-18 (F.3 Chat-Layer)
+**Aktualisiert:** 2026-04-18 (F.3 Chat-Layer + F.5 Web-Chat-Eskalation)
 **Hosting:** Hetzner CX32 Cloud Server (4 vCPU, 8GB RAM, 80GB SSD, Debian 13, Falkenstein) via Cloudflare Tunnel
 **SSH:** `ssh is42` (moritz@49.12.244.18)

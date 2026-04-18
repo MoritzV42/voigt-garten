@@ -124,6 +124,62 @@ def slack_interactivity():
         _update_card(response_url, text, original_blocks)
         return ('', 200)
 
+    # ============ F.5: Web-Help Email-Approval ============
+    if verb in ('web_help_send', 'web_help_reject', 'web_help_edit_hint'):
+        try:
+            request_id = int(image_id)
+        except (TypeError, ValueError):
+            _update_card(response_url, ":warning: Ungültige Request-ID.", original_blocks)
+            return ('', 200)
+
+        import web_help_service
+
+        if verb == 'web_help_send':
+            result = web_help_service.send_email(request_id, user_id)
+            if result.get('ok'):
+                _update_card(
+                    response_url,
+                    (f":white_check_mark: Email an *{result.get('recipient')}* "
+                     f"gesendet von <@{user_id}> (Subject: {result.get('subject')})"),
+                    original_blocks,
+                )
+            else:
+                _update_card(
+                    response_url,
+                    f":warning: Versand fehlgeschlagen — `{result.get('error', '?')}`",
+                    original_blocks,
+                )
+            return ('', 200)
+
+        if verb == 'web_help_reject':
+            result = web_help_service.reject_request(request_id, user_id)
+            if result.get('ok'):
+                _update_card(
+                    response_url,
+                    f":no_entry_sign: Hilfe-Anfrage #{request_id} verworfen von <@{user_id}>.",
+                    original_blocks,
+                )
+            else:
+                _update_card(
+                    response_url,
+                    f":warning: Verwerfen fehlgeschlagen — `{result.get('error', '?')}`",
+                    original_blocks,
+                )
+            return ('', 200)
+
+        if verb == 'web_help_edit_hint':
+            try:
+                requests.post(response_url, json={
+                    "response_type": "ephemeral",
+                    "replace_original": False,
+                    "text": ("Antworte einfach mit `@GartenBot <deine Aenderung>` "
+                             "in diesem Thread — der Bot ueberarbeitet den Entwurf "
+                             "und postet eine neue Karte."),
+                }, timeout=3)
+            except Exception:
+                pass
+            return ('', 200)
+
     # ============ F.3: Garten-Agent Approval-Gate ============
     if verb in ('agent_action_approve', 'agent_action_reject'):
         try:

@@ -441,6 +441,76 @@ def report_issue(args):
             conn.close()
 
 
+@register_tool(
+    name='request_human_help',
+    description=('Eskaliert die Konversation an Moritz, wenn der Nutzer mit einem '
+                 'Anliegen ansteht, das du nicht selbst beantworten kannst, oder '
+                 'wenn er explizit Hilfe von einer realen Person wünscht. Lege NUR '
+                 'an, wenn der Nutzer ein konkretes Anliegen hat. Nicht für '
+                 'Feedback/Bugs verwenden — dafür report_issue benutzen.'),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'topic': {
+                'type': 'string',
+                'description': ('Kurze Zusammenfassung des Anliegens für Moritz '
+                                '(max 500 Zeichen). Auf Deutsch.'),
+            },
+            'urgency': {
+                'type': 'string',
+                'enum': ['low', 'normal', 'high'],
+                'description': 'Dringlichkeit aus Sicht des Nutzers.',
+            },
+            'phone': {
+                'type': 'string',
+                'description': ('Optional: Telefonnummer des Nutzers, falls er '
+                                'sie im Chat genannt hat oder du danach gefragt hast.'),
+            },
+        },
+        'required': ['topic'],
+    },
+    role_required='guest',
+)
+def request_human_help(args):
+    topic = (args.get('topic', '') or '').strip()[:500]
+    urgency = args.get('urgency', 'normal')
+    if urgency not in ('low', 'normal', 'high'):
+        urgency = 'normal'
+    phone = (args.get('phone', '') or '').strip()[:50] or None
+    user_email = args.get('_user_email', '')
+    user_name = args.get('_user_name', '')
+    chat_context = args.get('_chat_context', [])
+
+    if not user_email:
+        return json.dumps({
+            'error': 'Du musst eingeloggt sein, damit Moritz dich erreichen kann.',
+        })
+    if not topic:
+        return json.dumps({
+            'error': 'Bitte beschreibe kurz, womit du Hilfe brauchst.',
+        })
+
+    try:
+        import web_help_service
+        request_id = web_help_service.create_help_request(
+            user_email=user_email,
+            user_name=user_name or None,
+            user_phone=phone,
+            topic=topic,
+            urgency=urgency,
+            chat_context=chat_context if isinstance(chat_context, list) else [],
+        )
+        return json.dumps({
+            'success': True,
+            'request_id': request_id,
+            'message': ('Ich habe Moritz auf Slack benachrichtigt. Er meldet '
+                        f'sich per Email an {user_email} bei dir — '
+                        'ein Entwurf wird gerade vorbereitet.'),
+        })
+    except Exception as e:
+        return json.dumps({'error': f'Eskalation fehlgeschlagen: {e}'})
+
+
 # ─── Admin Tools ───────────────────────────────────────────────
 
 
