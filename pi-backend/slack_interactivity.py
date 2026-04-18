@@ -124,5 +124,51 @@ def slack_interactivity():
         _update_card(response_url, text, original_blocks)
         return ('', 200)
 
+    # ============ F.3: Garten-Agent Approval-Gate ============
+    if verb in ('agent_action_approve', 'agent_action_reject'):
+        try:
+            pending_id = int(image_id)
+        except (TypeError, ValueError):
+            _update_card(response_url, ":warning: Ungültige Approval-ID.", original_blocks)
+            return ('', 200)
+
+        import chat_approval
+
+        if verb == 'agent_action_approve':
+            result = chat_approval.execute_pending_action(pending_id, user_id)
+            if not result.get("ok"):
+                _update_card(
+                    response_url,
+                    f":warning: Ausführung fehlgeschlagen — "
+                    f"`{result.get('error') or result.get('result', {}).get('error', '?')}`",
+                    original_blocks,
+                )
+                return ('', 200)
+            tool = result.get("tool", "?")
+            tool_result = result.get("result", {})
+            summary = ", ".join(f"{k}={json.dumps(v, ensure_ascii=False)[:60]}"
+                                for k, v in tool_result.items() if k != "ok")
+            _update_card(
+                response_url,
+                f":white_check_mark: `{tool}` ausgeführt von <@{user_id}> — {summary or 'OK'}",
+                original_blocks,
+            )
+            return ('', 200)
+        else:
+            result = chat_approval.reject_pending_action(pending_id, user_id)
+            if not result.get("ok"):
+                _update_card(
+                    response_url,
+                    f":warning: Verwerfen fehlgeschlagen — `{result.get('error', '?')}`",
+                    original_blocks,
+                )
+                return ('', 200)
+            _update_card(
+                response_url,
+                f":no_entry_sign: `{result.get('tool', '?')}` verworfen von <@{user_id}>.",
+                original_blocks,
+            )
+            return ('', 200)
+
     # Unbekannte Action — schweigend ACK'en
     return ('', 200)

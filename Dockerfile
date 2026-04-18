@@ -25,11 +25,18 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies (ffmpeg for video, libwebp for images)
+# Install system dependencies (ffmpeg for video, libwebp for images, nodejs for claude-cli)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ffmpeg \
     libwebp-dev \
+    ca-certificates \
+    gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g @anthropic-ai/claude-code \
+    && claude --version \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python requirements and install

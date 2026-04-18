@@ -143,10 +143,14 @@ def verify_slack_signature(body: bytes, headers) -> bool:
         return False
 
     try:
-        if abs(time.time() - int(timestamp)) > 60 * 5:
-            print("[slack_service] signature timestamp too old")
+        now = int(time.time())
+        ts_int = int(timestamp)
+        diff = now - ts_int
+        if abs(diff) > 60 * 5:
+            print(f"[slack_service] signature timestamp too old: ts={timestamp} now={now} diff={diff}s")
             return False
     except ValueError:
+        print(f"[slack_service] signature timestamp not int: {timestamp!r}")
         return False
 
     if isinstance(body, str):
@@ -225,3 +229,131 @@ def post_with_photo(text: str, image_url: str | None, blocks: list | None = None
     Für Block-Kit wird das Bild bereits in `blocks` via build_moderation_blocks eingebettet.
     """
     return post_channel(text, blocks=blocks, channel=channel)
+
+
+# ============ Thread / Channel Helpers (F.3 Chat-Layer) ============
+
+def post_thread_reply(channel: str, thread_ts: str, text: str,
+                      blocks: list | None = None) -> dict:
+    """Reply in a Slack thread. thread_ts must be the parent message ts."""
+    if not is_configured():
+        return {"ok": False, "error": "GARTEN_BOT_TOKEN not configured"}
+    payload: dict = {"channel": channel, "text": text, "thread_ts": thread_ts}
+    if blocks:
+        payload["blocks"] = blocks
+    try:
+        resp = requests.post(f"{SLACK_API}/chat.postMessage", headers=_headers(),
+                             data=json.dumps(payload), timeout=10)
+        data = resp.json()
+        if not data.get("ok"):
+            print(f"[slack_service] post_thread_reply error: {data.get('error')}")
+        return data
+    except Exception as e:
+        print(f"[slack_service] post_thread_reply exception: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+def add_reaction(channel: str, timestamp: str, name: str) -> dict:
+    """Add an emoji reaction. name without colons (e.g. 'eyes')."""
+    if not is_configured():
+        return {"ok": False}
+    try:
+        resp = requests.post(f"{SLACK_API}/reactions.add", headers=_headers(),
+                             data=json.dumps({"channel": channel, "timestamp": timestamp,
+                                              "name": name}),
+                             timeout=10)
+        return resp.json()
+    except Exception as e:
+        print(f"[slack_service] add_reaction exception: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+def fetch_thread(channel: str, thread_ts: str, limit: int = 50) -> list[dict]:
+    """conversations.replies — returns list of Slack messages (oldest first)."""
+    if not is_configured():
+        return []
+    try:
+        resp = requests.get(f"{SLACK_API}/conversations.replies",
+                            headers={"Authorization": f"Bearer {GARTEN_BOT_TOKEN}"},
+                            params={"channel": channel, "ts": thread_ts,
+                                    "limit": min(int(limit), 200)},
+                            timeout=10)
+        data = resp.json()
+        if not data.get("ok"):
+            print(f"[slack_service] fetch_thread error: {data.get('error')}")
+            return []
+        return data.get("messages", []) or []
+    except Exception as e:
+        print(f"[slack_service] fetch_thread exception: {e}")
+        return []
+
+
+def fetch_channel_history(channel: str, limit: int = 10) -> list[dict]:
+    """conversations.history — returns recent channel messages, reordered oldest first."""
+    if not is_configured():
+        return []
+    try:
+        resp = requests.get(f"{SLACK_API}/conversations.history",
+                            headers={"Authorization": f"Bearer {GARTEN_BOT_TOKEN}"},
+                            params={"channel": channel, "limit": min(int(limit), 100)},
+                            timeout=10)
+        data = resp.json()
+        if not data.get("ok"):
+            print(f"[slack_service] fetch_channel_history error: {data.get('error')}")
+            return []
+        msgs = data.get("messages", []) or []
+        msgs = [m for m in msgs if not m.get("subtype")]
+        return list(reversed(msgs))
+    except Exception as e:
+        print(f"[slack_service] fetch_channel_history exception: {e}")
+        return []
+
+
+# ============ Approval-Card (F.3 Tool-Calls) ============
+
+def build_approval_card(pending_id: int, tool_name: str, summary: str,
+                        params: dict) -> list:
+    """Block-Kit-Karte für Approval-Gate. Buttons posten action_id mit pending_id."""
+    fields = [
+        {"type": "mrkdwn", "text": f"*Tool:*\n`{tool_name}`"},
+        {"type": "mrkdwn", "text": f"*Approval-ID:*\n#{pending_id}"},
+    ]
+
+    pretty_lines = []
+    for k, v in (params or {}).items():
+        val = json.dumps(v, ensure_ascii=False)
+        if len(val) > 120:
+            val = val[:117] + "..."
+        pretty_lines.append(f"• *{k}:* `{val}`")
+    pretty = "\n".join(pretty_lines) or "_(keine Parameter)_"
+
+    blocks: list = [
+        {"type": "header",
+         "text": {"type": "plain_text", "text": ":robot_face: Aktions-Vorschlag",
+                  "emoji": True}},
+        {"type": "section", "fields": fields},
+        {"type": "section",
+         "text": {"type": "mrkdwn", "text": f"*Zusammenfassung:*\n{summary or '_(keine)_'}"}},
+        {"type": "section",
+         "text": {"type": "mrkdwn", "text": f"*Parameter:*\n{pretty}"}},
+        {"type": "actions",
+         "block_id": "agent_approval",
+         "elements": [
+            {"type": "button",
+             "text": {"type": "plain_text", "text": ":white_check_mark: Ausführen",
+                      "emoji": True},
+             "style": "primary",
+             "action_id": f"agent_action_approve:{pending_id}",
+             "value": str(pending_id)},
+            {"type": "button",
+             "text": {"type": "plain_text", "text": ":no_entry_sign: Verwerfen",
+                      "emoji": True},
+             "style": "danger",
+             "action_id": f"agent_action_reject:{pending_id}",
+             "value": str(pending_id)},
+         ]},
+        {"type": "context",
+         "elements": [{"type": "mrkdwn",
+                       "text": f"GartenBot Approval-Gate · ID #{pending_id}"}]},
+    ]
+    return blocks

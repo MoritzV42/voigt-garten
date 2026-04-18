@@ -1333,6 +1333,25 @@ def migrate_db():
         )
     ''')
 
+    # Pending agent actions (F.3 Chat-Layer Approval-Gate)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS agent_pending_actions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tool_name TEXT NOT NULL,
+            params_json TEXT NOT NULL,
+            summary TEXT,
+            requested_by_slack_user TEXT,
+            channel_id TEXT,
+            thread_ts TEXT,
+            card_message_ts TEXT,
+            status TEXT DEFAULT 'pending',
+            decided_at TEXT,
+            decided_by TEXT,
+            result_json TEXT,
+            created_at TEXT DEFAULT (datetime('now', 'localtime'))
+        )
+    ''')
+
     # Indices für Agent-Tabellen
     conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_actions_type ON agent_actions_log(action_type)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_actions_source ON agent_actions_log(source)")
@@ -1340,6 +1359,7 @@ def migrate_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_email_drafts_status ON email_drafts(status)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_conversations_session ON agent_conversations(session_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_messages_conv ON agent_messages(conversation_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_pending_status ON agent_pending_actions(status)")
     conn.commit()
 
     # Service-Provider Erweiterungen

@@ -157,3 +157,28 @@ def run_now():
     """Manually trigger one worker run (useful for smoke-tests)."""
     summary = agent_worker.run()
     return jsonify(summary)
+
+
+# ============ F.3 Chat-Layer: Slack-Events-Endpoint ============
+
+@agent_bp.route('/slack-events', methods=['POST'])
+def slack_events():
+    """
+    Slack-Events-API-Endpoint für @GartenBot-Mentions.
+    Auth via Slack-Signing-Secret (NICHT X-COO-Secret).
+    ACKt sofort 200, dispatcht in Daemon-Thread.
+    """
+    import slack_service
+    import chat_handler
+
+    raw_body = request.get_data()
+    if not slack_service.verify_slack_signature(raw_body, request.headers):
+        return ('', 401)
+
+    try:
+        payload = json.loads(raw_body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return ('', 200)
+
+    body, status, headers = chat_handler.handle_slack_event(payload)
+    return (body, status, headers)
