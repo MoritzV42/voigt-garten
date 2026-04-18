@@ -839,14 +839,64 @@ Crontab-Eintrag (alle 6 h, loggt nach `~/logs/garten-agent.log`):
 
 ---
 
+## F.4 Admin-Notifications (Slack-Migration, April 2026)
+
+Admin-Notifications (Moderations-Anfragen, Buchungen, Feedback, Rechnungen, Bewerbungen, System-Errors, Email-Drafts) ziehen schrittweise von Telegram nach Slack um. Konzept: `~/stacks/voigt-garten/docs/SLACK_NOTIFICATION_MIGRATION.md`. Worker H Deploy: 2026-04-18.
+
+### Feature-Flag
+| `NOTIFICATION_BACKEND` | Verhalten |
+|---|---|
+| `both` | **Default** — Telegram + Slack parallel (14 Tage Beobachtung) |
+| `slack` | Ziel — nur Slack, Telegram still |
+| `telegram` | Rollback — nur Legacy |
+
+Container-Restart reicht zum Umschalten (kein Rebuild nötig).
+
+### Neue Dateien (`pi-backend/`)
+| Datei | Zweck |
+|---|---|
+| `notifications.py` | Dispatcher-Hub — einziger Import-Punkt für alle Call-Sites |
+| `slack_notifications.py` | Drop-in-Pendant zu `telegram_service.py` (gleiche Signaturen) |
+| `slack_interactivity.py` | Flask-Blueprint `/api/garten/slack/interactivity` für Approve/Reject-Buttons |
+
+`slack_service.py` erweitert um `verify_slack_signature()` (HMAC-SHA256, 5-min Replay-Schutz) und `build_moderation_blocks()` (Block-Kit mit Bild + Buttons).
+
+### Moderation-Flow (Slack)
+1. Non-Admin-Upload → `status='pending'`.
+2. `send_moderation_request` postet Block-Kit-Karte in `#refugium-heideland-management` + DM an Moritz.
+3. Button-Click → `POST /api/garten/slack/interactivity` → Signing-Verify → DB-Update → Karte via `response_url` aktualisiert (Bestätigungstext, Buttons weg).
+4. Im `both`-Modus sendet Telegram parallel **nur einen Info-Post ohne Buttons** (Race-Condition-Schutz) — Moderation läuft exklusiv über Slack.
+
+### Neue Env-Vars
+| Variable | Beschreibung |
+|---|---|
+| `NOTIFICATION_BACKEND` | `telegram` / `slack` / `both` (Default `both`) |
+| `GARTEN_SLACK_SIGNING_SECRET` | HMAC-Secret aus Slack-App-Config, shared mit F.3 |
+
+### Slack-App-Config (einmalig)
+- App-ID `A0ATNG554JJ`, Bot-User `U0AUJTS5F5W`
+- **Interactivity & Shortcuts** aktiviert, Request-URL: `https://garten.infinityspace42.de/api/garten/slack/interactivity`
+- Signing-Secret in `.env` als `GARTEN_SLACK_SIGNING_SECRET`
+
+### Telegram-Webhook bleibt
+`/api/telegram/webhook` und `telegram_agent.py` laufen parallel bis F.3 (Worker I) live ist. `telegram_service.py` wird deprecated, aber erst nach Cutover auf `NOTIFICATION_BACKEND=slack` und F.3-Go-Live gelöscht.
+
+### Sunset-Plan (per Doku)
+- Tag 0: `NOTIFICATION_BACKEND=both` (Deploy 2026-04-18).
+- Tag 14 (ca. 2026-05-02): Moritz schaltet manuell `=slack`, Container-Restart.
+- Tag 30 nach `=slack`: `telegram_service.py` aus `app.py`-Import entfernen.
+- Nach F.3-Go-Live: Telegram-Webhook deregistrieren, `telegram_agent.py` entfernen.
+
+---
+
 ## Coding Standards
 
 **Deutsche Texte:** Alle User-facing Strings müssen korrekte Umlaute verwenden (ä, ö, ü, ß). Keine ae/oe/ue/ss-Ersetzungen. Ausnahme: DB-Slugs und Variablennamen dürfen ASCII bleiben.
 
 ---
 
-**Version:** 2.2
+**Version:** 2.3
 **Erstellt:** 2026-01-26
-**Aktualisiert:** 2026-04-17
+**Aktualisiert:** 2026-04-18
 **Hosting:** Hetzner CX32 Cloud Server (4 vCPU, 8GB RAM, 80GB SSD, Debian 13, Falkenstein) via Cloudflare Tunnel
 **SSH:** `ssh is42` (moritz@49.12.244.18)

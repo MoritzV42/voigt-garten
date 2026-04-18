@@ -7,12 +7,16 @@ Phase 1: output-only (channel posts + direct messages).
 
 import os
 import json
+import hmac
+import hashlib
+import time
 import requests
 
 SLACK_API = "https://slack.com/api"
 GARTEN_BOT_TOKEN = os.environ.get('GARTEN_BOT_TOKEN', '')
 GARTEN_SLACK_CHANNEL_ID = os.environ.get('GARTEN_SLACK_CHANNEL_ID', 'C0AUAD6QY2U')
 GARTEN_MORITZ_SLACK_USER_ID = os.environ.get('GARTEN_MORITZ_SLACK_USER_ID', 'U0ASYE5UPQR')
+GARTEN_SLACK_SIGNING_SECRET = os.environ.get('GARTEN_SLACK_SIGNING_SECRET', '')
 
 
 def _headers() -> dict:
@@ -119,3 +123,105 @@ def build_escalation_blocks(task: dict, stage: int, days_overdue: int,
                    "elements": [{"type": "mrkdwn",
                                  "text": f"Voigt-Garten Eskalations-Agent · Task-ID #{task['id']}"}]})
     return blocks
+
+
+# ============ Signing Verification (shared mit F.3/F.4) ============
+
+def verify_slack_signature(body: bytes, headers) -> bool:
+    """
+    Verify Slack request signature per HMAC-SHA256.
+    Body = raw request body (bytes). Headers = Flask request.headers (dict-like).
+    Rejects requests older than 5 minutes (replay protection).
+    """
+    if not GARTEN_SLACK_SIGNING_SECRET:
+        print("[slack_service] GARTEN_SLACK_SIGNING_SECRET not set — rejecting")
+        return False
+
+    timestamp = headers.get('X-Slack-Request-Timestamp', '')
+    signature = headers.get('X-Slack-Signature', '')
+    if not timestamp or not signature:
+        return False
+
+    try:
+        if abs(time.time() - int(timestamp)) > 60 * 5:
+            print("[slack_service] signature timestamp too old")
+            return False
+    except ValueError:
+        return False
+
+    if isinstance(body, str):
+        body = body.encode('utf-8')
+    basestring = f"v0:{timestamp}:".encode('utf-8') + body
+    digest = hmac.new(
+        GARTEN_SLACK_SIGNING_SECRET.encode('utf-8'),
+        basestring,
+        hashlib.sha256,
+    ).hexdigest()
+    expected = f"v0={digest}"
+    return hmac.compare_digest(expected, signature)
+
+
+# ============ Moderation-Karte (F.4) ============
+
+def build_moderation_blocks(image_id: str, image_url: str | None, uploader: str,
+                            title: str | None, category: str) -> list:
+    """Block-Kit-Payload für Galerie-Moderations-Karte mit Approve/Reject-Buttons."""
+    display_title = title or "Ohne Titel"
+    fields = [
+        {"type": "mrkdwn", "text": f"*Titel:*\n{display_title}"},
+        {"type": "mrkdwn", "text": f"*Kategorie:*\n{category}"},
+        {"type": "mrkdwn", "text": f"*Uploader:*\n{uploader or 'unbekannt'}"},
+        {"type": "mrkdwn", "text": f"*Bild-ID:*\n{image_id}"},
+    ]
+
+    blocks: list = [
+        {"type": "header",
+         "text": {"type": "plain_text", "text": ":camera: Neuer Galerie-Upload", "emoji": True}},
+        {"type": "section", "fields": fields},
+    ]
+
+    if image_url:
+        blocks.append({
+            "type": "image",
+            "image_url": image_url,
+            "alt_text": "Upload-Vorschau",
+        })
+
+    blocks.append({
+        "type": "actions",
+        "block_id": "gallery_moderation",
+        "elements": [
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "Freigeben", "emoji": True},
+                "style": "primary",
+                "action_id": f"moderation_approve:{image_id}",
+                "value": image_id,
+            },
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "Ablehnen", "emoji": True},
+                "style": "danger",
+                "action_id": f"moderation_reject:{image_id}",
+                "value": image_id,
+            },
+        ],
+    })
+
+    blocks.append({
+        "type": "context",
+        "elements": [{
+            "type": "mrkdwn",
+            "text": "Upload wartet auf Moderation · <https://garten.infinityspace42.de/admin#gallery|Im Dashboard öffnen>",
+        }],
+    })
+    return blocks
+
+
+def post_with_photo(text: str, image_url: str | None, blocks: list | None = None,
+                    channel: str | None = None) -> dict:
+    """
+    Post-Wrapper für Moderations-Karten. `image_url` optional, primär für Fallback/Doku.
+    Für Block-Kit wird das Bild bereits in `blocks` via build_moderation_blocks eingebettet.
+    """
+    return post_channel(text, blocks=blocks, channel=channel)

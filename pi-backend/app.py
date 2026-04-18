@@ -22,7 +22,8 @@ import secrets
 import uuid
 from collections import deque
 from email_service import send_booking_confirmation, send_booking_notification_to_admin, send_activity_notification, send_magic_link_email, send_welcome_email, send_feedback_request, send_google_review_followup, send_payment_reminder, send_application_confirmation, send_application_notification_admin
-from telegram_service import send_moderation_request, answer_callback_query, notify_admin, notify_booking, notify_feedback, notify_email_sent, notify_job_application
+from telegram_service import answer_callback_query
+from notifications import send_moderation_request, notify_admin, notify_booking, notify_feedback, notify_email_sent, notify_job_application
 from storage import LocalStorage
 import urllib.parse
 
@@ -124,6 +125,14 @@ try:
     print("[app] garten-agent blueprint registered")
 except ImportError as e:
     print(f"[app] Warning: garten-agent not available: {e}")
+
+# Slack-Interactivity Blueprint (F.4)
+try:
+    from slack_interactivity import slack_interactivity_bp
+    app.register_blueprint(slack_interactivity_bp)
+    print("[app] slack-interactivity blueprint registered")
+except ImportError as e:
+    print(f"[app] Warning: slack-interactivity not available: {e}")
 
 
 @app.after_request

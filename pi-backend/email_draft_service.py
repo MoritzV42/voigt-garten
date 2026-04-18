@@ -164,15 +164,15 @@ def update_draft(draft_id: int, **kwargs) -> dict:
 
 
 def _notify_telegram_draft(draft_id: int, recipient_name: str, subject: str):
-    """Send Telegram notification about new draft."""
+    """Send admin notification about new draft (via notifications-Hub, F.4)."""
     try:
-        from telegram_service import notify_admin
-        notify_admin(
-            f"📧 Neuer Email-Entwurf #{draft_id}\n"
-            f"An: {recipient_name}\n"
-            f"Betreff: {subject}\n\n"
-            f"Bitte im Dashboard genehmigen oder ablehnen."
-        )
+        from notifications import notify_admin
+        notify_admin('email_draft_created', {
+            'Draft-ID': f"#{draft_id}",
+            'An': recipient_name,
+            'Betreff': subject,
+            'Aktion': 'Bitte im Dashboard genehmigen oder ablehnen.',
+        })
     except Exception:
         pass
 
