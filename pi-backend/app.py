@@ -550,6 +550,32 @@ def migrate_db():
         except Exception:
             pass  # Column already exists
 
+    # -- Worker G (2026-04-18): seasonal_months für Recurring-Saisonalität --
+    for col_stmt in [
+        "ALTER TABLE recurring_tasks ADD COLUMN seasonal_months TEXT DEFAULT '[]'",
+        "ALTER TABLE projects ADD COLUMN seasonal_months TEXT DEFAULT '[]'",
+    ]:
+        try:
+            conn.execute(col_stmt)
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+
+    # Sync seasonal_months von recurring_tasks auf projects.is_recurring Instanzen
+    try:
+        conn.execute('''
+            UPDATE projects
+               SET seasonal_months = COALESCE((
+                   SELECT seasonal_months FROM recurring_tasks rt
+                    WHERE rt.title = projects.title LIMIT 1
+               ), '[]')
+             WHERE is_recurring = 1
+               AND (seasonal_months IS NULL OR seasonal_months = '[]')
+        ''')
+        conn.commit()
+    except Exception as e:
+        print(f"Seasonal months sync: {e}")
+
     # Migrate recurring_tasks data into projects (one-time)
     try:
         existing = conn.execute("SELECT COUNT(*) as c FROM projects WHERE is_recurring = 1").fetchone()['c']
@@ -3694,6 +3720,32 @@ def update_project(project_id, user):
     return jsonify({'success': True, 'message': 'Projekt aktualisiert'})
 
 
+def _compute_next_seasonal_due(cycle_days, seasonal_months_json):
+    """Berechnet next_due unter Berücksichtigung saisonaler Monate.
+
+    seasonal_months_json: JSON-Array der aktiven Monate (1-12). Leeres Array = alle Monate.
+    Wenn das per cycle_days errechnete Datum in einem inaktiven Monat liegt, springt es
+    auf den 1. des nächsten aktiven Monats vor.
+    """
+    from datetime import date
+    base = date.today() + timedelta(days=cycle_days or 0)
+    try:
+        seasonal = json.loads(seasonal_months_json or '[]')
+    except (ValueError, TypeError):
+        seasonal = []
+    if not seasonal:
+        return base.isoformat()
+    # Spring forward to first day of next active month (max 12 iterations)
+    for _ in range(12):
+        if base.month in seasonal:
+            return base.isoformat()
+        if base.month == 12:
+            base = date(base.year + 1, 1, 1)
+        else:
+            base = date(base.year, base.month + 1, 1)
+    return base.isoformat()
+
+
 @app.route('/api/projects/<int:project_id>/complete', methods=['POST'])
 @require_auth
 def complete_project(project_id, user):
@@ -3755,17 +3807,19 @@ def complete_project(project_id, user):
     # Auto-recreate recurring tasks
     project_dict = dict(project)
     if project_dict.get('is_recurring') and project_dict.get('cycle_days'):
-        from datetime import date
-        next_due = (date.today() + timedelta(days=project_dict['cycle_days'])).isoformat()
+        seasonal_months = project_dict.get('seasonal_months') or '[]'
+        next_due = _compute_next_seasonal_due(project_dict['cycle_days'], seasonal_months)
         conn.execute('''
             INSERT INTO projects (title, description, category, status, priority, effort,
-                is_recurring, cycle_days, credit_value, due_date, assigned_to, map_area, created_by)
-            VALUES (?, ?, ?, 'offen', ?, ?, 1, ?, ?, ?, ?, ?, ?)
+                is_recurring, cycle_days, credit_value, due_date, assigned_to, map_area,
+                seasonal_months, created_by)
+            VALUES (?, ?, ?, 'offen', ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             project_dict['title'], project_dict.get('description'), project_dict['category'],
             project_dict.get('priority', 'mittel'), project_dict.get('effort', 'mittel'),
             project_dict['cycle_days'], project_dict.get('credit_value', 0),
             next_due, project_dict.get('assigned_to'), project_dict.get('map_area'),
+            seasonal_months,
             project_dict.get('created_by', 'system')
         ))
         # Auto-award credit
@@ -4146,12 +4200,15 @@ def update_recurring_task(task_id, user):
 
     updates = []
     params = []
-    allowed_fields = ['title', 'description', 'category', 'cycle_days', 'credit_value', 'effort', 'next_due', 'is_active', 'map_area']
+    allowed_fields = ['title', 'description', 'category', 'cycle_days', 'credit_value', 'effort', 'next_due', 'is_active', 'map_area', 'seasonal_months']
 
     for field in allowed_fields:
         if field in data:
+            value = data[field]
+            if field == 'seasonal_months' and isinstance(value, list):
+                value = json.dumps(value)
             updates.append(f'{field} = ?')
-            params.append(data[field])
+            params.append(value)
 
     if updates:
         params.append(task_id)
@@ -4214,8 +4271,9 @@ def complete_recurring_task(task_id, user):
         data = request.json or {}
         notes = data.get('notes')
 
-    # Calculate next due date
-    next_due = (datetime.now() + timedelta(days=task['cycle_days'])).strftime('%Y-%m-%d')
+    # Calculate next due date (seasonal-aware)
+    task_dict = dict(task)
+    next_due = _compute_next_seasonal_due(task_dict['cycle_days'], task_dict.get('seasonal_months'))
 
     # Update task
     conn.execute('''

@@ -505,7 +505,23 @@ ALTER TABLE projects ADD COLUMN cycle_days INTEGER;
 ALTER TABLE projects ADD COLUMN credit_value REAL DEFAULT 0;
 -- Wenn is_recurring=1 und ein Task abgeschlossen wird, erstellt complete_project
 -- automatisch einen neuen Task mit due_date = heute + cycle_days
+
+-- Worker G (2026-04-18): Saisonale Recurring-Tasks
+ALTER TABLE projects ADD COLUMN seasonal_months TEXT DEFAULT '[]';
+ALTER TABLE recurring_tasks ADD COLUMN seasonal_months TEXT DEFAULT '[]';
+-- JSON-Array der Monate (1-12) in denen der Task aktiv ist. Leeres Array = alle Monate.
+-- Helper _compute_next_seasonal_due(cycle_days, seasonal_months_json) springt bei
+-- inaktivem Zielmonat automatisch auf den 1. des nächsten aktiven Monats vor.
+-- Genutzt von complete_project() + complete_recurring_task().
+-- Agent-Worker (agent_worker.py) respektiert das implizit: fetch_overdue_tasks()
+-- eskaliert nur Tasks mit due_date < today, und complete_*-Pfade setzen due_date
+-- bereits saisonal-korrekt → kein expliziter Filter im Worker nötig.
 ```
+
+### Status-Werte projects
+- `offen` (default), `in_arbeit`, `in_progress`, `next`, `done`, `erledigt`
+- `duplicate` — Task ist Duplikat, wird in UI ausgeblendet (Historie bleibt)
+- `archived` — Task ist obsolet (z.B. Termin vergangen), wird ausgeblendet (Historie bleibt)
 
 ---
 
