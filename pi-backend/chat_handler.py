@@ -246,7 +246,15 @@ def handle_slack_event(payload: dict) -> tuple[str, int, dict]:
         return ("", 200, {})
 
     event = payload.get("event") or {}
-    if event.get("type") != "app_mention":
+    event_type = event.get("type")
+
+    is_mention = event_type == "app_mention"
+    is_dm = (event_type == "message"
+             and event.get("channel_type") == "im"
+             and not event.get("subtype")
+             and not event.get("bot_id")
+             and not event.get("thread_ts"))
+    if not (is_mention or is_dm):
         return ("", 200, {})
 
     if event.get("bot_id") or event.get("user") == BOT_USER_ID:
