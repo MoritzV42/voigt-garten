@@ -897,7 +897,7 @@ GartenBot ist seit 2026-04-18 dialogfähig. Auf `@GartenBot`-Mention im Channel 
 | Komponente | Datei | Zweck |
 |---|---|---|
 | Event-Endpoint | `pi-backend/agent_routes.py` (`/api/garten/agent/slack-events`) | Slack-Signing-Verify, ACK 200 < 3 s |
-| Dispatcher | `pi-backend/chat_handler.py` | Dedupe (event_id, TTL 10 min), Whitelist, Rate-Limit, Async-Thread |
+| Dispatcher | `pi-backend/chat_handler.py` | Dedupe (event_id, TTL 10 min), Whitelist, Rate-Limit, Async-Thread. Reagiert auf `app_mention` (Channel/Thread) UND `message.im` (Direct-Messages an den Bot) |
 | Slack-Context | `pi-backend/chat_context.py` | `conversations.replies` (Thread max 50) / `conversations.history` (Channel max 10) |
 | Claude-Wrapper | `pi-backend/claude_cli_backend.py` | `claude -p --model claude-sonnet-4-6`, Prompt-Assembly, JSON-Parser |
 | Tool-Registry | `pi-backend/chat_tools.py` | Read-Tools direkt, Write-Tools brauchen Approval |
@@ -925,7 +925,7 @@ GartenBot ist seit 2026-04-18 dialogfähig. Auf `@GartenBot`-Mention im Channel 
 |---|---|
 | Scopes (zusätzlich) | `app_mentions:read`, `channels:history`, `im:history`, `reactions:write` |
 | Event Subscriptions Request URL | `https://garten.infinityspace42.de/api/garten/agent/slack-events` |
-| Subscribe to bot events | `app_mention` |
+| Subscribe to bot events | `app_mention`, `message.im` (für DMs) |
 | Interactivity Request URL | `https://garten.infinityspace42.de/api/garten/slack/interactivity` (gleicher wie F.4 Moderation) |
 | Re-Install im Workspace | nötig nach Scope-Änderung; Bot-Token ggf. neu in `.env` |
 
