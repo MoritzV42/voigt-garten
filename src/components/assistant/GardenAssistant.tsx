@@ -59,18 +59,50 @@ export default function GardenAssistant() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Determine user role from token
-  const userRole: UserRole = useMemo(() => {
+  // Determine user role from token (SSR-safe + base64url-aware + reaktiv)
+  const decodeRole = useCallback((): UserRole => {
     try {
-      const token = localStorage.getItem("voigt-garten-token");
+      if (typeof window === "undefined") return "anonymous";
+      const token = window.localStorage.getItem("voigt-garten-token");
       if (!token) return "anonymous";
-      const payload = JSON.parse(atob(token.split(".")[1]));
+      const parts = token.split(".");
+      if (parts.length < 2) return "anonymous";
+      // JWT verwendet base64url — atob erwartet base64. Ersetzen + Padding.
+      let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (b64.length % 4) b64 += "=";
+      const payload = JSON.parse(atob(b64));
       if (payload.role === "admin") return "admin";
       return "guest";
     } catch {
       return "anonymous";
     }
   }, []);
+
+  const [userRole, setUserRole] = useState<UserRole>("anonymous");
+
+  // Re-evaluate token after mount (SSR liefert immer "anonymous") und bei
+  // storage-Events (Login in anderem Tab).
+  useEffect(() => {
+    setUserRole(decodeRole());
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "voigt-garten-token" || e.key === null) {
+        setUserRole(decodeRole());
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    // Falls Token nach Login im selben Tab gesetzt wird, nochmal nach 500ms
+    // checken (kein storage-Event fuer same-tab setItem).
+    const t = setTimeout(() => setUserRole(decodeRole()), 500);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      clearTimeout(t);
+    };
+  }, [decodeRole]);
+
+  // Re-check beim Oeffnen des Widgets (User koennte zwischenzeitlich eingeloggt sein)
+  useEffect(() => {
+    if (isOpen) setUserRole(decodeRole());
+  }, [isOpen, decodeRole]);
 
   // Quick-action suggestions based on role
   const suggestions = useMemo(() => {
