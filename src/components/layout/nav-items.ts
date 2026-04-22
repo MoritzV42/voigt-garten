@@ -20,6 +20,7 @@ import {
   LogOut,
   Shield,
   Globe,
+  Sprout,
 } from "lucide-react";
 
 export type IconName =
@@ -37,7 +38,8 @@ export type IconName =
   | "log-in"
   | "log-out"
   | "shield"
-  | "globe";
+  | "globe"
+  | "sprout";
 
 export const ICON_MAP: Record<IconName, LucideIcon> = {
   home: Home,
@@ -55,6 +57,7 @@ export const ICON_MAP: Record<IconName, LucideIcon> = {
   "log-out": LogOut,
   shield: Shield,
   globe: Globe,
+  sprout: Sprout,
 };
 
 export interface NavItem {
@@ -78,6 +81,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/galerie", label: "Galerie", icon: "camera" },
       { href: "/gartenkarte", label: "Karte", icon: "map" },
       { href: "/umgebung", label: "Umgebung", icon: "mountain" },
+      { href: "/saisonkalender", label: "Saisons", icon: "sprout" },
     ],
   },
   {
