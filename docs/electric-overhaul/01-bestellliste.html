@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Voigt-Garten — Off-Grid-Stromversorgung Gartenhaus</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="doc-nav">
+  <a href="00-uebersicht.html">📋 Übersicht</a>
+  <a href="01-bestellliste.html" class="current">🛒 Bestellliste</a>
+  <a href="02-aufbau-anleitung.html">🔧 Aufbau</a>
+  <a href="03-verkabelungsplan.html">⚡ Verkabelung</a>
+  <a href="04-elektriker-abnahme.html">✅ Abnahme</a>
+  <a href="05-betrieb-und-wartung.html">🛠️ Betrieb</a>
+</nav>
+
+<header>
+  <h1>Off-Grid-Stromversorgung Gartenhaus Voigt-Garten</h1>
+  <div class="subtitle">Komplette Bestellliste, Verkabelungsplan und offene Punkte für Elektriker-Abnahme</div>
+  <div class="meta">
+    Standort: Etzdorf im Rosental · Stand: 27.04.2026 · Auslegung: Off-Grid 48 V / 230 V · 1-phasig 16 A<br>
+    Zur Durchsicht durch Opa und finalen Abnahme durch Elektriker
+  </div>
+</header>
+
+<section class="toc">
+  <strong>Inhaltsverzeichnis</strong>
+  <ol>
+    <li><a href="#uebersicht">Was wird gebaut — Kurzübersicht</a></li>
+    <li><a href="#architektur">Systemarchitektur und Verkabelungsplan</a></li>
+    <li><a href="#energiezentrale">Energiezentrale (Wechselrichter, MPPT, Akku)</a></li>
+    <li><a href="#solar">Solarmodule und Aufständerung</a></li>
+    <li><a href="#dc-verkabelung">DC-Verkabelung (Modul → MPPT → Akku → Wechselrichter)</a></li>
+    <li><a href="#ac-verkabelung">AC-Verkabelung (Schuppen → Garten → Haus)</a></li>
+    <li><a href="#hausverteilung">Hausverteilung, FI/LS und Steckdosen</a></li>
+    <li><a href="#erdung">Erdung — offener Punkt</a></li>
+    <li><a href="#aufbau">Empfohlene Aufbaureihenfolge</a></li>
+    <li><a href="#kosten">Gesamtkostenübersicht</a></li>
+    <li><a href="#fragen">Offene Fragen für Opa und Elektriker</a></li>
+  </ol>
+</section>
+
+<!-- ============================================== -->
+<h2 id="uebersicht">1. Was wird gebaut — Kurzübersicht</h2>
+
+<p>Eine zweite, vollständig vom Bestandssystem unabhängige Off-Grid-Stromversorgung für das Gartenhaus. Das bestehende 12V/700W/1,4kWh-System bleibt für den Garten erhalten, das neue 48V-System versorgt:</p>
+
+<ul>
+  <li><strong>Gartenhaus</strong> — ca. 10 Steckdosen, Beleuchtung, Mini-Kühlschrank, Starlink, evtl. Mikrowelle, Bewegungsmelder mit LED-Leiste an der Klo-Treppe</li>
+  <li><strong>Außensteckdosen</strong> — 1–2 Stück IP44, witterungsbeständig</li>
+  <li><strong>Brunnenpumpe</strong> — wird vom alten System auf das neue umgeklemmt</li>
+  <li><strong>Überwachungskameras</strong> (geplant) — Dauerverbrauch ca. 5–15 W pro Kamera</li>
+</ul>
+
+<div class="info-box">
+  <strong>Heizen und Warmwasser bleiben Gas.</strong> Der Boiler und der Ofen werden über Gasflaschen betrieben. Strom wird also nur für Elektronik, kleinere Geräte und gelegentliche Spitzenlasten (Mikrowelle, Wasserkocher, Werkzeug) gebraucht. Geschätzter Tagesverbrauch: 1–2 kWh, in einer aktiven Buchungswoche bis 3–4 kWh.
+</div>
+
+<div class="success-box">
+  <strong>Warum diese Auslegung?</strong> Mit 2,76 kWp Solar und 3,5 kWh Akku hat das System auch bei mehreren Schlechtwettertagen Reserven. Der Wechselrichter (3000 W Dauer / 5500 W kurzzeitig) reicht problemlos für 16 A Hauptsicherung. Wichtigster Designtreiber: <strong>niedriger Eigenverbrauch des Wechselrichters</strong> — das Gartenhaus steht oft leer, da darf der Wechselrichter nicht mehr Strom ziehen als die Verbraucher.
+</div>
+
+<!-- ============================================== -->
+<h2 id="architektur">2. Systemarchitektur und Verkabelungsplan</h2>
+
+<div class="architecture">
+                    +---- 6× Solarmodul 460 Wp (Aufdach Schuppen Einfahrt) ----+
+                    |                                                          |
+                    | DC: 2 Strings à 3 Module in Reihe                        |
+                    | H1Z2Z2-K 6 mm² + MC4-Stecker                             |
+                    v                                                          v
+              +-----+-----+                                              +-----+
+              | DC-Trenn- |                                              |     |
+              | schalter  |                                              |     |
+              +-----+-----+                                              +-----+
+                    |
+                    v
+       +------------+------------+
+       |  Victron SmartSolar     |   <-- Schaltschrank im VORDEREN Schuppen
+       |  MPPT 150/45 (Laderegler)|       (abschließbar, isoliert, frostfrei)
+       +------------+------------+
+                    |
+                    | DC 48V (Kupfer 25 mm²)
+                    v
+       +------------+------------+              +-----------------------+
+       | Pylontech US3000C 3.5kWh|              | Mega-Sicherung 125 A  |
+       | LiFePO4 Batterie        |<------------>| (zwischen Akku + WR)  |
+       +------------+------------+              +-----------------------+
+                    |
+                    | DC 48V (Kupfer 35 mm² + Sicherung)
+                    v
+       +------------+------------+
+       | Victron MultiPlus II    |   <-- Wandelt 48V DC -> 230V AC
+       |       48/3000/35        |       Standby ~11 W (super niedrig!)
+       +------------+------------+
+                    |
+                    | 230V AC (NYY-J 5×2,5 mm² als Luftleitung, ~20 m)
+                    v
+       +------------+------------+
+       | mittlerer Schuppen      |   <-- bestehende alte 12V-Anlage bleibt
+       | (Geräteschuppen)        |       hier ungestört, eigenes 5×-Erdkabel
+       |                         |       wird übernommen
+       +------------+------------+
+                    |
+                    | 230V AC (Bestand: NYY-J 5× Erdkabel)
+                    v
+       +------------+------------+
+       |     Gartenhaus          |
+       |     Hauptverteilung:    |
+       |     - FI 25 A / 30 mA   |
+       |     - LS B16 (Steckd.)  |
+       |     - LS B10 (Licht)    |
+       |     - 10× Steckdosen    |
+       |     - Bew.-Melder Klo   |
+       +-------------------------+
+</div>
+
+<div class="info-box">
+  <strong>Trick mit dem 5-adrigen Erdkabel:</strong> Vom Geräteschuppen zum Gartenhaus liegt schon ein 5-adriges NYY-J-Erdkabel. Wir nutzen davon nur eine Phase + N + PE für das neue System (3 Adern). Die zwei freien Adern bleiben für mögliche zukünftige Anwendungen reserviert oder werden parallel als zusätzliche Phase aufgelegt. <strong>Erlaubt nur, wenn beide Stromversorgungen klar getrennt und gekennzeichnet sind</strong> — das muss der Elektriker bestätigen.
+</div>
+
+<!-- ============================================== -->
+<h2 id="energiezentrale">3. Energiezentrale</h2>
+
+<p>Diese drei Komponenten bilden das Herz des Systems und stehen alle gemeinsam in einem abschließbaren, isolierten Schaltschrank im vorderen Schuppen direkt unter den Solarmodulen.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Bild</th>
+      <th>Produkt</th>
+      <th>Spezifikation</th>
+      <th>Anz.</th>
+      <th>Einzelpreis</th>
+      <th>Summe</th>
+      <th>Link</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img class="product-img" src="img/multiplus-ii-48-3000.png" alt="Victron MultiPlus II 48/3000"></td>
+      <td>
+        <strong>Victron MultiPlus II 48/3000/35-32</strong>
+        <span class="badge badge-must">PFLICHT</span>
+        <div class="small">Inselwechselrichter mit Ladegerät, reine Sinuswelle</div>
+      </td>
+      <td class="small">
+        Dauerleistung: 2400 W (3000 VA)<br>
+        Spitzenleistung: 5500 W<br>
+        <strong>Standby: ~11 W</strong> (entscheidend!)<br>
+        Wirkungsgrad: 95 %<br>
+        Eingang: 48 V DC<br>
+        Ausgang: 230 V AC / 50 Hz<br>
+        Maße: 50 × 30 × 22 cm<br>
+        Gewicht: 19 kg<br>
+        5 Jahre Garantie
+      </td>
+      <td class="qty">1</td>
+      <td class="price">~ 1.100 €</td>
+      <td class="price">1.100 €</td>
+      <td><a href="https://www.offgridtec.com/victron-multiplus-ii-48-3000-35-32-230v-gx.html">offgridtec</a><br><a href="https://www.panda-solar.de/Victron-Multiplus-II-48-3000-35-32.html">panda-solar</a></td>
+    </tr>
+    <tr>
+      <td><div style="font-size: 2.5em; text-align: center; padding: 20px;">⚡</div></td>
+      <td>
+        <strong>Victron SmartSolar MPPT 150/45</strong>
+        <span class="badge badge-must">PFLICHT</span>
+        <div class="small">Solarladeregler mit Bluetooth</div>
+      </td>
+      <td class="small">
+        Max. PV-Leistung: 2600 W (48 V Akku)<br>
+        Max. PV-Spannung (Voc): 150 V<br>
+        Max. Ladestrom: 45 A<br>
+        Bluetooth integriert (App)<br>
+        Wirkungsgrad: 98 %<br>
+        Maße: 25 × 19 × 10 cm
+      </td>
+      <td class="qty">1</td>
+      <td class="price">~ 280 €</td>
+      <td class="price">280 €</td>
+      <td><a href="https://www.offgridtec.com/victron-smartsolar-mppt-150-45-tr.html">offgridtec</a></td>
+    </tr>
+    <tr>
+      <td><img class="product-img" src="img/pylontech-us3000c.png" alt="Pylontech US3000C"></td>
+      <td>
+        <strong>Pylontech US3000C 3,5 kWh</strong>
+        <span class="badge badge-rec">EMPFOHLEN</span>
+        <div class="small">LiFePO4-Akku, plug-and-play mit Victron</div>
+      </td>
+      <td class="small">
+        Nennspannung: 48 V (15 LiFePO4-Zellen)<br>
+        Nutzkapazität: 3,5 kWh (95 % DoD)<br>
+        Max. Lade-/Entladestrom: 37 A<br>
+        Lebensdauer: &gt;6000 Zyklen, &gt;10 Jahre<br>
+        BMS: integriert mit CAN-Bus<br>
+        Maße: 44 × 42 × 13 cm (1U)<br>
+        Gewicht: 32 kg<br>
+        Kommunikation mit Victron geprüft (siehe Kompatibilitätsliste)
+      </td>
+      <td class="qty">1</td>
+      <td class="price">~ 1.100 €</td>
+      <td class="price">1.100 €</td>
+      <td><a href="https://www.bau-tech.shop/batterie/lithium/lithium-48v/pylontech-us3000c-lithium-3-5kwh-speicher-48v-batterie-lifepo4-0-mwst1.html">bau-tech</a><br><a href="https://b2b.offgridtec.com/pylontech-us3000c-3-5kwh-lifepo4.html">offgridtec</a></td>
+    </tr>
+    <tr>
+      <td colspan="5" style="text-align: right;"><strong>Zwischensumme Energiezentrale</strong></td>
+      <td class="price"><strong>2.480 €</strong></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>Sparvariante (zum Vergleich):</strong> Statt Pylontech eine <a href="https://www.kaufland.de/product/515848937/">EPEVER 48V 100Ah (5,12 kWh)</a> für ~700 € einsetzen. Hat sogar mehr Kapazität, ist aber bei der Kommunikation mit Victron etwas frickeliger (Profil muss manuell konfiguriert werden, kein nativer CAN-Support). Spart ~400 €. Empfehlung: bei Pylontech bleiben — das ist seit Jahren der bewährte Standard für Victron-Off-Grid-Anlagen.
+</div>
+
+<!-- ============================================== -->
+<h2 id="solar">4. Solarmodule und Aufständerung</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Bild</th>
+      <th>Produkt</th>
+      <th>Spezifikation</th>
+      <th>Anz.</th>
+      <th>Einzelpreis</th>
+      <th>Summe</th>
+      <th>Link</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><div style="font-size: 2.5em; text-align: center; padding: 20px;">☀️</div></td>
+      <td>
+        <strong>JA Solar JAM54D40-LB 460 Wp</strong>
+        <span class="badge badge-rec">EMPFOHLEN</span>
+        <div class="small">Glas-Glas, bifazial, schwarzer Rahmen</div>
+      </td>
+      <td class="small">
+        Leistung: 460 Wp (STC)<br>
+        Voc: ~46 V, Vmp: ~38 V<br>
+        Isc: ~13 A, Imp: ~12 A<br>
+        Maße: ~176 × 113 × 3 cm<br>
+        Gewicht: ~22 kg<br>
+        Glas-Glas, bifazial<br>
+        Wirkungsgrad: ~22 %<br>
+        25 Jahre Leistungsgarantie
+      </td>
+      <td class="qty">6</td>
+      <td class="price">75,90 €</td>
+      <td class="price">455,40 €</td>
+      <td><a href="https://www.tepto.de/Solarmodule/">tepto.de</a> (Abholung empfohlen — Versand frisst die Ersparnis)</td>
+    </tr>
+    <tr>
+      <td>—</td>
+      <td>
+        <strong>Modul-Aufständerung Holz-Selbstbau</strong>
+        <span class="badge badge-opt">EIGENBAU</span>
+        <div class="small">30°-Winkel-Gestell auf Schuppendach</div>
+      </td>
+      <td class="small">
+        Druckimprägnierte Kantholz 7×7 cm + 4×6 cm<br>
+        Schwerlastwinkel verzinkt<br>
+        Edelstahlschrauben + Stockschrauben<br>
+        Sturmsicherung (Spanngurte oder Stahlseil)<br>
+        Modulklemmen Mitte/Außen Alu (12 + 4 Stück)<br>
+        Material aus dem Bauhaus / Toom
+      </td>
+      <td class="qty">1</td>
+      <td class="price">—</td>
+      <td class="price">~ 120 €</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>—</td>
+      <td>
+        <strong>Modulklemmen-Set Aluminium</strong>
+        <span class="badge badge-rec">EMPFOHLEN</span>
+        <div class="small">Falls keine professionelle Schiene gebaut wird</div>
+      </td>
+      <td class="small">
+        Mittelklemmen 35 mm + Endklemmen 35 mm<br>
+        Set für 6 Module (12+4 Stück)<br>
+        Zur Befestigung an Holz-Querbalken
+      </td>
+      <td class="qty">1</td>
+      <td class="price">~ 30 €</td>
+      <td class="price">30 €</td>
+      <td><a href="https://www.amazon.de/s?k=Modulklemmen+Set+35mm+alu">Amazon</a></td>
+    </tr>
+    <tr>
+      <td colspan="5" style="text-align: right;"><strong>Zwischensumme Solar</strong></td>
+      <td class="price"><strong>605 €</strong></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>String-Auslegung:</strong> 6 Module werden in <strong>2 parallelen Strings à 3 Module in Reihe</strong> verschaltet.
+  <ul>
+    <li>Vmp pro String: 3 × 38 V = <strong>114 V</strong> (im MPPT-Range 60–145 V) ✓</li>
+    <li>Voc pro String bei –10°C: 3 × 51 V = <strong>153 V</strong> — knapp am 150 V Limit, daher MPPT 150/45 mit etwas Reserve. <span class="small">(Bei Modulen mit niedrigerem Voc kein Problem; wenn JA Solar liefert mit Voc 46 V, dann Wintermax = 138 V — sicher.)</span></li>
+    <li>Imp 2 Strings parallel: 2 × 12 A = 24 A — passt zu MPPT 45 A</li>
+    <li>Gesamtleistung: 6 × 460 Wp = <strong>2760 Wp</strong></li>
+  </ul>
+</div>
+
+<div class="danger-box">
+  <strong>Aufständerung kritisch:</strong> Holz-Selbstbau ist OK, ABER <strong>Sturmlast und Schneelast müssen passen</strong>. 6 Module wiegen 130 kg, bei Sturm wirken aber Hebelkräfte von mehreren hundert Kilo. Empfehlung: Konstruktion vom Opa oder Elektriker prüfen lassen, mind. 4 Auflagepunkte pro Modul, Sturmsicherung mit Spanngurten zur Schuppenwand. Schuppendach muss die Last tragen können.
+</div>
+
+<!-- ============================================== -->
+<h2 id="dc-verkabelung">5. DC-Verkabelung (Solarmodule → MPPT → Akku → Wechselrichter)</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Produkt</th>
+      <th>Spezifikation / Verwendung</th>
+      <th>Anz.</th>
+      <th>Preis</th>
+      <th>Link</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Solarkabel H1Z2Z2-K 6 mm² rot + schwarz</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>UV-beständig, doppelt isoliert, von Modulen zum MPPT (~5 m bis Schaltschrank, plus Verlegungs-Reserve). 2 × 10 m reicht.</td>
+      <td class="qty">je 10 m</td>
+      <td class="price">~ 40 €</td>
+      <td><a href="https://www.amazon.de/s?k=H1Z2Z2-K+6mm%C2%B2+solarkabel">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>MC4-Stecker-Set</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>10 Paar Stecker + Crimpzange (Crimpzange habt ihr schon?). Verbindet Modulkabel mit Hauptstrang.</td>
+      <td class="qty">1 Set</td>
+      <td class="price">~ 25 €</td>
+      <td><a href="https://www.amazon.de/s?k=MC4+Stecker+Set+crimpzange">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>DC-Trennschalter 1000 V / 32 A</strong> <span class="badge badge-must">PFLICHT (Vorschrift)</span></td>
+      <td>Zwischen PV-Strings und MPPT. Ermöglicht stromloses Schalten bei Wartung. IP65 Aufputz.</td>
+      <td class="qty">1</td>
+      <td class="price">~ 30 €</td>
+      <td><a href="https://www.amazon.de/s?k=DC+Trennschalter+1000V+PV">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Akkukabel 35 mm² rot + schwarz</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Vom Akku zum Wechselrichter. Im Schaltschrank, kurz (&lt;1 m). Mit Ringkabelschuhen M8.</td>
+      <td class="qty">je 1 m</td>
+      <td class="price">~ 35 €</td>
+      <td><a href="https://www.amazon.de/s?k=Akkukabel+35mm%C2%B2+M8">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Akkukabel 25 mm² rot + schwarz</strong></td>
+      <td>Vom MPPT zum Akku. Im Schaltschrank, kurz.</td>
+      <td class="qty">je 1 m</td>
+      <td class="price">~ 25 €</td>
+      <td><a href="https://www.amazon.de/s?k=Batteriekabel+25mm%C2%B2">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Mega-Sicherung 125 A + Halter</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Zwischen Akku-Plus und Wechselrichter-Plus. Schützt bei Kurzschluss vor Akku-Brand. Direkt am Akku-Plus-Pol montiert.</td>
+      <td class="qty">1 + 1</td>
+      <td class="price">~ 30 €</td>
+      <td><a href="https://www.amazon.de/s?k=Mega+Sicherung+125A+halter">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>DC-Sicherung 32 A für MPPT</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Zwischen MPPT-Akku-Ausgang und Akku-Plus. Sicherungshalter mit Sicherung.</td>
+      <td class="qty">1</td>
+      <td class="price">~ 15 €</td>
+      <td><a href="https://www.amazon.de/s?k=NH00+Sicherung+32A+Halter">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Anschlusskabel Pylontech ↔ Victron</strong> <span class="badge badge-rec">EMPFOHLEN</span></td>
+      <td>Mit Original-Kommunikationskabel CAN. Manche Pylontech-Sets enthalten das schon, prüfen beim Bestellen.</td>
+      <td class="qty">1</td>
+      <td class="price">im Akku-Set</td>
+      <td>im Pylontech-Set enthalten</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="text-align: right;"><strong>Zwischensumme DC-Verkabelung</strong></td>
+      <td class="price"><strong>200 €</strong></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2 id="ac-verkabelung">6. AC-Verkabelung</h2>
+
+<p>Drei Abschnitte:</p>
+<ol>
+  <li><strong>Vorderer Schuppen → mittlerer Schuppen</strong> (~20 m, NEU als Luftleitung)</li>
+  <li><strong>Mittlerer Schuppen → Gartenhaus</strong> (~40 m, BESTAND als 5-adriges Erdkabel — wir nutzen davon nur 1 Phase + N + PE)</li>
+  <li><strong>Im Gartenhaus</strong> (~50 m für 10 Steckdosen + 1 Lichtkreis)</li>
+</ol>
+
+<table>
+  <thead>
+    <tr>
+      <th>Produkt</th>
+      <th>Spezifikation / Verwendung</th>
+      <th>Anz.</th>
+      <th>Preis</th>
+      <th>Link</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>NYY-J 5×2,5 mm² Erdkabel</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Vom vorderen zum mittleren Schuppen als Freileitung über Spanndraht (~20 m + 5 m Reserve). 5 Adern, weil das vorhandene Erdkabel auch 5-adrig ist und so der Übergang sauber bleibt. Nur L1, N und PE werden genutzt.</td>
+      <td class="qty">25 m</td>
+      <td class="price">~ 75 €</td>
+      <td><a href="https://www.amazon.de/s?k=NYY-J+5x2%2C5+erdkabel">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Tragseil verzinkt 4 mm + Spannschloss</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Stahlseil zum Aufhängen der Luftleitung. Spannschloss zum Spannen. Befestigungsösen für Schuppenwand.</td>
+      <td class="qty">25 m + 1 Set</td>
+      <td class="price">~ 35 €</td>
+      <td><a href="https://www.amazon.de/s?k=Tragseil+stahl+4mm+spannschloss">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Kabelschellen / Bandagen</strong></td>
+      <td>Zum Befestigen des AC-Kabels am Tragseil (alle ~40 cm).</td>
+      <td class="qty">~50 St.</td>
+      <td class="price">~ 10 €</td>
+      <td><a href="https://www.amazon.de/s?k=kabelbinder+UV+best%C3%A4ndig+schwarz">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>NYM-J 3×2,5 mm² Innenkabel</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Im Gartenhaus für Steckdosenkreis(e). 50 m lt. deiner Schätzung. Reicht für 1 Stromkreis Steckdosen — wenn 2 getrennte Kreise erwünscht (Steckdosen + Licht), dann 75 m bestellen.</td>
+      <td class="qty">50 m</td>
+      <td class="price">~ 60 €</td>
+      <td><a href="https://www.amazon.de/s?k=NYM-J+3x2%2C5+50m">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>NYM-J 3×1,5 mm² für Lichtkreis</strong> <span class="badge badge-rec">EMPFOHLEN</span></td>
+      <td>Falls Licht und Steckdosen getrennt werden sollen (sinnvoll wegen separater B10-Sicherung). 25 m reichen für Beleuchtung + Bewegungsmelder + LED-Leiste.</td>
+      <td class="qty">25 m</td>
+      <td class="price">~ 25 €</td>
+      <td><a href="https://www.amazon.de/s?k=NYM-J+3x1%2C5+25m">Amazon</a></td>
+    </tr>
+    <tr>
+      <td colspan="3" style="text-align: right;"><strong>Zwischensumme AC-Verkabelung</strong></td>
+      <td class="price"><strong>205 €</strong></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>Querschnitts-Check (Spannungsabfall bei 16 A Volllast):</strong>
+  <ul>
+    <li>NYY 5×2,5: 20 m Strecke → ~3 % Drop. Akzeptabel für Reserve-Phase.</li>
+    <li>Bestand 5×2,5 (Annahme): 40 m → ~6 % Drop bei 16 A. Grenzwertig (max 4 % erlaubt nach VDE).<br>
+    <strong>→ Daher Empfehlung: im Gartenhaus mit B13 statt B16 absichern</strong>, oder den Wechselrichter elektronisch auf 13 A (3 kW) begrenzen — der Victron kann das per App. Reicht für alle geplanten Verbraucher.</li>
+    <li>NYM 3×2,5 im Haus: 30 m → ~3 %. Passt.</li>
+  </ul>
+  <strong>Frage an Elektriker:</strong> Welcher Querschnitt ist im bestehenden 5-adrigen Erdkabel? Wenn 4 mm² oder mehr: B16 problemlos OK. Wenn 2,5 mm²: Begrenzung auf 13 A wegen Spannungsabfall.
+</div>
+
+<!-- ============================================== -->
+<h2 id="hausverteilung">7. Hausverteilung, FI/LS, Steckdosen</h2>
+
+<h3>Schaltschrank Energiezentrale (vorderer Schuppen)</h3>
+<table>
+  <thead>
+    <tr><th>Produkt</th><th>Spezifikation</th><th>Anz.</th><th>Preis</th><th>Link</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Wandverteiler IP65 Aufputz, 24 Module</strong> <span class="badge badge-rec">EMPFOHLEN</span></td>
+      <td>Für die DC-Sicherungen, Klemmen und ggf. AC-Hauptschalter im Schuppen. Falls eigener Holzschrank gebaut wird, ist nur ein Reihenklemmen-Set nötig.</td>
+      <td class="qty">1</td>
+      <td class="price">~ 50 €</td>
+      <td><a href="https://www.amazon.de/s?k=Aufputz+Verteilerkasten+24+Module+IP65">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>AC-Hauptschalter 25 A 1+N polig</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Kann das ganze System spannungsfrei schalten (für Wartung).</td>
+      <td class="qty">1</td>
+      <td class="price">~ 15 €</td>
+      <td><a href="https://www.amazon.de/s?k=Hauptschalter+25A+1+polig">Amazon</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Hausverteilung Gartenhaus</h3>
+<table>
+  <thead>
+    <tr><th>Produkt</th><th>Spezifikation</th><th>Anz.</th><th>Preis</th><th>Link</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Aufputz-Verteilerkasten 1- oder 2-reihig IP54</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Fasst FI + 2-3 LS-Schalter + Reserve. 12 TE reicht.</td>
+      <td class="qty">1</td>
+      <td class="price">~ 40 €</td>
+      <td><a href="https://www.amazon.de/s?k=Aufputz+Stromkasten+12+TE+IP54">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>FI/RCD 25 A / 30 mA, 2-polig (Typ A)</strong> <span class="badge badge-must">PFLICHT (Pflicht!)</span></td>
+      <td>Personenschutz. Löst bei Fehlerstrom &gt; 30 mA aus. <strong>Vorschrift für alle Steckdosen-Stromkreise.</strong></td>
+      <td class="qty">1</td>
+      <td class="price">~ 40 €</td>
+      <td><a href="https://www.amazon.de/s?k=FI+RCD+25A+30mA+typ+A+2polig">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>LS-Schalter B16, 1-polig</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Steckdosenkreis(e). Bei begrenztem Querschnitt im Bestand-Kabel ggf. B13 statt B16.</td>
+      <td class="qty">1–2</td>
+      <td class="price">je 8 €</td>
+      <td><a href="https://www.amazon.de/s?k=Leitungsschutzschalter+B16+1polig">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>LS-Schalter B10, 1-polig</strong> <span class="badge badge-rec">EMPFOHLEN</span></td>
+      <td>Lichtkreis getrennt vom Steckdosenkreis.</td>
+      <td class="qty">1</td>
+      <td class="price">~ 8 €</td>
+      <td><a href="https://www.amazon.de/s?k=Leitungsschutzschalter+B10+1polig">Amazon</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Steckdosen, Schalter, Beleuchtung</h3>
+<table>
+  <thead>
+    <tr><th>Produkt</th><th>Spezifikation</th><th>Anz.</th><th>Preis</th><th>Link</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Schuko-Steckdose Aufputz IP44</strong></td>
+      <td>Witterungsbeständig, mit Klappdeckel. Für Außenbereich + Werkstatt-Ecke.</td>
+      <td class="qty">3</td>
+      <td class="price">je 10 €</td>
+      <td><a href="https://www.amazon.de/s?k=Schuko+Aufputz+IP44+klappdeckel">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Schuko-Steckdose Innen Standard</strong></td>
+      <td>Unterputz oder Aufputz nach Wunsch. 7 Stück für innen.</td>
+      <td class="qty">7</td>
+      <td class="price">je 5 €</td>
+      <td><a href="https://www.amazon.de/s?k=Schuko+Steckdose+aufputz">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Lichtschalter Aufputz</strong></td>
+      <td>Standard für Lichtkreise.</td>
+      <td class="qty">2–3</td>
+      <td class="price">je 5 €</td>
+      <td><a href="https://www.amazon.de/s?k=Lichtschalter+aufputz">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Bewegungsmelder Aufputz IP44</strong></td>
+      <td>Für die Klo-Treppe. PIR-Melder mit Zeitschaltung. 230V direkt.</td>
+      <td class="qty">1</td>
+      <td class="price">~ 25 €</td>
+      <td><a href="https://www.amazon.de/s?k=Bewegungsmelder+aufputz+IP44">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>LED-Leiste 230V mit Schutzabdeckung</strong></td>
+      <td>Klo-Treppe. ~60 cm, 8–10 W, IP65 falls feucht.</td>
+      <td class="qty">1</td>
+      <td class="price">~ 20 €</td>
+      <td><a href="https://www.amazon.de/s?k=LED+leiste+IP65+230V">Amazon</a></td>
+    </tr>
+    <tr>
+      <td colspan="3" style="text-align: right;"><strong>Zwischensumme Hausverteilung + Innen</strong></td>
+      <td class="price"><strong>~ 240 €</strong></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2 id="erdung">8. Erdung — offener Punkt für Elektriker</h2>
+
+<div class="danger-box">
+  <strong>Wichtig:</strong> Erdung ist für ein Off-Grid-System mit FI <strong>zwingend erforderlich</strong>. Ohne Erder funktioniert der FI nicht zuverlässig — bei Fehlerstrom muss er abschalten können.
+</div>
+
+<p>Da kein Fundamenterder vorhanden ist, gibt es drei realistische Optionen:</p>
+
+<div class="grid-two">
+  <div class="card">
+    <h4>Option A: Tiefenerder (Kreuzerder)</h4>
+    <p><strong>Empfehlung.</strong> Verzinkter Stahlerder, 1,5 m oder besser 2 × 1,5 m gestoßen, in feuchtes Erdreich neben dem Schuppen / Gartenhaus.</p>
+    <ul>
+      <li>Material: Tiefenerder feuerverzinkt 1,5 m: ~30 €</li>
+      <li>Erdungsklemme + 16 mm² Erdungskabel grün-gelb: ~25 €</li>
+      <li>Schlagvorrichtung leihen oder mit Vorschlaghammer</li>
+    </ul>
+    <p class="small">Messung des Erdwiderstands nötig (Elektriker mit Erdungsmessgerät), Ziel &lt;100 Ω, besser &lt;50 Ω.</p>
+  </div>
+
+  <div class="card">
+    <h4>Option B: Im Brunnenrohr</h4>
+    <p>Metallband oder Edelstahl-Erder durch den Plastikschlauch des Brunnens bis ans Grundwasser ablassen. <strong>Nur wenn das technisch sauber geht.</strong> Vorteil: kontakt mit Grundwasser = sehr niedriger Erdwiderstand.</p>
+    <ul>
+      <li>Edelstahlband V4A 30×3,5 mm: ~50 €</li>
+      <li>Erdungsschelle + Anschlusskabel</li>
+    </ul>
+    <p class="small">Risiko: das Band scheuert am Plastikschlauch oder Schlauch wird beschädigt. Mit dem Elektriker durchsprechen.</p>
+  </div>
+</div>
+
+<p>Option C wäre noch ein Banderder im Erdreich (mind. 50 cm tief, mind. 25 m lang) — das ist aber Aufwand mit dem Bagger und nur sinnvoll wenn parallel Erdkabel-Trasse gegraben wird.</p>
+
+<h3>Erdung — Bestellliste</h3>
+<table>
+  <thead>
+    <tr><th>Produkt</th><th>Spezifikation</th><th>Anz.</th><th>Preis</th><th>Link</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Tiefenerder feuerverzinkt 1,5 m</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Stahlerder zum Einschlagen, mit Anschlussklemme.</td>
+      <td class="qty">1–2</td>
+      <td class="price">je 30 €</td>
+      <td><a href="https://www.amazon.de/s?k=Tiefenerder+feuerverzinkt+1%2C5m">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Erdungskabel 16 mm² grün-gelb</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Vom Tiefenerder zum Schaltschrank / FI. ~10 m.</td>
+      <td class="qty">10 m</td>
+      <td class="price">~ 25 €</td>
+      <td><a href="https://www.amazon.de/s?k=Erdungskabel+16mm%C2%B2+gr%C3%BCn-gelb">Amazon</a></td>
+    </tr>
+    <tr>
+      <td><strong>Potentialausgleichsschiene</strong> <span class="badge badge-must">PFLICHT</span></td>
+      <td>Sammelpunkt für Erdung. Im Schaltschrank vorderer Schuppen.</td>
+      <td class="qty">1</td>
+      <td class="price">~ 15 €</td>
+      <td><a href="https://www.amazon.de/s?k=Potentialausgleichsschiene">Amazon</a></td>
+    </tr>
+    <tr>
+      <td colspan="3" style="text-align: right;"><strong>Zwischensumme Erdung</strong></td>
+      <td class="price"><strong>~ 100 €</strong></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2 id="aufbau">9. Empfohlene Aufbaureihenfolge</h2>
+
+<ol>
+  <li><strong>Schaltschrank-Standort vorbereiten</strong> — abschließbarer, isolierter, frostfreier Raum/Schrank im vorderen Schuppen. Ausreichend Platz: ~80 × 60 × 40 cm.</li>
+  <li><strong>Solarmodule montieren</strong> — Holz-Aufständerung bauen, Module festschrauben, Kabel mit MC4-Steckern verbinden. Module noch NICHT ans MPPT anschließen (sonst stehen sie unter Spannung).</li>
+  <li><strong>DC-Trennschalter setzen</strong> — zwischen Module und MPPT. Auf "AUS" lassen.</li>
+  <li><strong>Komponenten im Schaltschrank verkabeln</strong> — Wechselrichter, MPPT, Akku-Halterung. Akku noch NICHT anklemmen!</li>
+  <li><strong>Erdung herstellen</strong> — Tiefenerder einschlagen, Potentialausgleich verkabeln. Erdwiderstand vom Elektriker messen lassen.</li>
+  <li><strong>AC-Luftleitung verlegen</strong> — Tragseil spannen, NYY-Kabel daran befestigen.</li>
+  <li><strong>Übergang zum 5-adrigen Bestandskabel</strong> — Im mittleren Schuppen sauber auf Reihenklemmen verbinden, beschriften ("Off-Grid System Haus — getrennt vom 12V-Garten").</li>
+  <li><strong>Hausverteilung montieren</strong> — Verteilerkasten anschrauben, FI + LS einbauen, NYM-Kabel verlegen, Steckdosen montieren.</li>
+  <li><strong>Akku-Inbetriebnahme</strong> — Mega-Sicherung erst entfernen, Akku-Pole anklemmen (Plus zuletzt!), Sicherung einsetzen.</li>
+  <li><strong>System hochfahren</strong> — Wechselrichter ein, MPPT prüft Akku, dann DC-Trennschalter ein. App-Verbindung testen.</li>
+  <li><strong>Pumpe umklemmen</strong> — Brunnenpumpe vom 12V-System trennen, neu am 230V-Netz anschließen. Drehrichtung prüfen!</li>
+  <li><strong>Elektriker-Abnahme</strong> — Isolationsmessung, FI-Test, Erdwiderstand, Polaritätsprüfung. Protokoll anfertigen lassen.</li>
+</ol>
+
+<!-- ============================================== -->
+<h2 id="kosten">10. Gesamtkostenübersicht</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Kategorie</th>
+      <th>Position</th>
+      <th class="price">Summe</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Energiezentrale</td><td>Wechselrichter, MPPT, Akku</td><td class="price">2.480 €</td></tr>
+    <tr><td>Solar</td><td>6 Module + Aufständerung + Klemmen</td><td class="price">605 €</td></tr>
+    <tr><td>DC-Verkabelung</td><td>Solarkabel, MC4, Trennschalter, Akkukabel, Sicherungen</td><td class="price">200 €</td></tr>
+    <tr><td>AC-Verkabelung</td><td>NYY-J Erdkabel, NYM-J Innen, Tragseil, Klemmen</td><td class="price">205 €</td></tr>
+    <tr><td>Hausverteilung</td><td>Verteilerkasten, FI, LS, Steckdosen, Schalter, Beleuchtung</td><td class="price">240 €</td></tr>
+    <tr><td>Erdung</td><td>Tiefenerder, Erdungskabel, Potentialausgleich</td><td class="price">100 €</td></tr>
+    <tr class="subtotal-row"><td colspan="2"><strong>Zwischensumme Material</strong></td><td class="price"><strong>~ 3.830 €</strong></td></tr>
+    <tr><td>Elektriker</td><td>Abnahme + Isolations-/FI-/Erder-Messung + Protokoll</td><td class="price">300–500 €</td></tr>
+    <tr class="total-row"><td colspan="2"><strong>GESAMT</strong></td><td class="price"><strong>~ 4.150–4.350 €</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>Sparpotenzial:</strong>
+  <ul>
+    <li>EPEVER 48V 100Ah statt Pylontech: <strong>−400 €</strong> (Kommunikation tricky, aber 5,12 statt 3,5 kWh)</li>
+    <li>4 statt 6 Module: <strong>−150 €</strong> (1,84 statt 2,76 kWp — würde aber für Winter knapp)</li>
+    <li>Verteilerkasten Schuppen weglassen, alles direkt montieren: <strong>−50 €</strong></li>
+    <li>Potential gesamt: <strong>~600 € weniger</strong>, also Material ~3.250 € statt 3.830 €</li>
+  </ul>
+  <strong>Warum nicht weniger?</strong> Das ist ein durchgängig neuwertiges, langlebiges System mit 5–25 Jahren Garantie auf den Hauptkomponenten. Die 1.300 €-Anlage, die ihr ursprünglich gefunden hattet, war wahrscheinlich Restposten/gebraucht ohne Garantie und ohne ordentliche Hausverkabelung — das Risiko ist da deutlich höher.
+</div>
+
+<!-- ============================================== -->
+<h2 id="fragen">11. Offene Fragen für Opa und Elektriker</h2>
+
+<div class="question-box">
+  <h4>Frage 1 — Querschnitt des bestehenden 5-adrigen Erdkabels?</h4>
+  <p>Das Bestandskabel vom Geräteschuppen zum Gartenhaus ist 5-adrig — wir wissen aber nicht, ob 1,5 / 2,5 / 4 / 6 mm². Davon hängt ab, ob wir mit B16 oder B13 absichern und wie viel Leistung wirklich übertragen werden kann.</p>
+  <p><strong>Aktion:</strong> Kabelmantel im Schuppen aufschneiden und Adernquerschnitt messen oder vom Aufdruck ablesen.</p>
+</div>
+
+<div class="question-box">
+  <h4>Frage 2 — Kann der Schuppen die Schnee-/Sturmlast tragen?</h4>
+  <p>6 Module à 22 kg = 132 kg Eigengewicht plus mögliche Schneelast. Bei Sturm wirken Hebelkräfte. Das Dach des vorderen Schuppens muss das aushalten.</p>
+  <p><strong>Aktion:</strong> Dachkonstruktion mit Opa beurteilen. Falls Bedenken: Holz-Aufständerung mit Spanngurten zur Schuppenwand zusätzlich abspannen, Module nur auf den Dachstützen, nicht in der Mitte.</p>
+</div>
+
+<div class="question-box">
+  <h4>Frage 3 — Erdung Option A oder B?</h4>
+  <p>Tiefenerder neben dem Schuppen einschlagen (sauber, Standard) oder Edelstahlband durch den Brunnenrohr ablassen (besserer Erdwiderstand, aber Risiko Schlauchbeschädigung)?</p>
+  <p><strong>Aktion:</strong> Mit Elektriker beraten. Empfehlung: Tiefenerder, weil das Brunnenrisiko unkalkulierbar ist.</p>
+</div>
+
+<div class="question-box">
+  <h4>Frage 4 — Trennung der zwei Anlagen sauber dokumentiert?</h4>
+  <p>Das alte 12V-System (Garten) und das neue 48V-System (Haus + Pumpe) müssen klar gekennzeichnet sein. Im mittleren Schuppen, wo das alte System steht, müssen die Klemmen für das durchgehende 5-adrige Erdkabel beschriftet werden — sonst legt jemand mal versehentlich beide Systeme parallel.</p>
+  <p><strong>Aktion:</strong> Beschriftungs-Schilder bestellen ("Achtung: System-Trennung"), Klemmkasten beschriften.</p>
+</div>
+
+<div class="question-box">
+  <h4>Frage 5 — Pumpe: 230V einphasig vorhanden, oder muss sie ausgetauscht werden?</h4>
+  <p>Die Brunnenpumpe lief bisher am 12V-System. War das eine 12V-DC-Pumpe oder eine 230V-AC-Pumpe (mit Wechselrichter dazwischen)? Wenn DC, brauchen wir eine neue 230V-Pumpe.</p>
+  <p><strong>Aktion:</strong> Typenschild der Pumpe ablesen.</p>
+</div>
+
+<div class="question-box">
+  <h4>Frage 6 — Mikrowelle vs. Wechselrichter-Spitzenleistung?</h4>
+  <p>Eine Mikrowelle braucht im Anlauf ~2000 W. Der Victron MultiPlus II 48/3000 schafft das locker (5500 W Spitze, 2400 W Dauer). Aber wenn parallel andere Verbraucher laufen, kann es eng werden. Wir empfehlen: Mikrowelle alleine, kein Wasserkocher gleichzeitig.</p>
+  <p><strong>Aktion:</strong> Familie informieren.</p>
+</div>
+
+<div class="question-box">
+  <h4>Frage 7 — Kabelweg vom vorderen Schuppen zum mittleren Schuppen: Höhe der Luftleitung?</h4>
+  <p>VDE schreibt für Freileitungen über zugänglichen Bereich Mindesthöhen vor (typ. 4 m über Wegen, 3 m sonst). Strecke ist nur ~20 m, aber wir brauchen Befestigungspunkte (Bäume? Pfosten setzen?).</p>
+  <p><strong>Aktion:</strong> Trasse vor Ort abgehen, Befestigungspunkte planen.</p>
+</div>
+
+<div class="question-box">
+  <h4>Frage 8 — Wechselrichter: Standby-Verbrauch wirklich akzeptabel?</h4>
+  <p>11 W Standby × 24 h × 30 d = ~8 kWh/Monat = ~10 % der monatlichen Erzeugung im Winter. Im Sommer egal, im Winter spürbar. Alternative: Wechselrichter komplett ausschalten wenn das Haus leer steht (Hauptschalter im Schuppen umlegen).</p>
+  <p><strong>Aktion:</strong> Verhalten besprechen — was muss durchlaufen (Starlink? Kameras?), was kann offline gehen.</p>
+</div>
+
+<!-- ============================================== -->
+<h2>12. Was nicht im Setup ist (zur Klarstellung)</h2>
+
+<ul class="checklist">
+  <li><strong>Backup-Generator</strong> — Falls jemals zentrales 230V-Notstrom gewünscht ist (z.B. längere Schlechtwetterphase im Winter), könnte später ein Honda EU22i oder ähnliches dazukommen. Nicht jetzt nötig.</li>
+  <li><strong>Akku-Erweiterung</strong> — Pylontech US3000C ist parallel-fähig, eine zweite Einheit kann später dazu (3,5 → 7 kWh).</li>
+  <li><strong>Modul-Erweiterung</strong> — Der MPPT 150/45 schafft maximal 2600 W, also wären noch ~0–1 Modul möglich. Für mehr braucht es einen zweiten MPPT.</li>
+  <li><strong>WLAN/Monitoring</strong> — Der Victron hat Bluetooth + per VRM-Cloud auch Online-Zugriff (kostenfrei). Falls Cerbo GX dazugekauft wird (~280 €), gibt's Touchscreen + lokales Webinterface. Aktuell nicht im Budget, kann später ergänzt werden.</li>
+  <li><strong>Überspannungsschutz Typ 2</strong> — Bei Off-Grid weniger wichtig als bei Netzanschluss, aber empfehlenswert wenn Blitz-Risiko hoch (offene Lage). ~50 € extra. Mit Elektriker abstimmen.</li>
+  <li><strong>Kameras + Starlink-Anschluss</strong> — Hardware nicht in dieser Liste enthalten, da separat geplant.</li>
+</ul>
+
+<!-- ============================================== -->
+<footer style="margin-top: 50px; padding-top: 20px; border-top: 2px solid var(--border); color: var(--muted); font-size: 0.85em;">
+  <p>Dieses Dokument ist eine Bestellgrundlage zur Diskussion mit Opa und der Endabnahme durch einen zugelassenen Elektriker. Keine Komponente einbauen, bevor das Gesamtkonzept abgesegnet ist. Insbesondere die Erdungsmaßnahme, FI-Auslegung und Querschnitt-Festlegung sind Pflichtaufgaben des Elektrikers.</p>
+  <p>Erstellt für: Moritz Voigt · Garten Voigt-Garten / Refugium Heideland · Etzdorf im Rosental</p>
+</footer>
+
+</body>
+</html>

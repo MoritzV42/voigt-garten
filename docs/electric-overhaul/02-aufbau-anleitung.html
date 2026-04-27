@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Aufbau-Anleitung — Voigt-Garten Off-Grid</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="doc-nav">
+  <a href="00-uebersicht.html">📋 Übersicht</a>
+  <a href="01-bestellliste.html">🛒 Bestellliste</a>
+  <a href="02-aufbau-anleitung.html" class="current">🔧 Aufbau</a>
+  <a href="03-verkabelungsplan.html">⚡ Verkabelung</a>
+  <a href="04-elektriker-abnahme.html">✅ Abnahme</a>
+  <a href="05-betrieb-und-wartung.html">🛠️ Betrieb</a>
+</nav>
+
+<header>
+  <h1>Aufbau-Anleitung in 7 Phasen</h1>
+  <div class="subtitle">Von Lieferung bis Inbetriebnahme — chronologisch</div>
+  <div class="meta">
+    Geschätzter Zeitaufwand: 4–6 Tage à 4–6 h, plus Wartezeit auf Elektriker-Abnahme<br>
+    Werkzeug: Multimeter, Crimpzange, Aderendhülsen-Zange, Akkuschrauber, Schraubenzieher-Set, Wasserwaage, Maßband, Vorschlaghammer (Erder), Holzwerkzeug für Aufständerung
+  </div>
+</header>
+
+<div class="danger-box">
+  <strong>Sicherheits-Grundregeln (gelten in allen Phasen):</strong>
+  <ul>
+    <li>Auf der DC-Seite (Module + Akku): immer mit DC-Trennschalter und Mega-Sicherung arbeiten. Solarmodule liefern <strong>auch ohne Sonne</strong> noch Restspannung — nur bei Dunkelheit oder mit Abdecktuch sind sie wirklich spannungsfrei.</li>
+    <li>48-V-Batteriepole NIE mit Werkzeug überbrücken. Selbst bei „nur" 48 V kann der Kurzschluss-Strom mehrere hundert Ampere erreichen — Schweißbrenner-Effekt.</li>
+    <li>AC-Seite: <strong>Nicht unter Spannung arbeiten</strong>. Hauptschalter aus, Spannungsfreiheit mit Multimeter prüfen, Phase + Nullleiter beide messen.</li>
+    <li>Eheringe / Uhren / Ketten ablegen. Schmuck im Stromfluss = Verbrennung.</li>
+    <li>Bei Fehler oder Unsicherheit: Nicht improvisieren. Foto machen, kurzes Video, Elektriker fragen.</li>
+  </ul>
+</div>
+
+<!-- ============================================== -->
+<h2>Phase 1 — Vorbereitung (Tag 0)</h2>
+
+<h3>Material-Check nach Lieferung</h3>
+<p>Bevor irgendetwas angeschraubt wird: Bestellliste durchgehen, alles auspacken, auf Vollständigkeit prüfen.</p>
+
+<ul class="checklist">
+  <li>Wechselrichter Victron MultiPlus II 48/3000 — unbeschädigt, Original-Verpackung</li>
+  <li>SmartSolar MPPT 150/45 — unbeschädigt</li>
+  <li>Pylontech US3000C — kein sichtbarer Schaden, Spannungsanzeige reagiert beim Antippen</li>
+  <li>6 × Solarmodule — visuelle Prüfung Glas (Risse?), Anschlussdose intakt, MC4-Stecker dran</li>
+  <li>Alle Kabel, Sicherungen, Klemmen vollzählig</li>
+  <li>Kommunikationskabel CAN für Pylontech ↔ Victron im Set vorhanden? (sonst nachbestellen)</li>
+</ul>
+
+<h3>Aufstellort vorbereiten</h3>
+
+<div class="grid-two">
+  <div class="card">
+    <h4>Schaltschrank-Standort vorderer Schuppen</h4>
+    <ul>
+      <li>Trocken, frostfrei (&gt;0 °C), belüftet</li>
+      <li>Mindestens 80 × 60 × 40 cm Platz für Wechselrichter, MPPT, Akku</li>
+      <li>Wandmontage stabil — Akku wiegt 32 kg, Wechselrichter 19 kg</li>
+      <li>Abschließbar (Schloss)</li>
+      <li>Brandlast minimieren — kein Heu, Holzspäne, Gasflasche im selben Raum</li>
+      <li>Rauchmelder im Schuppen?</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Hausverteilung im Gartenhaus</h4>
+    <ul>
+      <li>Trockener Wandbereich, gut zugänglich</li>
+      <li>Nahe der Eingangstür — Hauptschalter im Notfall schnell erreichbar</li>
+      <li>Nicht direkt neben Holzofen oder Spülbecken</li>
+      <li>Mindestens 40 × 30 cm freier Wandplatz</li>
+      <li>Keine brennbaren Materialien direkt drumherum</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Trasse abgehen und markieren</h3>
+<ol>
+  <li>Vom vorderen Schuppen zum Geräteschuppen (Bestand alte Solar): Luftleitungs-Trasse abgehen. Befestigungspunkte identifizieren (Schuppenwand, Pfosten, Bäume).</li>
+  <li>Mindesthöhe der Luftleitung: <strong>3 m über Garten/Wiese, 4 m über befahrbarem Bereich</strong> (Zufahrt!).</li>
+  <li>Pfosten setzen wo nötig (4 m hohe Holzpfosten, 80 cm einbetoniert).</li>
+  <li>Hausverkabelung im Gartenhaus skizzieren — wo sollen Steckdosen hin? Welcher Weg hat das Kabel?</li>
+</ol>
+
+<!-- ============================================== -->
+<h2>Phase 2 — Solarmodule und Aufständerung (Tag 1–2)</h2>
+
+<h3>Aufständerung bauen</h3>
+<ol>
+  <li><strong>Berechnung:</strong> 6 Module à 176 × 113 cm = 6,12 m² aktive Fläche. Aufgeständert mit 30° Neigung Richtung Süd.</li>
+  <li><strong>Holzkonstruktion:</strong> 4 Querbalken 7×7 cm KVH, in Längsrichtung des Daches. Aufgeständert auf Dreiecke aus 4×6 cm KVH.</li>
+  <li><strong>Verschraubung am Dach:</strong> Stockschrauben durch Sparren oder durchgehende Tragelatte. Mindestens 3 Befestigungspunkte je Querbalken.</li>
+  <li><strong>Sturmsicherung:</strong> Spanngurte oder Stahlseile von der Aufständerung zur Schuppenwand spannen. Bei Sturmlast wirken bis 200 kg pro Modul Sog!</li>
+  <li><strong>Druckimprägnierung:</strong> Holz vor Aufbau mit Holzschutzlasur behandeln (Wetterseite).</li>
+</ol>
+
+<div class="info-box">
+  <strong>Vor-Ort-Check:</strong> Schuppendach muss die Last tragen. Bei Schneelast (in Sachsen typ. Zone 2 = 0,85 kN/m²) plus Modulgewicht plus Aufständerung kommen auf das Dach gut 350 kg. Falls das Dach Bedenken hat: parallel zur Aufständerung Stützpfosten neben den Schuppen setzen, die einen Großteil der Last übernehmen.
+</div>
+
+<h3>Module montieren</h3>
+<ol>
+  <li>Module einzeln auf das Dach heben (Vorsicht beim Tragen — am Rahmen, nie am Glas).</li>
+  <li>Mit Modulklemmen an den Querbalken festklemmen. Drehmoment Modulklemme: <strong>15 Nm</strong> (siehe Klemmen-Datenblatt).</li>
+  <li>Mindestabstand zwischen Modulen: 2 cm (für thermische Ausdehnung).</li>
+  <li>Anschlussdosen aller Module sollten in dieselbe Richtung zeigen — vereinfacht die Verkabelung.</li>
+</ol>
+
+<h3>Verschalten zu 2 Strings</h3>
+<p>Siehe <a href="03-verkabelungsplan.html">Dokument 03</a> für den genauen Verschaltungsplan.</p>
+<ol>
+  <li>String A: Modul 1 (+) → Modul 2 (+/-) → Modul 3 (+/-) → MC4-Verlängerung zum Trennschalter</li>
+  <li>String B: Modul 4 (+) → Modul 5 (+/-) → Modul 6 (+/-) → MC4-Verlängerung zum Trennschalter</li>
+  <li>Beide Stringen werden im Trennschalter parallel zusammengeführt</li>
+  <li><strong>Polarität mit Multimeter messen, BEVOR ans MPPT angeschlossen wird!</strong> Falsche Polarität zerstört den MPPT.</li>
+  <li>Erwartete Voc pro String (im Sommer): ca. 138 V. Im Winter bei –10 °C bis 153 V.</li>
+</ol>
+
+<!-- ============================================== -->
+<h2>Phase 3 — Schaltschrank-Aufbau (Tag 2–3)</h2>
+
+<h3>Reihenfolge des Einbaus</h3>
+
+<ol>
+  <li><strong>Schaltschrank an die Wand:</strong> Verteilerkasten oder Holzschrank fest verdübeln. Auf Augenhöhe — typ. Oberkante 1,80 m.</li>
+  <li><strong>Akku unten:</strong> Pylontech US3000C ist 32 kg schwer und sollte am Boden / unteren Regal stehen. NICHT an die Wand hängen außer mit Originalhalterung.</li>
+  <li><strong>Wechselrichter mittig:</strong> Victron MultiPlus II an Wand schrauben, mit den 4 mitgelieferten Schrauben. Mindestens 10 cm Luft drumherum für Belüftung.</li>
+  <li><strong>MPPT links/rechts:</strong> SmartSolar an Wand schrauben, kein Lüfter aber ebenfalls Belüftung (5 cm).</li>
+  <li><strong>Sicherungen und Trennschalter:</strong> auf einer Hutschiene oder im IP65-Verteiler.</li>
+</ol>
+
+<h3>DC-Verkabelung (Innen-Schaltschrank)</h3>
+
+<div class="danger-box">
+  <strong>Akku noch NICHT anschließen!</strong> Erst alle Kabel vorbereiten, Polarität dreifach prüfen, Mega-Sicherung NICHT eingesetzt.
+</div>
+
+<ol>
+  <li><strong>MPPT → Akku:</strong> 25 mm² rot/schwarz. Länge möglichst kurz (max 1 m). Mit M8-Ringkabelschuhen, mit Schrumpfschlauch isoliert. Drehmoment Akkupol: <strong>10–12 Nm</strong>.</li>
+  <li><strong>Wechselrichter → Akku:</strong> 35 mm² rot/schwarz. Länge max 1,5 m. Wie oben. Plus-Leitung über Mega-Sicherung 125 A.</li>
+  <li><strong>MPPT-Akku-Sicherung 32 A:</strong> in der Plus-Leitung MPPT → Akku.</li>
+  <li><strong>Mega-Sicherung 125 A:</strong> direkt am Plus-Pol des Akkus, mit dem mitgelieferten Halter.</li>
+  <li><strong>Solarkabel:</strong> noch nicht ans MPPT anschließen, DC-Trennschalter auf AUS.</li>
+</ol>
+
+<h3>Kommunikation Pylontech ↔ Victron</h3>
+<ol>
+  <li>RJ45-Kabel von Pylontech CAN-Port zum Victron MultiPlus II VE.Bus / direkt am Cerbo (falls vorhanden).</li>
+  <li>Bei einfachem Setup ohne Cerbo: BMS-CAN über Victron VE.Direct-Bluetooth-Dongle möglich, aber <strong>einfacher mit Cerbo GX</strong>.</li>
+  <li>Nach Inbetriebnahme: Pylontech wird im Victron als Akku erkannt, Lade-/Entladegrenzen werden vom BMS gesteuert.</li>
+</ol>
+
+<div class="info-box">
+  <strong>Wenn ohne Cerbo gefahren wird:</strong> Akku-Lade-/Entladeprofile manuell im MPPT und Wechselrichter konfigurieren (LiFePO4-Profil, 53,2 V Bulk, 53,4 V Float, 47,5 V Cutoff). Im Betrieb funktioniert das, aber ohne BMS-Schutz auf Inverter-Ebene — der Pylontech BMS schützt sich selbst, aber Inverter muss die Werte eingeprägt haben. Cerbo ist die saubere Lösung, aber im Sparrahmen verzichtbar.
+</div>
+
+<!-- ============================================== -->
+<h2>Phase 4 — AC-Verkabelung außen (Tag 3)</h2>
+
+<h3>Luftleitung vorderer → mittlerer Schuppen</h3>
+<ol>
+  <li>Tragseil 4 mm Stahl verzinkt zwischen den Befestigungspunkten spannen. Spannschloss am Ende. <strong>Höhe min 3 m</strong> über Garten, 4 m über Zufahrt.</li>
+  <li>NYY-J 5×2,5 mm² unten am Tragseil mit UV-festen Kabelbindern alle 30 cm fixieren. Nicht stramm, leicht durchhängend (Temperaturausdehnung).</li>
+  <li>An beiden Enden Zugentlastung (Kabel macht eine Schlaufe um eine Mauerschelle).</li>
+  <li>Ins Gebäude über IP65-Kabeldurchführung (PG-Verschraubung).</li>
+</ol>
+
+<h3>Anschluss am alten Geräteschuppen (Klemmkasten)</h3>
+<ol>
+  <li>IP65-Verteilerkasten an der Schuppenwand (innen).</li>
+  <li>5-adriges Kabel der Luftleitung kommt rein.</li>
+  <li>Bestand: vorhandenes 5-adriges Erdkabel zum Haus kommt auch rein.</li>
+  <li><strong>Klemmen sauber beschriften!</strong>
+    <ul>
+      <li>L1: Phase neues 230-V-System (vom Wechselrichter)</li>
+      <li>L2, L3: nicht belegt / Reserve</li>
+      <li>N: Nullleiter</li>
+      <li>PE: Schutzleiter</li>
+    </ul>
+  </li>
+  <li>Beschriftungsschild „Achtung — Off-Grid-Stromversorgung Haus, NICHT mit altem 12V-System verbinden!"</li>
+</ol>
+
+<!-- ============================================== -->
+<h2>Phase 5 — Hausinstallation Gartenhaus (Tag 4)</h2>
+
+<h3>Hauptverteilung montieren</h3>
+<ol>
+  <li>Verteilerkasten an die Wand, NEBEN der Eingangstür. Höhe ca. 1,60–1,80 m.</li>
+  <li>Hauptschalter 25 A einbauen (oben in der Reihe).</li>
+  <li>FI/RCD 25 A / 30 mA Typ A unter dem Hauptschalter — versorgt alle nachgeschalteten LS-Schalter.</li>
+  <li>LS-Schalter B16 für Steckdosen (1 oder 2 Kreise).</li>
+  <li>LS-Schalter B10 für Lichtkreis.</li>
+  <li>PE-Sammelschiene und N-Sammelschiene unten im Verteiler.</li>
+</ol>
+
+<h3>Stromkreise legen</h3>
+<ol>
+  <li>NYM-J 3×2,5 mm² für Steckdosen-Kreis(e) — Verlegung in Aufputzkanal oder bei Holzwand direkt mit Schellen.</li>
+  <li>NYM-J 3×1,5 mm² für Lichtkreis und Bewegungsmelder.</li>
+  <li>Steckdosen werden parallel auf den Kreis aufgelegt (max 10 Steckdosen pro Kreis empfohlen).</li>
+  <li>Außensteckdosen IP44 separat verkabeln, am gleichen Kreis OK.</li>
+  <li>Bewegungsmelder + LED-Leiste an Treppe zum Klo: Bewegungsmelder schaltet die LED-Leiste, beide am Lichtkreis.</li>
+</ol>
+
+<h3>Pumpe umklemmen</h3>
+<ol>
+  <li>Brunnenpumpe vom alten 12V-System trennen — VORHER alten Wechselrichter ausschalten.</li>
+  <li>Typenschild prüfen: ist die Pumpe 230-V-AC oder 12-V-DC?
+    <ul>
+      <li><strong>230-V-AC-Pumpe:</strong> direkt anschließen am Steckdosen-Kreis (oder eigener LS-Schalter B10/B16 je nach Leistung).</li>
+      <li><strong>12-V-DC-Pumpe:</strong> kann nicht direkt — entweder neu kaufen (230 V) oder über separaten 12-V-Trafo / DC-Konverter (zusätzlicher Aufwand, separat planen).</li>
+    </ul>
+  </li>
+  <li>Drehrichtung prüfen (bei AC-Motoren mit Drehrichtung, bei einphasig meist egal).</li>
+  <li>Trockenlauf-Schutz nicht vergessen.</li>
+</ol>
+
+<!-- ============================================== -->
+<h2>Phase 6 — Erdung (Tag 4–5, parallel zu Phase 5)</h2>
+
+<ol>
+  <li>Tiefenerder neben dem vorderen Schuppen einschlagen. Mindestens 1,5 m Tiefe.</li>
+  <li>Bei trockenem Boden 2 Erder im Abstand von 3 m setzen und parallel verbinden — gibt niedrigeren Erdwiderstand.</li>
+  <li>Anschlussklemme oben am Erder befestigen. Erdungskabel 16 mm² grün-gelb verlegen.</li>
+  <li>Erdungskabel zum Schaltschrank Schuppen → Potentialausgleichsschiene.</li>
+  <li>Von der Potentialausgleichsschiene geht der PE auch ins 5-adrige Erdkabel zum Haus.</li>
+  <li><strong>Erdwiderstand muss vom Elektriker gemessen werden</strong> — Ziel &lt; 100 Ω, besser &lt; 50 Ω. Wenn zu hoch, mehr/tiefere Erder.</li>
+</ol>
+
+<div class="info-box">
+  <strong>Brunnen als Erder?</strong> Nur wenn das Grundwasser tatsächlich Kontakt mit dem Erder hat. Bei Plastikschlauch geht das nur, wenn ein Edelstahlband V4A bis ans Wasser geführt wird (durch das Plastikrohr). Risiko: Schlauch beschädigt. <strong>Empfehlung: NICHT machen, lieber Tiefenerder neben dem Schuppen.</strong>
+</div>
+
+<!-- ============================================== -->
+<h2>Phase 7 — Inbetriebnahme (Tag 5–6)</h2>
+
+<h3>Reihenfolge wichtig!</h3>
+
+<ol>
+  <li><strong>Alle Schalter AUS:</strong> Hauptschalter Haus, FI, alle LS, DC-Trennschalter, Mega-Sicherung NICHT eingesetzt, Wechselrichter AUS.</li>
+  <li><strong>Erdung prüfen:</strong> Multimeter Widerstandsmessung zwischen Erder und Schaltschrank — sollte &lt; 1 Ω sein.</li>
+  <li><strong>Akku in Betrieb nehmen:</strong>
+    <ul>
+      <li>Pylontech-Akku: Kommunikationskabel angeschlossen prüfen.</li>
+      <li>Akku-Sicherung Pylontech (am Akku selbst) einsetzen.</li>
+      <li>Pylontech "ON"-Knopf am Akku 5 Sek drücken — Status-LEDs sollten leuchten.</li>
+      <li>Spannung an Akku-Polen messen: ca. 50–53 V DC.</li>
+    </ul>
+  </li>
+  <li><strong>Wechselrichter mit Akku verbinden:</strong>
+    <ul>
+      <li>Mega-Sicherung 125 A einsetzen (Funke ist normal beim Einsetzen — kurzzeitig hohe Anlaufladung).</li>
+      <li>Wechselrichter sollte sofort Spannung haben (Status-LEDs).</li>
+      <li>Bluetooth-App "VictronConnect" verbinden — Wechselrichter konfigurieren (siehe nächster Schritt).</li>
+    </ul>
+  </li>
+  <li><strong>Wechselrichter konfigurieren (per VictronConnect):</strong>
+    <ul>
+      <li>Akku-Profil: <strong>"User-defined"</strong> mit folgenden Werten (LiFePO4 Pylontech US3000C):
+        <ul>
+          <li>Absorptionsspannung: 53,2 V</li>
+          <li>Float-Spannung: 53,4 V</li>
+          <li>Min. Entladespannung: 47,5 V</li>
+          <li>Max. Ladestrom: 35 A</li>
+        </ul>
+      </li>
+      <li>AC-Eingang abschalten (kein Generator, kein Netz angeschlossen).</li>
+      <li>"Inverter" Modus: ON.</li>
+      <li>Optional: ECO-Mode aktivieren — Wechselrichter geht in Standby wenn Last unter 25 W (spart Eigenverbrauch). Aufwachen bei 30 W Last.</li>
+    </ul>
+  </li>
+  <li><strong>MPPT konfigurieren (per VictronConnect):</strong>
+    <ul>
+      <li>Akku-Profil dieselben Werte wie oben.</li>
+      <li>"Charger Enabled": ON.</li>
+    </ul>
+  </li>
+  <li><strong>Solarmodule anklemmen:</strong>
+    <ul>
+      <li>Polarität nochmal mit Multimeter prüfen!</li>
+      <li>String A am Trennschalter Eingang anschließen, dann String B.</li>
+      <li>DC-Trennschalter auf EIN.</li>
+      <li>MPPT zeigt jetzt Eingangsspannung und beginnt zu laden.</li>
+    </ul>
+  </li>
+  <li><strong>AC-Ausgang aktivieren:</strong>
+    <ul>
+      <li>Im Schaltschrank Schuppen: AC-Hauptschalter zum Haus EIN.</li>
+      <li>Im Haus: Hauptschalter EIN.</li>
+      <li>FI EIN.</li>
+      <li>LS-Schalter einer nach dem anderen EIN.</li>
+      <li>An einer Steckdose mit Lampe oder Multimeter prüfen: 230 V ± 5 % (also 218–242 V).</li>
+    </ul>
+  </li>
+</ol>
+
+<h3>Funktionstest</h3>
+<ul class="checklist">
+  <li>FI-Test-Knopf drücken — FI muss auslösen, alle Steckdosen tot. Wieder einschalten.</li>
+  <li>Phase-Tester an mehreren Steckdosen — zeigt Phase + Erde korrekt an?</li>
+  <li>Eine Last anschließen (z.B. Wasserkocher 2000 W) — Wechselrichter zieht Akku-Strom, MPPT-Anzeige reagiert.</li>
+  <li>Nachts: Solar liefert nichts, alle Geräte laufen aus dem Akku.</li>
+  <li>Tags: Solar lädt Akku, parallel zu Verbrauch.</li>
+  <li>Pumpe einschalten und prüfen: Wasser fließt?</li>
+</ul>
+
+<!-- ============================================== -->
+<h2>Phase 8 — Elektriker-Abnahme (extern, separat planen)</h2>
+
+<p>Nach Eigeninbetriebnahme: Elektriker rufen, Termin machen, Anlage zeigen, Messprotokoll ausfüllen lassen. Siehe <a href="04-elektriker-abnahme.html">Dokument 04</a>.</p>
+
+<div class="success-box">
+  <strong>Vor dem Elektriker-Termin:</strong>
+  <ul>
+    <li>Alle Komponenten beschriften (was ist was)</li>
+    <li>Alle Klemmen geschlossen, Kabel sauber verlegt</li>
+    <li>Schaltschrank-Türen schließen lassen</li>
+    <li>Bestellliste + Verkabelungsplan + Datenblätter bereitlegen</li>
+    <li>Anlage in Betrieb, alles funktioniert wie geplant</li>
+  </ul>
+  Eine sauber aufgebaute Anlage spart Diskussion + Zeit (= Geld) beim Elektriker.
+</div>
+
+<footer style="margin-top: 50px; padding-top: 20px; border-top: 2px solid var(--border); color: var(--muted); font-size: 0.85em;">
+  <p>Voigt-Garten Electric Overhaul · Dokument 02 · Aufbau-Anleitung · Version 1.0</p>
+</footer>
+
+</body>
+</html>

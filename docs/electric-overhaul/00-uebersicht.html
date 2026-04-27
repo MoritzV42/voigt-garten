@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Electric Overhaul — Übersicht — Voigt-Garten</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="doc-nav">
+  <a href="00-uebersicht.html" class="current">📋 Übersicht</a>
+  <a href="01-bestellliste.html">🛒 Bestellliste</a>
+  <a href="02-aufbau-anleitung.html">🔧 Aufbau</a>
+  <a href="03-verkabelungsplan.html">⚡ Verkabelung</a>
+  <a href="04-elektriker-abnahme.html">✅ Abnahme</a>
+  <a href="05-betrieb-und-wartung.html">🛠️ Betrieb</a>
+</nav>
+
+<header>
+  <h1>Electric Overhaul — Off-Grid-Stromversorgung Gartenhaus</h1>
+  <div class="subtitle">Vollständiger Plan zum Bestellen, Bauen, Abnehmen und Betreiben</div>
+  <div class="meta">
+    Standort: Etzdorf im Rosental · Erstellt: 27.04.2026 · Version 1.0<br>
+    Bauherr: Moritz Voigt · Eigentümer: Konny Voigt
+  </div>
+</header>
+
+<h2>Was ist das hier?</h2>
+
+<p>Eine komplett vom Bestand getrennte 230 V Stromversorgung für das Gartenhaus mit eigener PV-Anlage und Lithium-Akku. Das alte 12 V/700 W/1,4 kWh Garten-System bleibt unverändert. Das neue System versorgt:</p>
+
+<ul>
+  <li>Gartenhaus mit ~10 Steckdosen, Beleuchtung, Mini-Kühlschrank, Starlink, Mikrowelle, Bewegungsmelder</li>
+  <li>Brunnenpumpe (wird vom alten System auf neues umgeklemmt)</li>
+  <li>Außensteckdosen für Werkzeug</li>
+  <li>geplante Überwachungskameras</li>
+</ul>
+
+<div class="success-box">
+  <strong>Auslegung:</strong> 2,76 kWp Solar / 3,5 kWh Akku / 3000 W Wechselrichter (1-phasig 230 V). Reicht für 1–2 kWh Tagesverbrauch mit Reserve für mehrere Schlechtwettertage. Wechselrichter-Standby ~11 W.
+</div>
+
+<h2>An wen richtet sich dieser Plan?</h2>
+
+<div class="grid-two">
+  <div class="card">
+    <h4>📐 Selbstbau-Team</h4>
+    <p><strong>Moritz + Kumpel + ggf. Elektriker-Student</strong></p>
+    <p>Plant, bestellt, montiert. Hat Werkzeug (Multimeter, Crimpzange, Schraubendreher etc.). Kennt die Grundlagen, braucht aber klare Schritte. Keine Babymäßige Erklärung, aber alle Querschnitte, Sicherungswerte und Reihenfolge im Klartext.</p>
+  </div>
+  <div class="card">
+    <h4>👴 Opa</h4>
+    <p><strong>Plausibilitätsprüfung vor dem Bestellen</strong></p>
+    <p>Soll das Konzept und die Bestellliste in Ruhe lesen, mit Augenmerk auf: Reicht die Auslegung? Sind die Sicherungen richtig? Ist die Sturmlast der Modulhalterung OK? Fehlt was?</p>
+  </div>
+  <div class="card">
+    <h4>👷 Zugelassener Elektriker</h4>
+    <p><strong>Endabnahme</strong></p>
+    <p>Bekommt am Ende den Plan plus die fertige Anlage. Misst Erdwiderstand, Schleifenimpedanz, FI-Auslösung, prüft nach VDE 0100-600. Trägt Werte ins Prüfprotokoll (Dokument 04) ein und unterschreibt.</p>
+  </div>
+  <div class="card">
+    <h4>📁 Bauherr (Moritz, Archiv)</h4>
+    <p><strong>Dokumentation für später</strong></p>
+    <p>Dokumente bleiben dauerhaft greifbar — wenn in 10 Jahren ein Bauteil getauscht werden muss, weiß man, was wo wie verkabelt ist.</p>
+  </div>
+</div>
+
+<h2>Reihenfolge der Dokumente</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Dokument</th>
+      <th>Inhalt</th>
+      <th>Wer liest das?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>00</td>
+      <td><a href="00-uebersicht.html"><strong>Übersicht</strong></a></td>
+      <td>Diese Seite — Einstieg, Zielgruppen, Inhaltsverzeichnis</td>
+      <td>alle</td>
+    </tr>
+    <tr>
+      <td>01</td>
+      <td><a href="01-bestellliste.html"><strong>Bestellliste</strong></a></td>
+      <td>Komponenten mit Bildern, Preisen, Direktlinks. Architektur-Überblick. Sparvarianten. Kostenrahmen.</td>
+      <td>Moritz, Opa</td>
+    </tr>
+    <tr>
+      <td>02</td>
+      <td><a href="02-aufbau-anleitung.html"><strong>Aufbau-Anleitung</strong></a></td>
+      <td>Schritt-für-Schritt vom unbestellten Material bis zur funktionsfähigen Anlage. Drehmomente, Reihenfolge, Sicherheitsregeln.</td>
+      <td>Selbstbau-Team</td>
+    </tr>
+    <tr>
+      <td>03</td>
+      <td><a href="03-verkabelungsplan.html"><strong>Verkabelungsplan</strong></a></td>
+      <td>Schaltpläne DC + AC. Adernbelegung 5-adriges Erdkabel. Spannungsabfall-Berechnung. Klemmenplan Schaltschrank. Beschriftung.</td>
+      <td>Selbstbau-Team, Elektriker</td>
+    </tr>
+    <tr>
+      <td>04</td>
+      <td><a href="04-elektriker-abnahme.html"><strong>Elektriker-Abnahme</strong></a></td>
+      <td>Geltende Normen (VDE 0100, 0185, 0298). Pflichtprüfungen mit Sollwerten. Messprotokoll-Vorlage. Übergabe-Checkliste. Unterschriftenfeld.</td>
+      <td>Elektriker</td>
+    </tr>
+    <tr>
+      <td>05</td>
+      <td><a href="05-betrieb-und-wartung.html"><strong>Betrieb & Wartung</strong></a></td>
+      <td>Wie schalte ich was ein/aus. Was tun bei Fehler. Wartungsintervalle. Service-Telefon-Liste.</td>
+      <td>Nutzer, Gäste, Wartung</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Geltende Normen — was eingehalten werden muss</h2>
+
+<table>
+  <thead>
+    <tr><th>Norm</th><th>Was sie regelt</th><th>Wo wir's einhalten</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="norm">DIN VDE 0100-410</span></td>
+      <td>Schutzmaßnahmen gegen elektrischen Schlag (FI, Erdung)</td>
+      <td>FI 30 mA Typ A, TT-Netz mit Erder</td>
+    </tr>
+    <tr>
+      <td><span class="norm">DIN VDE 0100-510</span></td>
+      <td>Auswahl und Errichtung elektrischer Betriebsmittel</td>
+      <td>Querschnitte, Sicherungen, Klemmen</td>
+    </tr>
+    <tr>
+      <td><span class="norm">DIN VDE 0100-540</span></td>
+      <td>Erdung und Schutzleiter</td>
+      <td>Tiefenerder, 16 mm² Cu Erdleitung</td>
+    </tr>
+    <tr>
+      <td><span class="norm">DIN VDE 0100-600</span></td>
+      <td>Erstprüfung — Messungen, Inspektion, Protokoll</td>
+      <td>Dokument 04 (Abnahme)</td>
+    </tr>
+    <tr>
+      <td><span class="norm">DIN VDE 0100-712</span></td>
+      <td>PV-Anlagen (DC-Seite, Trennstellen)</td>
+      <td>DC-Trennschalter, MC4, getrennte DC/AC-Trassen</td>
+    </tr>
+    <tr>
+      <td><span class="norm">DIN VDE 0298-4</span></td>
+      <td>Strombelastbarkeit von Kabeln und Leitungen</td>
+      <td>Querschnitt-Auslegung in Dok. 03</td>
+    </tr>
+    <tr>
+      <td><span class="norm">DIN VDE 0185-305</span></td>
+      <td>Blitzschutz (optional bei freistehender Lage)</td>
+      <td>Überspannungsschutz Typ 2 als Option (Dok. 04)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>Hinweis zu „rechtskonform":</strong> Eine Off-Grid-Anlage ohne Netzanschluss ist anmeldefrei und braucht keine Genehmigung des Netzbetreibers. <strong>Aber</strong>: Wenn das Gartenhaus als „elektrische Anlage" zählt (Steckdosen, Beleuchtung, Festinstallation), gelten die VDE-Normen für die Errichtung. Eine schriftliche Abnahme durch einen zugelassenen Elektriker mit Eintrag im Installateur-Verzeichnis schützt vor Versicherungs- und Haftungsfragen — falls mal ein Brand entsteht oder ein Gast einen Stromschlag bekommt.
+</div>
+
+<h2>Status — wo wir gerade stehen</h2>
+
+<table>
+  <thead>
+    <tr><th>Phase</th><th>Status</th><th>Anmerkung</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Konzept und Bestellliste</td><td>✅ Fertig</td><td>siehe Dok. 01</td></tr>
+    <tr><td>Plausibilitätsprüfung Opa</td><td>⏳ Offen</td><td>Dokumente weiterleiten</td></tr>
+    <tr><td>Bestellung Material</td><td>⏳ Offen</td><td>nach Opa-OK</td></tr>
+    <tr><td>Aufbau</td><td>⏳ Offen</td><td>siehe Dok. 02</td></tr>
+    <tr><td>Inbetriebnahme</td><td>⏳ Offen</td><td>siehe Dok. 02 + 03</td></tr>
+    <tr><td>Elektriker-Abnahme</td><td>⏳ Offen</td><td>siehe Dok. 04</td></tr>
+    <tr><td>Übergabe an Nutzer</td><td>⏳ Offen</td><td>siehe Dok. 05</td></tr>
+  </tbody>
+</table>
+
+<h2>Verknüpfte Tasks im Voigt-Garten Task-Management</h2>
+
+<p>Im Task-System (<a href="https://garten.infinityspace42.de">garten.infinityspace42.de</a>) gibt es bereits 13 Tasks, die thematisch zu diesem Electric Overhaul gehören und durch das Projekt entweder erledigt, ergänzt oder umgewidmet werden können. Bisher haben diese Tasks <strong>keinen Verweis auf das neue Dokument</strong> — siehe Aktion ganz unten.</p>
+
+<h3>Direkt durch Electric Overhaul abgedeckt</h3>
+<table>
+  <thead>
+    <tr><th>Task</th><th>Titel</th><th>Status</th><th>Wird durch Electric Overhaul…</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>#4</td><td>Erdung installieren</td><td>offen / elektrik</td><td>… komplett gelöst (siehe Phase 6 + Dok. 03 Erdungsschema)</td></tr>
+    <tr><td>#5</td><td>Hausverkabelung auf 220V erneuern</td><td>next / elektrik</td><td>… komplett gelöst (NYM-J 3×2,5 + 3×1,5, FI, LS — siehe Dok. 02 Phase 5)</td></tr>
+    <tr><td>#6</td><td>Steckdosen installieren</td><td>offen / elektrik</td><td>… komplett gelöst (10 Steckdosen, davon 3 außen IP44)</td></tr>
+    <tr><td>#7</td><td>Balkonanlage mit Batterie kaufen</td><td>offen / elektrik</td><td>… ersetzt durch echte Off-Grid-Anlage (Victron + Pylontech). Task kann auf "duplicate" gesetzt werden.</td></tr>
+    <tr><td>#8</td><td>Elektriker für Planung & Abnahme</td><td>offen / elektrik</td><td>… abgedeckt durch Dok. 04 Abnahmeprotokoll. Bleibt offen bis Termin gemacht ist.</td></tr>
+    <tr><td>#28</td><td>Außenbeleuchtung prüfen</td><td>offen / elektrik</td><td>… teilweise abgedeckt; Außensteckdosen + LED-Treppe sind Teil des neuen Systems</td></tr>
+    <tr><td>#29</td><td>Steckdosen prüfen</td><td>offen / elektrik</td><td>… komplett neu gemacht — alle Steckdosen frisch installiert + im Abnahmeprotokoll geprüft</td></tr>
+    <tr><td>#30</td><td>E-Check (Elektriker)</td><td>offen / elektrik</td><td>… abgedeckt durch Dok. 04. Bleibt offen bis Abnahme erfolgt.</td></tr>
+    <tr><td>#51</td><td>E-Check Solar/Akku-System durch Elektriker</td><td>offen / rechtliches</td><td>… NEU formuliert: nicht mehr 700W-Altanlage, sondern neue 2,76 kWp + 3,5 kWh System. Dok. 04 ist die Vorlage.</td></tr>
+    <tr><td>#91</td><td>Elektro-Endabnahme (E-Check)</td><td>duplicate</td><td>… bleibt Duplikat (zu #30/#51), kann archiviert werden</td></tr>
+  </tbody>
+</table>
+
+<h3>Indirekt verknüpft — laufen weiter</h3>
+<table>
+  <thead>
+    <tr><th>Task</th><th>Titel</th><th>Status</th><th>Beziehung</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>#14</td><td>Starlink bestellen, anbringen & einrichten</td><td>offen / elektrik</td><td>Starlink wird ans neue 230 V System angeschlossen. Ohne Electric Overhaul kein Starlink-Strom.</td></tr>
+    <tr><td>#42</td><td>Hardware-Setup: Starlink & Kameras</td><td>offen / elektrik</td><td>Kameras + AUS-Schalter werden ans neue System gehängt</td></tr>
+    <tr><td>#88</td><td>Hardware-Einkauf (Starlink, Kameras, Elektro)</td><td>offen / launch-offline</td><td>"Elektro" Teil = Bestellliste Dok. 01</td></tr>
+    <tr><td>#92</td><td>Beschilderung + AUS-Schalter montieren</td><td>offen / launch-offline</td><td>Der AUS-Schalter ist der Hauptschalter im Gartenhaus aus Dok. 03</td></tr>
+    <tr><td>#1</td><td>Hydrophoranlage erneuern</td><td>offen / wasser</td><td>Pumpe wird auf neues 230 V System umgeklemmt — siehe Dok. 02 Phase 5</td></tr>
+    <tr><td>#2</td><td>Wasserverteilung im Keller überarbeiten</td><td>offen / wasser</td><td>Steht in Verbindung mit Pumpen-Anschluss am neuen System</td></tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>Aktion: Tasks im Web-Frontend ergänzen</strong>
+  <p>Im Task-System sollten die oben genannten Tasks einen Verweis erhalten. Konkreter Vorschlag für jede Beschreibung am Ende anhängen:</p>
+  <pre style="background: var(--light); padding: 10px; border-radius: 4px; font-size: 0.85em;">
+📁 Detaillierter Plan: /docs/electric-overhaul/
+   ├ 01-bestellliste.html         Komponenten + Preise
+   ├ 02-aufbau-anleitung.html     Schritt-für-Schritt
+   ├ 03-verkabelungsplan.html     Schaltpläne
+   ├ 04-elektriker-abnahme.html   VDE-Prüfprotokoll
+   └ 05-betrieb-und-wartung.html  Nutzerhandbuch
+  </pre>
+  <p>Das kann via Web-Frontend (Doku-App / Wartung) oder per API-PATCH ergänzt werden:</p>
+  <pre style="background: var(--light); padding: 10px; border-radius: 4px; font-size: 0.8em;">curl -X PATCH https://garten.infinityspace42.de/api/projects/4 \
+  -H "Authorization: Bearer &lt;ADMIN-JWT&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"description": "&lt;bestehender-text&gt;\n\nDetaillierter Plan: /docs/electric-overhaul/"}'</pre>
+</div>
+
+<h2>Wie ausdrucken?</h2>
+
+<ol>
+  <li>Jede HTML-Datei in Edge oder Chrome öffnen</li>
+  <li>Strg+P → "Als PDF speichern" oder direkt drucken</li>
+  <li>Oder alle 6 Dateien zusammen als PDF: per Pandoc oder durch nacheinander-Drucken</li>
+</ol>
+
+<p>Empfehlung für die Übergabe an den Elektriker: Dokument 01, 03 und 04 ausdrucken und in einem Schnellhefter mit den Komponentenrechnungen mitgeben. Dokumente 02 und 05 sind eher fürs Selbstbau-Team und Bauherrn-Archiv.</p>
+
+<footer style="margin-top: 50px; padding-top: 20px; border-top: 2px solid var(--border); color: var(--muted); font-size: 0.85em;">
+  <p>Voigt-Garten / Refugium Heideland · Etzdorf im Rosental · Dokumentation Version 1.0 vom 27.04.2026</p>
+</footer>
+
+</body>
+</html>

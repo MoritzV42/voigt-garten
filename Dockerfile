@@ -48,6 +48,9 @@ COPY pi-backend/*.py /app/
 COPY pi-backend/start.sh /app/
 RUN chmod +x start.sh
 
+# Copy shared documentation (electric-overhaul, etc.) - served via /shared/<token>/<set>/
+COPY docs/electric-overhaul/ /app/docs/electric-overhaul/
+
 # Copy built frontend from Stage 1
 COPY --from=frontend-builder /build/dist /app/static
 

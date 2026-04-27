@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Elektriker-Abnahme — Voigt-Garten Off-Grid</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="doc-nav">
+  <a href="00-uebersicht.html">📋 Übersicht</a>
+  <a href="01-bestellliste.html">🛒 Bestellliste</a>
+  <a href="02-aufbau-anleitung.html">🔧 Aufbau</a>
+  <a href="03-verkabelungsplan.html">⚡ Verkabelung</a>
+  <a href="04-elektriker-abnahme.html" class="current">✅ Abnahme</a>
+  <a href="05-betrieb-und-wartung.html">🛠️ Betrieb</a>
+</nav>
+
+<header>
+  <h1>Elektriker-Abnahme — Prüfprotokoll</h1>
+  <div class="subtitle">Erstprüfung nach DIN VDE 0100-600 für die Off-Grid-Anlage</div>
+  <div class="meta">
+    Anlage: 230 V AC / 48 V DC Off-Grid Stromversorgung Gartenhaus<br>
+    Eigentümer: Konny Voigt · Errichtet durch: Moritz Voigt + Helfer<br>
+    Vor Inbetriebnahme durchzuführen
+  </div>
+</header>
+
+<h2>1. Anlagendaten</h2>
+
+<div class="signature-block">
+  <table>
+    <tr><td><strong>Bauherr</strong></td><td>Moritz Voigt</td></tr>
+    <tr><td><strong>Eigentümer</strong></td><td>Konny Voigt</td></tr>
+    <tr><td><strong>Anschrift</strong></td><td>Garten Etzdorf im Rosental, Refugium Heideland</td></tr>
+    <tr><td><strong>Anlagentyp</strong></td><td>Inselanlage (Off-Grid) mit PV und Lithium-Akku</td></tr>
+    <tr><td><strong>Netzform</strong></td><td>TT-Netz (eigener Erder, kein Versorger-PEN)</td></tr>
+    <tr><td><strong>Nennspannung</strong></td><td>230 V AC, 1-phasig, 50 Hz</td></tr>
+    <tr><td><strong>Nennleistung Wechselrichter</strong></td><td>3000 VA / 2400 W Dauer</td></tr>
+    <tr><td><strong>Vorsicherung Hausabgang</strong></td><td>25 A Hauptschalter, FI 25 A 30 mA Typ A, LS B16 / B10</td></tr>
+    <tr><td><strong>PV-Leistung</strong></td><td>6 × 460 Wp = 2,76 kWp</td></tr>
+    <tr><td><strong>Speicherkapazität</strong></td><td>Pylontech US3000C 3,5 kWh LiFePO4</td></tr>
+    <tr><td><strong>Datum Errichtung</strong></td><td>______________________</td></tr>
+    <tr><td><strong>Datum Erstprüfung</strong></td><td>______________________</td></tr>
+  </table>
+</div>
+
+<!-- ============================================== -->
+<h2>2. Anwendbare Normen und Richtlinien</h2>
+
+<table>
+  <thead>
+    <tr><th>Norm</th><th>Was sie regelt</th><th>Geprüft</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="norm">DIN VDE 0100-410</span></td><td>Schutzmaßnahmen gegen elektrischen Schlag</td><td>☐</td></tr>
+    <tr><td><span class="norm">DIN VDE 0100-510</span></td><td>Auswahl und Errichtung elektrischer Betriebsmittel</td><td>☐</td></tr>
+    <tr><td><span class="norm">DIN VDE 0100-540</span></td><td>Erdung, Schutzleiter und Potentialausgleich</td><td>☐</td></tr>
+    <tr><td><span class="norm">DIN VDE 0100-600</span></td><td>Erstprüfung — Inspektion und Messungen</td><td>☐</td></tr>
+    <tr><td><span class="norm">DIN VDE 0100-712</span></td><td>Anforderungen für PV-Anlagen</td><td>☐</td></tr>
+    <tr><td><span class="norm">DIN VDE 0298-4</span></td><td>Strombelastbarkeit von Kabeln</td><td>☐</td></tr>
+    <tr><td>Hersteller-Vorgaben</td><td>Datenblätter Victron, Pylontech, JA Solar — eingehalten</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2>3. Sichtprüfung (Inspektion)</h2>
+
+<table>
+  <thead>
+    <tr><th>Prüfpunkt</th><th>OK</th><th>Anmerkung</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Komponenten unbeschädigt, korrekte Montage</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Schaltschrank IP-Schutzart angemessen für Aufstellort</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Mindestabstände zu brennbaren Materialien eingehalten</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Belüftung Wechselrichter + Akku ausreichend</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Kabelquerschnitte nach Strombelastbarkeit (DIN VDE 0298-4)</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Verlegung der Kabel mechanisch geschützt</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Luftleitung min 3 m über Garten / 4 m über Wegen</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Klemmen mit korrektem Drehmoment angezogen</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Aderendhülsen an feindrähtigen Leitungen</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Trennung zwischen altem 12-V- und neuem 48-V-System gegeben</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Reserve-Adern (L2, L3) an beiden Enden isoliert</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Beschriftungen vollständig (Schaltschrank, Sicherungen, Klemmen)</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>FI-Schalter Typ A, Auslösestrom 30 mA</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>LS-Schalter mit Charakteristik B (für Steckdosen) / B (für Licht)</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Tiefenerder ordnungsgemäß eingebracht</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Potentialausgleich an Schaltschrank vorhanden</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>DC-Trennschalter zwischen PV und MPPT vorhanden</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Mega-Sicherung 125 A direkt am Akku-Plus</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Solarmodule ordnungsgemäß befestigt, Sturmsicherung vorhanden</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Modul-Anschlussdosen vor Witterung geschützt</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>MC4-Stecker korrekt gecrimpt, verriegelt</td><td>☐</td><td>&nbsp;</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2>4. Messungen (vom Elektriker mit Messgeräten durchzuführen)</h2>
+
+<h3>4.1 Schutzleiter — Durchgang</h3>
+<table class="measurement-table">
+  <thead>
+    <tr>
+      <th>Messstelle</th>
+      <th>Sollwert</th>
+      <th>Gemessen</th>
+      <th>OK</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Tiefenerder ↔ Schaltschrank-PE Schuppen</td><td>&lt; 1 Ω</td><td>__________ Ω</td><td>☐</td></tr>
+    <tr><td>Schaltschrank-PE Schuppen ↔ PE Hausverteiler</td><td>&lt; 1 Ω</td><td>__________ Ω</td><td>☐</td></tr>
+    <tr><td>Hausverteiler-PE ↔ Steckdose 1 (am weitesten entfernt)</td><td>&lt; 1 Ω</td><td>__________ Ω</td><td>☐</td></tr>
+    <tr><td>Hausverteiler-PE ↔ Außensteckdose</td><td>&lt; 1 Ω</td><td>__________ Ω</td><td>☐</td></tr>
+    <tr><td>Hausverteiler-PE ↔ Lichtkreis-Schalter</td><td>&lt; 1 Ω</td><td>__________ Ω</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2 Isolationswiderstand (DIN VDE 0100-600 Kap. 6.4.3)</h3>
+<p class="small">Messung mit 500 V DC Prüfspannung. Zwischen aktiven Leitern und Erde, sowie zwischen den aktiven Leitern untereinander.</p>
+<table class="measurement-table">
+  <thead>
+    <tr><th>Messpunkt</th><th>Sollwert</th><th>Gemessen</th><th>OK</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>L gegen N + PE (gesamte Anlage)</td><td>&gt; 1 MΩ</td><td>__________ MΩ</td><td>☐</td></tr>
+    <tr><td>L gegen PE (gesamte Anlage)</td><td>&gt; 1 MΩ</td><td>__________ MΩ</td><td>☐</td></tr>
+    <tr><td>N gegen PE (gesamte Anlage)</td><td>&gt; 1 MΩ</td><td>__________ MΩ</td><td>☐</td></tr>
+    <tr><td>PV-Strang A (+ gegen –, ohne MPPT)</td><td>&gt; 1 MΩ</td><td>__________ MΩ</td><td>☐</td></tr>
+    <tr><td>PV-Strang B (+ gegen –, ohne MPPT)</td><td>&gt; 1 MΩ</td><td>__________ MΩ</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<h3>4.3 Erdungswiderstand (DIN VDE 0100-540)</h3>
+<table class="measurement-table">
+  <thead>
+    <tr><th>Messpunkt</th><th>Sollwert</th><th>Gemessen</th><th>OK</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Tiefenerder Gesamtsystem</td><td>&lt; 100 Ω, ideal &lt; 50 Ω</td><td>__________ Ω</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<h3>4.4 Schleifenimpedanz / Fehlerstromschleife</h3>
+<table class="measurement-table">
+  <thead>
+    <tr><th>Messpunkt</th><th>Sollwert</th><th>Gemessen</th><th>OK</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Steckdose 1 (am weitesten entfernt)</td><td>Auslösung FI 30 mA &lt; 0,4 s</td><td>__________ ms</td><td>☐</td></tr>
+    <tr><td>Außensteckdose</td><td>Auslösung FI 30 mA &lt; 0,4 s</td><td>__________ ms</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<h3>4.5 FI-Schutzschalter</h3>
+<table class="measurement-table">
+  <thead>
+    <tr><th>Prüfung</th><th>Sollwert</th><th>Gemessen</th><th>OK</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>FI-Auslösestrom IΔn</td><td>30 mA ± 50 % (15–30 mA)</td><td>__________ mA</td><td>☐</td></tr>
+    <tr><td>Auslösezeit bei IΔn</td><td>&lt; 300 ms</td><td>__________ ms</td><td>☐</td></tr>
+    <tr><td>Auslösezeit bei 5 × IΔn (150 mA)</td><td>&lt; 40 ms</td><td>__________ ms</td><td>☐</td></tr>
+    <tr><td>Test-Knopf (manuell)</td><td>FI fällt ab</td><td>—</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<h3>4.6 Drehfeld / Polarität</h3>
+<table class="measurement-table">
+  <thead>
+    <tr><th>Prüfung</th><th>Sollwert</th><th>Gemessen</th><th>OK</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Spannung L–N am Hauptverteiler</td><td>230 V ± 10 % (207–253 V)</td><td>__________ V</td><td>☐</td></tr>
+    <tr><td>Spannung L–PE am Hauptverteiler</td><td>~230 V (TT-Netz)</td><td>__________ V</td><td>☐</td></tr>
+    <tr><td>Spannung N–PE am Hauptverteiler</td><td>&lt; 5 V</td><td>__________ V</td><td>☐</td></tr>
+    <tr><td>Polarität an allen Steckdosen (Phasentester)</td><td>L = Phase, N = Null</td><td>—</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<h3>4.7 PV-spezifische Messungen (DIN VDE 0100-712)</h3>
+<table class="measurement-table">
+  <thead>
+    <tr><th>Prüfung</th><th>Sollwert</th><th>Gemessen</th><th>OK</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Voc String A (Leerlaufspannung)</td><td>~135–145 V (warm) / bis 153 V (kalt)</td><td>__________ V</td><td>☐</td></tr>
+    <tr><td>Voc String B</td><td>~135–145 V (warm) / bis 153 V (kalt)</td><td>__________ V</td><td>☐</td></tr>
+    <tr><td>Isc String A (Kurzschlussstrom, mit Klammer)</td><td>~10–13 A</td><td>__________ A</td><td>☐</td></tr>
+    <tr><td>Isc String B</td><td>~10–13 A</td><td>__________ A</td><td>☐</td></tr>
+    <tr><td>Polarität DC am MPPT-Eingang</td><td>+ / – korrekt</td><td>—</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<h3>4.8 Akku-Messungen</h3>
+<table class="measurement-table">
+  <thead>
+    <tr><th>Prüfung</th><th>Sollwert</th><th>Gemessen</th><th>OK</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Akku-Spannung (Pylontech US3000C)</td><td>48–53 V (je nach SOC)</td><td>__________ V</td><td>☐</td></tr>
+    <tr><td>BMS-Status (LED an Pylontech)</td><td>OK / grün</td><td>—</td><td>☐</td></tr>
+    <tr><td>Kommunikation Pylontech ↔ Victron</td><td>aktiv</td><td>—</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2>5. Funktionsprüfungen</h2>
+
+<table>
+  <thead>
+    <tr><th>Prüfung</th><th>OK</th><th>Anmerkung</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>FI-Test-Knopf löst FI aus</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Hauptschalter trennt allpolig</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>LS-Schalter B16 löst bei Test-Last aus</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>DC-Trennschalter PV trennt Module</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Mega-Sicherung 125 A trennt Akku vom Wechselrichter</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Wechselrichter liefert 230 V im Inselbetrieb</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>MPPT lädt Akku bei Sonneneinstrahlung</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Bewegungsmelder schaltet LED-Leiste</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Pumpe arbeitet am neuen System</td><td>☐</td><td>&nbsp;</td></tr>
+    <tr><td>Trennung zur alten 12-V-Anlage gegeben (kein versehentliches Einkoppeln)</td><td>☐</td><td>&nbsp;</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2>6. Übergabe-Dokumentation (vom Elektriker zu prüfen)</h2>
+
+<table>
+  <thead>
+    <tr><th>Dokument</th><th>vorhanden</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Bestellliste mit Komponenten und Datenblättern (<a href="01-bestellliste.html">Dok. 01</a>)</td><td>☐</td></tr>
+    <tr><td>Verkabelungsplan (<a href="03-verkabelungsplan.html">Dok. 03</a>)</td><td>☐</td></tr>
+    <tr><td>Schaltschrank-Foto-Dokumentation</td><td>☐</td></tr>
+    <tr><td>Datenblatt Victron MultiPlus II 48/3000</td><td>☐</td></tr>
+    <tr><td>Datenblatt Pylontech US3000C</td><td>☐</td></tr>
+    <tr><td>Datenblatt JA Solar JAM54D40-LB</td><td>☐</td></tr>
+    <tr><td>Konfigurationsdatei VictronConnect (Backup)</td><td>☐</td></tr>
+    <tr><td>Betriebsanleitung für Nutzer (<a href="05-betrieb-und-wartung.html">Dok. 05</a>)</td><td>☐</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2>7. Empfohlene Folgeprüfungen</h2>
+
+<table>
+  <thead>
+    <tr><th>Maßnahme</th><th>Intervall</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Wiederholungsprüfung nach DIN VDE 0105-100 (Anlage gewerblich)</td><td>4 Jahre, falls als Beherbergung/Gewerbe genutzt</td></tr>
+    <tr><td>Wiederholungsprüfung nach DGUV V3</td><td>4 Jahre für ortsfeste Anlagen, 0,5–2 Jahre für ortsveränderliche Geräte</td></tr>
+    <tr><td>FI-Test (Test-Knopf)</td><td>halbjährlich (durch Nutzer)</td></tr>
+    <tr><td>Sichtkontrolle Solarmodule, Verkabelung, Schaltschrank</td><td>jährlich</td></tr>
+    <tr><td>Akku-Inspektion (Spannung, BMS-Status)</td><td>jährlich</td></tr>
+    <tr><td>Erdungswiderstand-Messung</td><td>4 Jahre</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2>8. Festgestellte Mängel und Maßnahmen</h2>
+
+<div class="signature-block">
+  <p><strong>Festgestellte Mängel:</strong></p>
+  <div style="height: 100px; border: 1px solid var(--border); padding: 8px;">&nbsp;</div>
+  <p><strong>Vereinbarte Maßnahmen:</strong></p>
+  <div style="height: 100px; border: 1px solid var(--border); padding: 8px;">&nbsp;</div>
+  <p><strong>Erneute Prüfung erforderlich:</strong> ☐ Nein &nbsp;&nbsp; ☐ Ja, am ____________________</p>
+</div>
+
+<!-- ============================================== -->
+<h2>9. Gesamtbewertung und Unterschriften</h2>
+
+<div class="signature-block">
+  <p><strong>Gesamtergebnis:</strong></p>
+  <ul>
+    <li>☐ Anlage betriebsfertig und mängelfrei abgenommen</li>
+    <li>☐ Anlage abgenommen mit Auflagen (siehe oben)</li>
+    <li>☐ Anlage nicht abgenommen — Mängel beseitigen, Nachprüfung erforderlich</li>
+  </ul>
+
+  <table style="margin-top: 30px;">
+    <tr>
+      <td style="width: 50%; padding: 20px;">
+        <div class="signature-line"></div>
+        Bauherr: Moritz Voigt<br>
+        Datum: __________________
+      </td>
+      <td style="width: 50%; padding: 20px;">
+        <div class="signature-line"></div>
+        Eigentümer: Konny Voigt<br>
+        Datum: __________________
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding: 20px;">
+        <div class="signature-line"></div>
+        Prüfender Elektriker: __________________________________________ <br>
+        Eintrag im Installateur-Verzeichnis: ___________________________________ <br>
+        Stempel / Firma: _________________________________________________________ <br>
+        Datum: __________________
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ============================================== -->
+<h2>10. Verwendete Messgeräte</h2>
+
+<table>
+  <thead>
+    <tr><th>Messgerät</th><th>Hersteller / Typ</th><th>Kalibriert bis</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Installationstester (DIN VDE 0413)</td><td>____________________</td><td>____________________</td></tr>
+    <tr><td>Erdungsmessgerät</td><td>____________________</td><td>____________________</td></tr>
+    <tr><td>Multimeter / Strommesszange</td><td>____________________</td><td>____________________</td></tr>
+    <tr><td>Phasenfolge-Anzeige</td><td>____________________</td><td>____________________</td></tr>
+  </tbody>
+</table>
+
+<footer style="margin-top: 50px; padding-top: 20px; border-top: 2px solid var(--border); color: var(--muted); font-size: 0.85em;">
+  <p>Voigt-Garten Electric Overhaul · Dokument 04 · Elektriker-Abnahme · Version 1.0</p>
+  <p>Dieses Prüfprotokoll basiert auf DIN VDE 0100-600 (Erstprüfung). Für Sonderanforderungen (z.B. Ex-Bereiche, Beherbergung &gt;12 Personen, Gewerbenutzung) gelten weitere Normen, die der zugelassene Elektriker zu berücksichtigen hat.</p>
+</footer>
+
+</body>
+</html>

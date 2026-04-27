@@ -1,0 +1,38 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Pylon Technologies Co. Pylontech Website, Pylon Technologies Co., Ltd.</title>
+<script src="/js/jquery-3.5.1.min.js"></script>
+<script src="/js/wow.min.js"></script>
+<script src="/js/version.js"></script>
+<script src="/js/main.js"></script>
+<script src="/js/swiper-bundle.min.js"></script>
+<script src="/js/ScrollMagic/TweenMax.min.js"></script>
+<script src="/js/ScrollMagic/ScrollMagic.min.js"></script>
+<script src="/js/ScrollMagic/debug.addIndicators.js"></script>
+<script src="/js/ScrollMagic/animation.js"></script>
+<link rel="stylesheet" href="/_nuxt/style.DCvZP3Ki.css" crossorigin>
+<link rel="modulepreload" as="script" crossorigin href="/_nuxt/BvbznEFo.js">
+<link rel="modulepreload" as="script" crossorigin href="/_nuxt/CgN7R_oU.js">
+<link rel="modulepreload" as="script" crossorigin href="/_nuxt/DSCb70Op.js">
+<link rel="modulepreload" as="script" crossorigin href="/_nuxt/DWXKu-_8.js">
+<link rel="preload" as="fetch" fetchpriority="low" crossorigin="anonymous" href="/_nuxt/builds/meta/3c9540a7-c403-44ac-bb06-b441e6450499.json">
+<link rel="prefetch" as="image" type="image/svg+xml" href="/_nuxt/404.CiLLuvSd.svg">
+<link rel="prefetch" as="image" type="image/svg+xml" href="/_nuxt/fontawesome-webfont.D13rzr4g.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<link rel="alternate" hreflang="x-default" href="https://en.pylontech.com.cn/uploads/202210/63563dafd05d6.png" data-hid="hreflang-x-default">
+<link rel="alternate" hreflang="zh-CN" href="https://www.pylontech.com.cn/uploads/202210/63563dafd05d6.png" data-hid="hreflang-zh-CN">
+<link rel="alternate" hreflang="en-US" href="https://www.pylontech.us/uploads/202210/63563dafd05d6.png" data-hid="hreflang-en-US">
+<link rel="alternate" hreflang="en-AU" href="https://www.pylontech.au/uploads/202210/63563dafd05d6.png" data-hid="hreflang-en-AU">
+<link rel="alternate" hreflang="de-DE" href="https://www.pylontech.de/uploads/202210/63563dafd05d6.png" data-hid="hreflang-de-DE">
+<link rel="alternate" hreflang="es-ES" href="https://www.pylontech.es/uploads/202210/63563dafd05d6.png" data-hid="hreflang-es-ES">
+<link rel="alternate" hreflang="es-419" href="https://www.pylontech.lat/uploads/202210/63563dafd05d6.png" data-hid="hreflang-es-419">
+<link rel="alternate" hreflang="it-IT" href="https://www.pylontech.it/uploads/202210/63563dafd05d6.png" data-hid="hreflang-it-IT">
+<link rel="alternate" hreflang="fr-FR" href="https://www.pylontech.fr/uploads/202210/63563dafd05d6.png" data-hid="hreflang-fr-FR">
+<link rel="alternate" hreflang="ja-JP" href="https://www.pylontech.jp/uploads/202210/63563dafd05d6.png" data-hid="hreflang-ja-JP">
+<link rel="alternate" hreflang="pt-BR" href="https://www.pylontech.com.br/uploads/202210/63563dafd05d6.png" data-hid="hreflang-pt-BR">
+<script type="module" src="/_nuxt/BvbznEFo.js" crossorigin></script>
+<script id="unhead:payload" type="application/json">{"title":"Pylon Technologies Co."}</script></head><body><div id="__nuxt"><!--[--><div></div><!--]--></div><div id="teleports"></div><script type="application/json" data-nuxt-data="nuxt-app" data-ssr="true" id="__NUXT_DATA__">[["ShallowReactive",1],{"data":2,"state":4,"once":12,"_errors":13,"serverRendered":15,"path":16,"pinia":17},["ShallowReactive",3],{},["Reactive",5],{"$snuxt-i18n-meta":6,"$ssite-config":7},{},{"currentLocale":8,"defaultLocale":8,"env":9,"name":10,"url":11},"en","production","paineng","https://en.pylontech.com.cn/",["Set"],["ShallowReactive",14],{},true,"/uploads/202210/63563dafd05d6.png",["Reactive",18],{"redirect":19},{"redirectMapping":20},{}]</script>
+<script>window.__NUXT__={};window.__NUXT__.config={public:{baseURL:"",appVersion:"1.0.0",i18n:{baseUrl:"",defaultLocale:"en",defaultDirection:"ltr",strategy:"prefix_except_default",lazy:false,rootRedirect:"",routesNameSeparator:"___",defaultLocaleRouteNameSuffix:"default",skipSettingLocaleOnNavigate:false,differentDomains:false,trailingSlash:false,locales:[{code:"en",files:[{path:"/Users/radish/project/IdeaProjects/paineng_all/paineng/i18n/locales/en.json",cache:""}]}],detectBrowserLanguage:{alwaysRedirect:false,cookieCrossOrigin:false,cookieDomain:"",cookieKey:"i18n_redirected",cookieSecure:false,fallbackLocale:"",redirectOn:"root",useCookie:true},experimental:{localeDetector:"",switchLocalePathLinkSSR:false,autoImportTranslationFunctions:false,typedPages:true,typedOptionsAndMessages:false,generatedLocaleFilePathFormat:"absolute",alternateLinkCanonicalQueries:false,hmr:true},multiDomainLocales:false,domainLocales:{en:{domain:""}}},cookieControl:{_isPrerendered:false,barPosition:"bottom-full",closeModalOnClickOutside:true,colors:{barBackground:"#000",barButtonBackground:"#f1d600",barButtonColor:"#fff",barButtonHoverBackground:"#e6c200",barButtonHoverColor:"#000",barTextColor:"#fff",checkboxActiveBackground:"#000",checkboxActiveCircleBackground:"#fff",checkboxDisabledBackground:"#ddd",checkboxDisabledCircleBackground:"#fff",checkboxInactiveBackground:"#000",checkboxInactiveCircleBackground:"#fff",controlButtonBackground:"#fff",controlButtonHoverBackground:"#000",controlButtonIconColor:"#000",controlButtonIconHoverColor:"#fff",focusRingColor:"#808080",modalBackground:"#fff",modalButtonBackground:"#000",modalButtonColor:"#fff",modalButtonHoverBackground:"#333",modalButtonHoverColor:"#fff",modalOverlay:"#000",modalOverlayOpacity:.8,modalTextColor:"#000",modalUnsavedColor:"#fff"},cookies:{necessary:[],optional:[]},cookieExpiryOffsetMs:31536000000,cookieNameIsConsentGiven:"ncc_c",cookieNameCookiesEnabledIds:"ncc_e",cookieOptions:{path:"/",sameSite:"strict",secure:true},isAcceptNecessaryButtonEnabled:true,isControlButtonEnabled:true,isCookieIdVisible:false,isCssEnabled:true,isCssPonyfillEnabled:false,isDashInDescriptionEnabled:true,isIframeBlocked:false,isModalForced:false,locales:["en"],localeTexts:{en:{accept:"Accept",acceptAll:"Accept all",bannerDescription:"We use our own cookies and third-party cookies so that we can display this website correctly and better understand how this website is used, with a view to improving the services we offer. A decision on cookie usage permissions can be changed anytime using the cookie button that will appear after a selection has been made on this banner.",bannerTitle:"Cookies",close:"Close",cookiesFunctional:"Functional cookies",cookiesNecessary:"Necessary cookies",cookiesOptional:"Optional cookies",decline:"Reject",declineAll:"Decline all",here:"here",iframeBlocked:"To see this, please enable functional cookies",manageCookies:"Learn more and customize",save:"Save",settingsUnsaved:"You have unsaved settings"}}}},app:{baseURL:"/",buildId:"3c9540a7-c403-44ac-bb06-b441e6450499",buildAssetsDir:"/_nuxt/",cdnURL:""}}</script></body></html>

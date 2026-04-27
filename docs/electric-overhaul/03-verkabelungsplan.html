@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Verkabelungsplan — Voigt-Garten Off-Grid</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="doc-nav">
+  <a href="00-uebersicht.html">📋 Übersicht</a>
+  <a href="01-bestellliste.html">🛒 Bestellliste</a>
+  <a href="02-aufbau-anleitung.html">🔧 Aufbau</a>
+  <a href="03-verkabelungsplan.html" class="current">⚡ Verkabelung</a>
+  <a href="04-elektriker-abnahme.html">✅ Abnahme</a>
+  <a href="05-betrieb-und-wartung.html">🛠️ Betrieb</a>
+</nav>
+
+<header>
+  <h1>Verkabelungsplan</h1>
+  <div class="subtitle">Schaltpläne, Querschnitte, Adernbelegung, Sicherungswerte</div>
+  <div class="meta">Bezugnorm: DIN VDE 0100-510, DIN VDE 0298-4, DIN VDE 0100-712</div>
+</header>
+
+<!-- ============================================== -->
+<h2>1. DC-Schaltplan (Solar → MPPT → Akku → Wechselrichter)</h2>
+
+<div class="architecture">
+  ┌────────────┐  ┌────────────┐  ┌────────────┐
+  │  Modul 1   │  │  Modul 2   │  │  Modul 3   │
+  │  460 Wp    │  │  460 Wp    │  │  460 Wp    │      String A
+  │  Voc 46 V  │  │  Voc 46 V  │  │  Voc 46 V  │      Σ Voc 138 V
+  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘      Σ Vmp 114 V
+        │ +              │ +              │ +         Imp 12 A
+        └────────┬───────┘                │
+                 └──────────────┬─────────┘
+                                │
+  ┌────────────┐  ┌────────────┐│┌────────────┐
+  │  Modul 4   │  │  Modul 5   │││  Modul 6   │
+  │  460 Wp    │──│  460 Wp    ├┼┤  460 Wp    │      String B
+  └────────────┘  └────────────┘│└────────────┘
+                                │
+                                │  H1Z2Z2-K 6 mm² rot/schwarz
+                                │  ca. 8 m bis Schuppen
+                                │
+                          ┌─────▼─────┐
+                          │ DC-Trenn- │  IP65, 1000 V/32 A
+                          │ schalter  │  Pos: AUS bei Wartung
+                          └─────┬─────┘
+                                │
+                          ┌─────▼─────┐
+                          │  MPPT     │  Victron SmartSolar
+                          │  150/45   │  150 V max / 45 A max
+                          └──┬──────┬─┘
+                             │      │  25 mm² Cu
+                             │      │  Sicherung 32 A
+                          ┌──▼──────▼─┐
+                          │  Akku     │  Pylontech US3000C
+                          │  48 V LFP │  3,5 kWh, 95 % DoD
+                          │  3,5 kWh  │  Cycles &gt; 6000
+                          └──┬──────┬─┘
+                             │      │  35 mm² Cu
+                             │      │  Mega-Sicherung 125 A
+                          ┌──▼──────▼─┐
+                          │  Wechsel- │  Victron MultiPlus II
+                          │  richter  │  48 V → 230 V AC
+                          │  3000 VA  │  Standby ~11 W
+                          └─────┬─────┘
+                                │
+                          AC 230 V / 50 Hz
+                                │
+                                ▼
+                       (siehe AC-Schaltplan)
+</div>
+
+<h3>DC-Querschnitte und Sicherungen</h3>
+<table>
+  <thead>
+    <tr><th>Strecke</th><th>Querschnitt</th><th>Länge</th><th>Sicherung</th><th>Begründung</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Modul → Modul (in Reihe)</td><td>4 mm² (Modul-Anschluss)</td><td>~1 m je Sprung</td><td>—</td><td>Modul-eigenes Kabel</td></tr>
+    <tr><td>String → Trennschalter</td><td>H1Z2Z2-K 6 mm² rot/schwarz</td><td>~8 m</td><td>—</td><td>UV-fest, doppelte Isolation, 12 A Last bei 30 °C zulässig</td></tr>
+    <tr><td>Trennschalter → MPPT</td><td>H1Z2Z2-K 6 mm²</td><td>~1 m</td><td>—</td><td>kurz, im Schaltschrank</td></tr>
+    <tr><td>MPPT → Akku +</td><td>Cu 25 mm²</td><td>~0,5 m</td><td>32 A NH00</td><td>max 45 A Ladestrom + 30 % Reserve, kurze Strecke</td></tr>
+    <tr><td>MPPT → Akku –</td><td>Cu 25 mm²</td><td>~0,5 m</td><td>—</td><td>Minus durchgehend</td></tr>
+    <tr><td>Akku + → Wechselrichter +</td><td>Cu 35 mm²</td><td>~1 m</td><td>Mega 125 A</td><td>max 100 A Strom bei 5 kW Last + 25 % Reserve</td></tr>
+    <tr><td>Akku – → Wechselrichter –</td><td>Cu 35 mm²</td><td>~1 m</td><td>—</td><td>Minus durchgehend</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2>2. AC-Schaltplan (Wechselrichter → Schuppen → Haus)</h2>
+
+<div class="architecture">
+       Wechselrichter (vorderer Schuppen)
+       L1 ────┐
+       N  ────┤
+       PE ────┤
+              │
+              │  NYY-J 5×2,5 mm² Luftleitung, 25 m
+              │  L1 + N + PE belegt; L2/L3 Reserve
+              ▼
+       ┌─────────────────────┐
+       │  Klemmkasten        │  IP65 im mittleren Schuppen
+       │  (Übergang)         │  (Geräteschuppen, alte Solar)
+       └─────────┬───────────┘
+                 │  Bestand: 5-adriges Erdkabel
+                 │  Querschnitt: PRÜFEN!
+                 │  Länge ~40 m
+                 ▼
+       ┌─────────────────────┐
+       │  Hauptverteiler     │  IP54, 12 TE
+       │  Gartenhaus         │
+       │                     │
+       │  ┌──────────┐       │
+       │  │ HS 25 A  │       │  Hauptschalter
+       │  └────┬─────┘       │
+       │       │             │
+       │  ┌────▼─────┐       │
+       │  │ FI 30 mA │       │  RCD Typ A
+       │  │ 25 A     │       │
+       │  └─┬───┬──┬─┘       │
+       │    │   │  │         │
+       │   B16 B16 B10       │
+       │    │   │  │         │
+       └────┼───┼──┼─────────┘
+            │   │  │
+            ▼   ▼  ▼
+       SD1   SD2   Licht
+       SD3   ...   Bewegungsm.
+       (5)   (5)   LED-Leiste
+       Σ 10 Steckdosen
+</div>
+
+<h3>AC-Querschnitte und Sicherungen</h3>
+<table>
+  <thead>
+    <tr><th>Strecke</th><th>Querschnitt</th><th>Länge</th><th>Vorsicherung</th><th>Spannungsabfall*</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Wechselrichter → Klemmkasten</td>
+      <td>NYY-J 5×2,5 mm² (1×L1, 1×N, 1×PE genutzt)</td>
+      <td>25 m Luftleitung</td>
+      <td>am Wechselrichter intern</td>
+      <td>~3,2 % bei 16 A</td>
+    </tr>
+    <tr>
+      <td>Klemmkasten → Haus</td>
+      <td>Bestand 5-adrig (Querschnitt prüfen!)</td>
+      <td>~40 m Erdkabel</td>
+      <td>—</td>
+      <td>siehe Tabelle Spannungsabfall unten</td>
+    </tr>
+    <tr>
+      <td>Hauptschalter → FI</td>
+      <td>Brücke 6 mm²</td>
+      <td>0,2 m</td>
+      <td>25 A HS</td>
+      <td>vernachlässigbar</td>
+    </tr>
+    <tr>
+      <td>FI → LS Steckdosen</td>
+      <td>Brücke 4 mm²</td>
+      <td>0,1 m</td>
+      <td>FI 25 A</td>
+      <td>vernachlässigbar</td>
+    </tr>
+    <tr>
+      <td>LS B16 → Steckdosen</td>
+      <td>NYM-J 3×2,5 mm²</td>
+      <td>bis 30 m</td>
+      <td>LS B16</td>
+      <td>~3 % bei 16 A am letzten Punkt</td>
+    </tr>
+    <tr>
+      <td>LS B10 → Licht/Bewegungsmelder</td>
+      <td>NYM-J 3×1,5 mm²</td>
+      <td>bis 25 m</td>
+      <td>LS B10</td>
+      <td>~2 % bei 6 A</td>
+    </tr>
+  </tbody>
+</table>
+<p class="small">* Spannungsabfall bei Volllast. VDE-Empfehlung: ≤ 4 % vom Hauptverteiler bis Verbraucher.</p>
+
+<!-- ============================================== -->
+<h2>3. Adernbelegung 5-adriges Bestandskabel</h2>
+
+<p>Das vorhandene 5-adrige NYY-J Erdkabel vom mittleren Schuppen zum Gartenhaus wird wie folgt belegt:</p>
+
+<table>
+  <thead>
+    <tr><th>Ader-Farbe</th><th>Funktion</th><th>Verbunden mit</th><th>Reservenutzung später?</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Schwarz (L1)</td><td>Phase</td><td>Wechselrichter L1</td><td>—</td></tr>
+    <tr><td>Braun (L2)</td><td>RESERVE</td><td>nicht angeschlossen, an beiden Enden mit Aderendhülse + Schrumpfschlauch isoliert</td><td>z.B. zweiter Stromkreis später</td></tr>
+    <tr><td>Schwarz/Grau (L3)</td><td>RESERVE</td><td>nicht angeschlossen, isoliert</td><td>z.B. Drehstrom-Werkstatt später</td></tr>
+    <tr><td>Blau (N)</td><td>Nullleiter</td><td>Wechselrichter N</td><td>—</td></tr>
+    <tr><td>Grün-Gelb (PE)</td><td>Schutzleiter</td><td>Erder-Schiene Schuppen</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<div class="danger-box">
+  <strong>Wichtig:</strong> Reserve-Adern an BEIDEN Enden mit Schrumpfschlauch isolieren und mit Aderendhülse versehen — sonst entsteht ein offenes Ende, das im Schadensfall Spannung anziehen kann (Induktion bei nahe liegenden Phasen). Klemmkasten + Hausverteiler beschriften: „Adern braun + grau = Reserve, nicht belegen ohne Rücksprache".
+</div>
+
+<!-- ============================================== -->
+<h2>4. Spannungsabfall-Berechnung Bestandskabel</h2>
+
+<p>Der größte Risikofaktor in der Auslegung ist der Querschnitt des bestehenden 5-adrigen Erdkabels. Ohne Messung gehen wir von typischen Werten aus:</p>
+
+<table>
+  <thead>
+    <tr><th>Querschnitt</th><th>R bei 40 m hin+zurück</th><th>U-Drop bei 16 A</th><th>%</th><th>VDE-konform?</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1,5 mm²</td><td>0,95 Ω</td><td>15,2 V</td><td>6,6 %</td><td style="color: var(--danger);">❌ Nein, max B10!</td></tr>
+    <tr><td>2,5 mm²</td><td>0,57 Ω</td><td>9,1 V</td><td>4,0 %</td><td style="color: var(--warning);">⚠️ Grenzwertig, B13 sicher</td></tr>
+    <tr><td>4 mm²</td><td>0,36 Ω</td><td>5,7 V</td><td>2,5 %</td><td style="color: var(--primary);">✅ Ja, B16 OK</td></tr>
+    <tr><td>6 mm²</td><td>0,24 Ω</td><td>3,8 V</td><td>1,7 %</td><td style="color: var(--primary);">✅ Ja, B16 OK, Reserve da</td></tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>Aktion:</strong> Vor Inbetriebnahme den Querschnitt des Bestandskabels feststellen. Aufdruck auf der Kabelumhüllung lesen oder Kabel an einer Klemme aufmachen und visuell vergleichen. Falls 2,5 mm²: Wechselrichter im Victron auf 13 A AC-Output begrenzen (per App: AC Current Limit = 13 A). Falls 1,5 mm²: System ist nicht gut für 16 A-Verbraucher geeignet, neues Kabel ziehen ist sinnvoller. Im Zweifelsfall vom Elektriker beurteilen lassen.
+</div>
+
+<!-- ============================================== -->
+<h2>5. Klemmenplan Hauptverteiler Gartenhaus</h2>
+
+<div class="architecture">
+       ┌──────────────────────────────────────────────┐
+       │        Hauptverteiler IP54, 12 TE            │
+       ├──────────────────────────────────────────────┤
+       │                                              │
+       │  Reihe 1 (von oben):                         │
+       │  ┌─────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌─────┐ │
+       │  │ HS  │ │ FI   │ │ B16  │ │ B16  │ │ B10 │ │
+       │  │ 25A │ │ 25A  │ │      │ │      │ │     │ │
+       │  │     │ │ 30mA │ │ Stk1 │ │ Stk2 │ │ Lit │ │
+       │  └──┬──┘ └──┬───┘ └──┬───┘ └──┬───┘ └──┬──┘ │
+       │     │       │        │        │        │    │
+       │  ───┴───────┴────────┴────────┴────────┴─── │
+       │  L1 von Bestandskabel                       │
+       │                                              │
+       │  N-Sammelschiene ────────────────────────── │
+       │  PE-Sammelschiene ─────────────────────────│
+       │                                              │
+       └──────────────────────────────────────────────┘
+
+  Beschriftung an JEDEM Schalter:
+  - HS:  "Hauptschalter"
+  - FI:  "FI 30 mA — alle Verbraucher"
+  - B16: "Steckdosen Wohnraum" / "Steckdosen Außen"
+  - B10: "Licht + Bewegungsmelder"
+</div>
+
+<!-- ============================================== -->
+<h2>6. Beschriftungen und Schilder</h2>
+
+<table>
+  <thead>
+    <tr><th>Position</th><th>Beschriftung</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Schaltschrank vorderer Schuppen, außen</td>
+      <td>"Off-Grid Stromversorgung Gartenhaus — 230 V AC + 48 V DC — vor Wartung Hauptschalter aus + Mega-Sicherung ziehen"</td>
+    </tr>
+    <tr>
+      <td>Mega-Sicherung 125 A</td>
+      <td>"Akku-Hauptsicherung — niemals unter Last ziehen"</td>
+    </tr>
+    <tr>
+      <td>DC-Trennschalter</td>
+      <td>"PV-Trennschalter — Wartungsstellung 'AUS'"</td>
+    </tr>
+    <tr>
+      <td>Klemmkasten mittlerer Schuppen</td>
+      <td>"Übergang Off-Grid System Haus / Trennung vom 12-V-Garten-System / NICHT verbinden"</td>
+    </tr>
+    <tr>
+      <td>Hauptverteiler Haus, Tür innen</td>
+      <td>"Stromversorgung Gartenhaus — Off-Grid · FI 30 mA · Letzte Prüfung: ___________ · Nächste Prüfung: ___________"</td>
+    </tr>
+    <tr>
+      <td>Reserve-Adern Bestandskabel</td>
+      <td>"L2 + L3 Reserve — nicht ohne Rücksprache mit Bauherr belegen"</td>
+    </tr>
+    <tr>
+      <td>Pylontech-Akku</td>
+      <td>"LiFePO4 48 V 3,5 kWh · Inbetriebnahme: ___________ · Seriennummer: ___________"</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================== -->
+<h2>7. Erdungsschema</h2>
+
+<div class="architecture">
+                Tiefenerder neben Schuppen
+                ──── 1,5 m im Erdreich ────
+                            │
+                            │ 16 mm² grün-gelb
+                            │
+                ┌───────────▼────────────┐
+                │  Potentialausgleichs-  │  im vorderen Schuppen
+                │  schiene (PA)          │  (Schaltschrank)
+                └─────┬────────┬─────────┘
+                      │        │
+                  ┌───▼──┐  ┌──▼──────────┐
+                  │ MPPT │  │ Wechselr.   │
+                  │ PE   │  │ PE-Klemme   │
+                  └──────┘  └──┬──────────┘
+                               │
+                               │ als Bestandteil des
+                               │ 5×-Erdkabels (PE)
+                               │
+                               ▼
+                    Hauptverteiler Haus
+                    PE-Sammelschiene
+                          │
+                  ┌───────┼────────┬────────┐
+                  ▼       ▼        ▼        ▼
+              Steckd.   Steckd.  Licht    Außen-
+              Innen     Außen    Bew.M.   Steckd.
+              PE        PE       PE       PE
+</div>
+
+<div class="danger-box">
+  <strong>Erdung-Pflicht-Check:</strong>
+  <ul>
+    <li>Tiefenerder ist mit dem Schaltschrank-PE verbunden</li>
+    <li>Schaltschrank-PE ist mit dem Wechselrichter-PE und dem MPPT-PE verbunden</li>
+    <li>Schaltschrank-PE geht über den PE im 5-adrigen Erdkabel ins Haus</li>
+    <li>Im Haus: PE wird an die PE-Sammelschiene des Verteilers geklemmt</li>
+    <li>JEDE Steckdose hat eine PE-Verbindung — sonst kein Schutz bei Geräte-Isolationsfehler</li>
+  </ul>
+  Erdungswiderstand muss vom Elektriker mit Erdungsmessgerät gemessen werden. Sollwert &lt; 100 Ω, idealerweise &lt; 50 Ω. Wert wird im Abnahmeprotokoll (<a href="04-elektriker-abnahme.html">Dok. 04</a>) eingetragen.
+</div>
+
+<!-- ============================================== -->
+<h2>8. Trennung zwischen altem und neuem System</h2>
+
+<div class="info-box">
+  <strong>Kritischer Punkt:</strong> Die alte 12-V-Garten-Anlage und die neue 48-V-Hausanlage dürfen sich nirgendwo überschneiden außer am gemeinsamen 5-adrigen Erdkabel — und auch dort nur unter strikter Trennung der Adern. Das alte System bleibt auf seinen eigenen 12-V-Komponenten und versorgt nur Gartenpumpen, Beleuchtung im Schuppen, etc. Die Pumpe wird VOM alten System auf das neue umgeklemmt — NICHT parallel betrieben.
+</div>
+
+<table>
+  <thead>
+    <tr><th>Komponente</th><th>System ALT</th><th>System NEU</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Solarmodule alt (700 W)</td><td>✓ bleibt</td><td>—</td></tr>
+    <tr><td>Akku alt (1,4 kWh, 12 V)</td><td>✓ bleibt</td><td>—</td></tr>
+    <tr><td>Wechselrichter alt</td><td>✓ bleibt</td><td>—</td></tr>
+    <tr><td>Solarmodule neu (6 × 460 Wp)</td><td>—</td><td>✓ neu</td></tr>
+    <tr><td>Akku neu (Pylontech 3,5 kWh, 48 V)</td><td>—</td><td>✓ neu</td></tr>
+    <tr><td>Wechselrichter neu (Victron 3 kW)</td><td>—</td><td>✓ neu</td></tr>
+    <tr><td>Gartenbeleuchtung</td><td>✓ bleibt am alten</td><td>—</td></tr>
+    <tr><td>Brunnenpumpe</td><td>❌ wird abgeklemmt</td><td>✓ wird umgeklemmt</td></tr>
+    <tr><td>Steckdosen Gartenhaus</td><td>—</td><td>✓ neu</td></tr>
+    <tr><td>Lichtkreise Haus + Klo-Treppe</td><td>—</td><td>✓ neu</td></tr>
+    <tr><td>Starlink + Kameras</td><td>—</td><td>✓ neu</td></tr>
+  </tbody>
+</table>
+
+<footer style="margin-top: 50px; padding-top: 20px; border-top: 2px solid var(--border); color: var(--muted); font-size: 0.85em;">
+  <p>Voigt-Garten Electric Overhaul · Dokument 03 · Verkabelungsplan · Version 1.0</p>
+</footer>
+
+</body>
+</html>

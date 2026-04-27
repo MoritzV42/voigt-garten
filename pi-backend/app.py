@@ -1771,6 +1771,30 @@ def _apply_cache_headers(response, path: str):
     return response
 
 
+DOCS_SHARE_TOKEN = os.getenv('DOCS_SHARE_TOKEN', '').strip()
+SHARED_DOCS_DIR = os.environ.get('DOCS_DIR_SHARED', '/app/docs')
+SHARED_DOC_SETS = {'electric-overhaul'}
+
+
+@app.route('/shared/<token>/<doc_set>/', defaults={'filename': '00-uebersicht.html'})
+@app.route('/shared/<token>/<doc_set>/<path:filename>')
+@limiter.exempt
+def serve_shared_doc(token, doc_set, filename):
+    """Token-geschützte statische Dokumente (HTML/CSS/Bilder).
+
+    URL-Schema: /shared/<token>/<doc_set>/<filename>
+    Ohne gültigen Token: 404 (kein Hint dass es überhaupt was zu finden gibt).
+    """
+    if not DOCS_SHARE_TOKEN or token != DOCS_SHARE_TOKEN:
+        return jsonify({'error': 'not found'}), 404
+    if doc_set not in SHARED_DOC_SETS:
+        return jsonify({'error': 'not found'}), 404
+    target_dir = os.path.join(SHARED_DOCS_DIR, doc_set)
+    if not os.path.isfile(os.path.join(target_dir, filename)):
+        return jsonify({'error': 'not found'}), 404
+    return send_from_directory(target_dir, filename)
+
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 @limiter.exempt

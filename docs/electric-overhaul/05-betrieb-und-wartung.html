@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Betrieb & Wartung — Voigt-Garten Off-Grid</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="doc-nav">
+  <a href="00-uebersicht.html">📋 Übersicht</a>
+  <a href="01-bestellliste.html">🛒 Bestellliste</a>
+  <a href="02-aufbau-anleitung.html">🔧 Aufbau</a>
+  <a href="03-verkabelungsplan.html">⚡ Verkabelung</a>
+  <a href="04-elektriker-abnahme.html">✅ Abnahme</a>
+  <a href="05-betrieb-und-wartung.html" class="current">🛠️ Betrieb</a>
+</nav>
+
+<header>
+  <h1>Betrieb und Wartung</h1>
+  <div class="subtitle">Bedienung, Wartungsintervalle, Fehlerbehebung — für Nutzer und Wartungsteam</div>
+  <div class="meta">
+    Anlage: 230 V Off-Grid Stromversorgung Gartenhaus<br>
+    Zur Aufbewahrung im Schaltschrank Schuppen oder im Hausverteiler
+  </div>
+</header>
+
+<h2>1. Was ist hier installiert?</h2>
+
+<p>Eine vollständig autarke Stromversorgung für das Gartenhaus. Strom kommt von Solarmodulen auf dem vorderen Schuppen und wird in einem Akku im Schuppen-Schaltschrank gespeichert. Ein Wechselrichter macht daraus 230 V wie aus einer normalen Steckdose. Im Gartenhaus gibt es FI-Schutz und Sicherungen wie in einer normalen Wohnung.</p>
+
+<div class="success-box">
+  <strong>Praktisch heißt das für Nutzer:</strong> Stecker rein, Gerät an, läuft. Keine Sonderbedienung nötig. Wenn Strom mal weg ist (z.B. nach mehreren Tagen Schlechtwetter), erst mal in den Schuppen schauen.
+</div>
+
+<h2>2. Im Notfall: Strom abschalten</h2>
+
+<div class="grid-two">
+  <div class="card">
+    <h4>🚨 Im Haus, schnell</h4>
+    <p><strong>Hauptschalter im Hausverteiler aus.</strong> Damit ist der gesamte Hausstrom weg. FI fällt automatisch ab bei Fehlerstrom — wieder einschalten erst nachdem der Fehler beseitigt ist.</p>
+  </div>
+  <div class="card">
+    <h4>🚨 Komplettsystem aus (Schuppen)</h4>
+    <p><strong>Mega-Sicherung 125 A am Akku ziehen</strong> oder Hauptschalter Schaltschrank umlegen. Damit ist die ganze Anlage tot — kein Strom im Haus, Akku trennt sich vom Wechselrichter.</p>
+    <p class="small">Vorher Verbraucher abschalten, sonst gibt's einen kleinen Funken beim Trennen.</p>
+  </div>
+</div>
+
+<div class="danger-box">
+  <strong>Brandfall:</strong> Niemals mit Wasser löschen, solange die Anlage Spannung hat (auch nicht der Akku!). Erst Strom raus (siehe oben), dann Wasser oder besser CO₂-Löscher / Pulver. Akku-Brände bei LiFePO4 sind selten, aber wenn doch: Feuerwehr rufen, nicht selbst löschen.
+</div>
+
+<h2>3. Status-Anzeige und App</h2>
+
+<h3>Vor Ort am Wechselrichter</h3>
+<p>Der Victron MultiPlus II hat LEDs:</p>
+<ul>
+  <li><strong>Inverter on (grün):</strong> Wechselrichter läuft, Steckdosen haben 230 V</li>
+  <li><strong>Mains on (grün, beim Hybrid-Modell):</strong> bei uns nicht relevant — wir haben kein Netz angeschlossen</li>
+  <li><strong>Bulk / Absorption / Float (gelb):</strong> Lade-Phase des Akkus</li>
+  <li><strong>Low Battery (rot):</strong> Akku fast leer — bald Sonne nötig oder Verbraucher reduzieren</li>
+  <li><strong>Overload (rot):</strong> Wechselrichter überlastet (zu viele Verbraucher gleichzeitig)</li>
+  <li><strong>Temperature (rot):</strong> Wechselrichter zu heiß (Belüftung prüfen)</li>
+</ul>
+
+<h3>VictronConnect App (Bluetooth)</h3>
+<p>App-Download im App-Store oder Play-Store. Pairing direkt am Wechselrichter — Bluetooth ist fest eingebaut. Dort sieht man:</p>
+<ul>
+  <li>Akku-Ladezustand in Prozent</li>
+  <li>Aktuelle Verbraucherleistung in Watt</li>
+  <li>Solarertrag aktuell und Tagesgesamt</li>
+  <li>Lade-/Entladestrom</li>
+  <li>Historie (Wochen / Monate)</li>
+</ul>
+
+<h3>VRM Online-Portal (kostenlos)</h3>
+<p>Wenn Cerbo GX dazu installiert wird, sind alle Werte auch online unter <a href="https://vrm.victronenergy.com">vrm.victronenergy.com</a> einsehbar — von überall, auch ohne im Garten zu sein. Aktuelles Setup ist ohne Cerbo, kann aber später nachgerüstet werden.</p>
+
+<h2>4. Wartungsintervalle</h2>
+
+<table>
+  <thead>
+    <tr><th>Was</th><th>Wer</th><th>Wie oft</th><th>Was tun</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>FI Test-Knopf</td><td>Nutzer</td><td>halbjährlich</td><td>Test-Knopf am FI drücken — muss auslösen. Wieder einschalten.</td></tr>
+    <tr><td>Sichtkontrolle Solarmodule</td><td>Selbstbau-Team</td><td>jährlich</td><td>Vom Boden prüfen: keine Risse, Befestigungen fest, Schmutz/Laub abgewischt.</td></tr>
+    <tr><td>Solarmodule reinigen</td><td>Selbstbau-Team</td><td>nach Bedarf</td><td>Mit klarem Wasser und weichem Tuch / Mikrofaserwischer. Kein Hochdruck, keine Reinigungsmittel.</td></tr>
+    <tr><td>Schaltschrank Sichtkontrolle</td><td>Selbstbau-Team</td><td>jährlich</td><td>Keine losen Kabel, keine Verfärbung an Klemmen (= Wackelkontakt = Erwärmung). Spinnen / Mäuse?</td></tr>
+    <tr><td>Klemmen-Drehmoment nachprüfen</td><td>Selbstbau-Team / Elektriker</td><td>nach 6 Monaten, dann alle 4 Jahre</td><td>Mit Drehmoment-Schraubendreher Klemmen nachziehen. Nach Vorgabe Hersteller.</td></tr>
+    <tr><td>Akku Spannungsmessung</td><td>Selbstbau-Team</td><td>jährlich</td><td>Multimeter an Akku-Pole. Sollte 48–53 V zeigen. Bei &lt;47 V: laden lassen.</td></tr>
+    <tr><td>Erdungswiderstand</td><td>Elektriker</td><td>4 Jahre (DGUV V3)</td><td>Messung mit Erdungsmessgerät. Wert &lt; 100 Ω.</td></tr>
+    <tr><td>Komplette Anlage prüfen (DIN VDE 0105-100)</td><td>Elektriker</td><td>4 Jahre</td><td>Bei gewerblicher Nutzung Pflicht (Beherbergung). Privat empfohlen.</td></tr>
+    <tr><td>Pumpe-Trockenlauf-Schutz prüfen</td><td>Selbstbau-Team</td><td>jährlich</td><td>Pumpe ohne Wasser kurz laufen lassen — sollte nach wenigen Sekunden abschalten.</td></tr>
+    <tr><td>Backup VictronConnect Konfiguration</td><td>Selbstbau-Team</td><td>jährlich oder nach Änderung</td><td>App: Settings exportieren. Datei in Cloud speichern.</td></tr>
+  </tbody>
+</table>
+
+<h2>5. Häufige Probleme und Lösungen</h2>
+
+<table>
+  <thead>
+    <tr><th>Problem</th><th>Wahrscheinliche Ursache</th><th>Lösung</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Kein Strom im Haus</td>
+      <td>FI ausgelöst, LS aus, Akku leer, Wechselrichter aus</td>
+      <td>1. FI prüfen, ggf. einschalten. 2. LS-Schalter prüfen. 3. App öffnen, Akku-SOC prüfen. 4. Im Schuppen: Wechselrichter-Status-LEDs.</td>
+    </tr>
+    <tr>
+      <td>FI fliegt sofort wieder raus</td>
+      <td>Fehlerstrom irgendwo (defektes Gerät, Feuchtigkeit, Kabelschaden)</td>
+      <td>Alle Verbraucher abklemmen, FI einschalten — bleibt drin? Dann Verbraucher einzeln dazustecken. Schuldigen Verbraucher trennen.</td>
+    </tr>
+    <tr>
+      <td>Akku entlädt sich schnell</td>
+      <td>Verbraucher zieht mehr als gedacht / Wechselrichter-Standby</td>
+      <td>App: Live-Verbrauch prüfen. Bei Abwesenheit: Wechselrichter ECO-Mode oder Hauptschalter im Schuppen aus.</td>
+    </tr>
+    <tr>
+      <td>Akku wird im Winter nicht voll</td>
+      <td>zu wenig Sonneneinstrahlung, Module verschmutzt/beschattet</td>
+      <td>Module reinigen. Bei langem Schlechtwetter: Verbraucher reduzieren. Backup-Generator als Notfallplan.</td>
+    </tr>
+    <tr>
+      <td>Wechselrichter schaltet bei Last ab (Overload)</td>
+      <td>kurzzeitige Spitzenlast über 5500 W</td>
+      <td>Verbraucher reduzieren. Mikrowelle und Wasserkocher nicht gleichzeitig. Bei wiederkehrendem Problem: Konfiguration prüfen.</td>
+    </tr>
+    <tr>
+      <td>App findet Wechselrichter nicht</td>
+      <td>Bluetooth-Reichweite, Wechselrichter aus, App-Berechtigung</td>
+      <td>Näher rangehen. Kurz Standby-Schalter aus/an. Im Notfall App neu installieren + neu pairen.</td>
+    </tr>
+    <tr>
+      <td>Pylontech blinkt rot</td>
+      <td>Fehler im BMS — Über-/Unterspannung, Temperatur, Zellbalance</td>
+      <td>Status-LED-Code lesen (Pylontech-Manual). Bei Unsicherheit: Pylontech-Support kontaktieren.</td>
+    </tr>
+    <tr>
+      <td>Brunnenpumpe läuft nicht</td>
+      <td>FI aus, kein Wasser, Trockenlauf-Schutz, Pumpe defekt</td>
+      <td>1. FI/LS prüfen. 2. Wasserstand im Brunnen. 3. Pumpe abkühlen lassen. 4. Pumpenservice.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>6. Bedienungsfälle nach Saison</h2>
+
+<div class="grid-two">
+  <div class="card">
+    <h4>☀️ Sommer / aktive Buchungen</h4>
+    <p>Alles wie gewohnt — Akku wird tagsüber voll geladen, hält über Nacht für alle Verbraucher.</p>
+    <p>Wenn das Haus mehrere Tage genutzt wird mit Kühlschrank, Mikrowelle, Wasserkocher: Akku-Stand morgens prüfen, ggf. tagsüber Verbraucher reduzieren.</p>
+  </div>
+  <div class="card">
+    <h4>❄️ Winter / kein Aufenthalt</h4>
+    <p>Wechselrichter zieht 11 W Standby × 24 h = ~0,3 kWh/Tag. Im Winter mit wenig Sonne kann das den Akku langsam leeren.</p>
+    <p><strong>Empfehlung:</strong> Bei längerer Abwesenheit (&gt;1 Woche) im Winter Hauptschalter Schuppen aus. Wenn Starlink/Kameras laufen sollen: durchlaufen lassen, Akku-Stand wöchentlich per App prüfen.</p>
+  </div>
+  <div class="card">
+    <h4>🌧️ Längere Schlechtwetterphase</h4>
+    <p>Akku bei 20 % SOC: Verbraucher auf Notbetrieb (nur Starlink, Kühlschrank, Beleuchtung).</p>
+    <p>Bei 10 %: Wechselrichter schaltet ab, BMS schützt Akku. Warten auf Sonne oder Notstrom.</p>
+  </div>
+  <div class="card">
+    <h4>🛠️ Wartung / Reparatur</h4>
+    <p>1. Hauptschalter Haus aus<br>
+    2. Mega-Sicherung Akku ziehen<br>
+    3. DC-Trennschalter PV aus<br>
+    4. 5 min warten (Kondensatoren entladen sich)<br>
+    5. Spannungsfreiheit messen!<br>
+    6. Arbeit durchführen<br>
+    7. Umgekehrte Reihenfolge wieder einschalten</p>
+  </div>
+</div>
+
+<h2>7. Kontakte und Support</h2>
+
+<table>
+  <thead>
+    <tr><th>Wofür</th><th>Wer</th><th>Kontakt</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Bauherr / erste Anlaufstelle</td><td>Moritz Voigt</td><td>moritzvoigt42@gmail.com</td></tr>
+    <tr><td>Eigentümer</td><td>Konny Voigt</td><td>0165 2593763</td></tr>
+    <tr><td>Elektriker (Abnahme + Service)</td><td>____________________</td><td>____________________</td></tr>
+    <tr><td>Wechselrichter-Support</td><td>Victron Energy Deutschland</td><td><a href="https://www.victronenergy.de/contact">victronenergy.de/contact</a></td></tr>
+    <tr><td>Akku-Support</td><td>Pylontech</td><td>über Händler (z.B. bau-tech.shop)</td></tr>
+    <tr><td>Modul-Support</td><td>JA Solar / Tepto</td><td><a href="https://www.tepto.de">tepto.de</a></td></tr>
+    <tr><td>Notfall (Brand, Stromschlag)</td><td>Feuerwehr / Rettung</td><td>112</td></tr>
+  </tbody>
+</table>
+
+<h2>8. Datenblätter und Manuals</h2>
+
+<ul>
+  <li><a href="https://www.victronenergy.de/inverters-chargers/multiplus-ii">Victron MultiPlus II 48/3000 — Datenblatt + Manual</a></li>
+  <li><a href="https://en.pylontech.com.cn/products/Series.aspx?nid=10">Pylontech US3000C — Datenblatt</a></li>
+  <li><a href="https://www.victronenergy.de/solar-charge-controllers/smartsolar-mppt-150-35-150-45-150-60-150-70-150-85-150-100">SmartSolar MPPT 150/45 — Datenblatt</a></li>
+  <li><a href="https://www.tepto.de/Solarmodule/">JA Solar JAM54D40-LB 460W — Produktseite</a></li>
+</ul>
+
+<h2>9. Spätere Erweiterungen — was möglich ist</h2>
+
+<table>
+  <thead>
+    <tr><th>Erweiterung</th><th>Aufwand</th><th>Nutzen</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Cerbo GX dazu</td><td>~280 € + 2 h Installation</td><td>VRM-Cloud, Touchscreen, automatisches Backup, Fehlermeldungen per Email</td></tr>
+    <tr><td>2. Pylontech US3000C parallel</td><td>~1.100 €</td><td>Verdoppelung Akku-Kapazität auf 7 kWh — bei viel Wintergebrauch sinnvoll</td></tr>
+    <tr><td>1 weiteres Modul (max 7 wegen MPPT-Größe)</td><td>~80 € + Befestigung</td><td>+460 Wp Erzeugung — kaum spürbar, eher nicht lohnend</td></tr>
+    <tr><td>2. MPPT Charger 150/45 + 4 weitere Module</td><td>~600 €</td><td>+1,84 kWp = ~+50 % Erzeugung. Sinnvoll wenn Verbrauch wächst.</td></tr>
+    <tr><td>Notstrom-Generator (Honda EU22i)</td><td>~1.200 €</td><td>Backup für lange Schlechtwetterphasen, kann den Akku per AC-In-Eingang am Victron laden</td></tr>
+    <tr><td>Überspannungsschutz Typ 2</td><td>~50 €</td><td>Schützt bei Blitzeinschlägen in der Nähe (offene Lage = höheres Risiko)</td></tr>
+  </tbody>
+</table>
+
+<footer style="margin-top: 50px; padding-top: 20px; border-top: 2px solid var(--border); color: var(--muted); font-size: 0.85em;">
+  <p>Voigt-Garten Electric Overhaul · Dokument 05 · Betrieb & Wartung · Version 1.0</p>
+  <p>Dieses Dokument soll im Schaltschrank Schuppen oder im Hausverteiler aufbewahrt werden — sodass jeder Nutzer im Notfall weiß, wo er nachschlagen kann.</p>
+</footer>
+
+</body>
+</html>
