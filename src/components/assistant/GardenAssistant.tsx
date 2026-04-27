@@ -50,6 +50,7 @@ export default function GardenAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFailedMsg, setLastFailedMsg] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
@@ -156,10 +157,14 @@ export default function GardenAssistant() {
       if (!text.trim()) return;
 
       const userMsg = text.trim();
-      setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+      const isRetry = userMsg === lastFailedMsg;
+      if (!isRetry) {
+        setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+      }
       setInput("");
       setLoading(true);
       setError(null);
+      setLastFailedMsg(null);
 
       try {
         const token = localStorage.getItem("voigt-garten-token");
@@ -168,6 +173,8 @@ export default function GardenAssistant() {
         if (draft) {
           body.mode = "refine";
           body.draft = draft;
+        } else if (messages.length > 0) {
+          body.context = messages.slice(-10);
         }
 
         const res = await fetch(`${API_URL}/api/assistant/chat`, {
@@ -204,11 +211,12 @@ export default function GardenAssistant() {
           console.error((err as Error).stack);
         }
         setError(err instanceof Error ? err.message : "Unbekannter Fehler.");
+        setLastFailedMsg(userMsg);
       } finally {
         setLoading(false);
       }
     },
-    [draft]
+    [draft, messages, lastFailedMsg]
   );
 
   const handleSubmit = useCallback(
@@ -576,8 +584,18 @@ export default function GardenAssistant() {
 
             {/* Error */}
             {error && (
-              <div className="mx-4 mb-2 rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                {error}
+              <div className="mx-4 mb-2 rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700 flex items-center justify-between gap-2">
+                <span>{error}</span>
+                {lastFailedMsg && (
+                  <button
+                    type="button"
+                    onClick={() => sendMessage(lastFailedMsg)}
+                    disabled={loading}
+                    className="shrink-0 rounded-lg bg-red-100 px-2.5 py-1 text-xs font-medium text-red-800 transition hover:bg-red-200 disabled:opacity-50"
+                  >
+                    Nochmal
+                  </button>
+                )}
               </div>
             )}
 

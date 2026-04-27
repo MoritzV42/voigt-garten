@@ -272,6 +272,7 @@ def execute_tool_call(tool_name, args):
 def openai_chat(messages, tools=None):
     """Call OpenAI-compatible Chat Completions API (OpenRouter, OpenAI, etc.)."""
     import requests
+    import time
 
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
@@ -291,22 +292,45 @@ def openai_chat(messages, tools=None):
 
     api_url = f"{OPENAI_BASE_URL.rstrip('/')}/chat/completions"
 
-    resp = requests.post(
-        api_url,
-        headers=headers,
-        json=body,
-        timeout=30
-    )
+    last_err = None
+    for attempt in range(3):
+        try:
+            resp = requests.post(
+                api_url,
+                headers=headers,
+                json=body,
+                timeout=45
+            )
 
-    if not resp.ok:
-        raise Exception(f"API error ({api_url}): {resp.status_code} - {resp.text[:200]}")
+            if resp.status_code in (429, 500, 502, 503):
+                last_err = Exception(f"API error ({api_url}): {resp.status_code} - {resp.text[:200]}")
+                if attempt < 2:
+                    time.sleep(1.5 ** attempt)
+                    continue
+                raise last_err
 
-    data = resp.json()
-    message = data.get("choices", [{}])[0].get("message", {})
-    return {
-        "content": message.get("content", ""),
-        "tool_calls": message.get("tool_calls"),
-    }
+            if not resp.ok:
+                raise Exception(f"API error ({api_url}): {resp.status_code} - {resp.text[:200]}")
+
+            data = resp.json()
+            message = data.get("choices", [{}])[0].get("message", {})
+            return {
+                "content": message.get("content", ""),
+                "tool_calls": message.get("tool_calls"),
+            }
+
+        except requests.exceptions.Timeout:
+            last_err = Exception(f"Timeout nach 45s bei {api_url}")
+            if attempt < 2:
+                time.sleep(1.5 ** attempt)
+                continue
+        except requests.exceptions.ConnectionError as e:
+            last_err = Exception(f"Verbindungsfehler zu {api_url}: {e}")
+            if attempt < 2:
+                time.sleep(1.5 ** attempt)
+                continue
+
+    raise last_err
 
 
 # ─── Process Message ────────────────────────────────────────
