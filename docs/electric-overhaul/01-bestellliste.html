@@ -688,15 +688,94 @@
   </tbody>
 </table>
 
-<div class="info-box">
-  <strong>Sparpotenzial:</strong>
+<h3>Drei Varianten im Vergleich</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Position</th>
+      <th>A — Premium</th>
+      <th>B — Pragmatisch ⭐</th>
+      <th>C — Maximal-Spar</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Wechselrichter</td>
+      <td>Victron MultiPlus II 48/3000<br><span class="small">Standby ~11 W</span></td>
+      <td>Victron MultiPlus 48/3000<br><span class="small">älteres Modell, Standby ~15 W</span></td>
+      <td>Growatt SPF 5000ES<br><span class="small">5 kW, integrierter MPPT, Standby ~30–50 W</span></td>
+    </tr>
+    <tr>
+      <td>MPPT-Charger</td>
+      <td>SmartSolar 150/45 (extra)</td>
+      <td>SmartSolar 100/30 (extra)</td>
+      <td>im Wechselrichter integriert</td>
+    </tr>
+    <tr>
+      <td>Akku</td>
+      <td>Pylontech US3000C<br><span class="small">3,5 kWh, Plug-and-Play, 1100 €</span></td>
+      <td>EPEVER 48V 100Ah<br><span class="small">5,12 kWh, manuelle Konfig, 700 €</span></td>
+      <td>EPEVER 48V 100Ah<br><span class="small">5,12 kWh, manuelle Konfig, 700 €</span></td>
+    </tr>
+    <tr>
+      <td>Solarmodule</td>
+      <td>6 × 460 Wp = 2,76 kWp</td>
+      <td>5 × 460 Wp = 2,30 kWp</td>
+      <td>5 × 460 Wp = 2,30 kWp</td>
+    </tr>
+    <tr>
+      <td>Aufständerung</td>
+      <td>120 € (Bauhaus-Material)</td>
+      <td>60 € (Holz vom Hof)</td>
+      <td>60 € (Holz vom Hof)</td>
+    </tr>
+    <tr>
+      <td>Material gesamt</td>
+      <td class="price">~ 3.830 €</td>
+      <td class="price">~ 2.880 €</td>
+      <td class="price">~ 2.360 €</td>
+    </tr>
+    <tr>
+      <td>Elektriker-Abnahme</td>
+      <td>~ 400 €</td>
+      <td>~ 350 €</td>
+      <td>~ 350 €</td>
+    </tr>
+    <tr class="total-row">
+      <td><strong>GESAMT</strong></td>
+      <td class="price"><strong>~ 4.230 €</strong></td>
+      <td class="price"><strong>~ 3.230 €</strong></td>
+      <td class="price"><strong>~ 2.710 €</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="success-box">
+  <strong>Empfehlung: Variante B (~3.230 €)</strong>
+  <p>Trifft das Budget-Ziel von ~3.500 € sauber, behält den niedrigen Standby-Verbrauch (Victron, ~15 W), gewinnt aber durch den EPEVER-Akku 1,6 kWh mehr Speicherkapazität als Variante A (5,12 statt 3,5 kWh). 5 Module statt 6 reichen problemlos — bei dem geringen Verbrauchsprofil (Mini-Kühlschrank, Starlink, Kameras, gelegentliche Mikrowelle) sind 2,3 kWp im Sommer-Schnitt 9–11 kWh/Tag — mehr als das Achtfache des Tagesbedarfs.</p>
+  <p>Die ~970 € Ersparnis gegenüber Variante A geht auf Kosten von:</p>
   <ul>
-    <li>EPEVER 48V 100Ah statt Pylontech: <strong>−400 €</strong> (Kommunikation tricky, aber 5,12 statt 3,5 kWh)</li>
-    <li>4 statt 6 Module: <strong>−150 €</strong> (1,84 statt 2,76 kWp — würde aber für Winter knapp)</li>
-    <li>Verteilerkasten Schuppen weglassen, alles direkt montieren: <strong>−50 €</strong></li>
-    <li>Potential gesamt: <strong>~600 € weniger</strong>, also Material ~3.250 € statt 3.830 €</li>
+    <li>BMS-Kommunikation manuell konfigurieren (statt Plug-and-Play) — einmaliger Aufwand</li>
+    <li>5 Jahre Garantie statt 10 Jahre auf dem Akku</li>
+    <li>Älteres Wechselrichter-Modell (aber gleichwertig in Funktion)</li>
   </ul>
-  <strong>Warum nicht weniger?</strong> Das ist ein durchgängig neuwertiges, langlebiges System mit 5–25 Jahren Garantie auf den Hauptkomponenten. Die 1.300 €-Anlage, die ihr ursprünglich gefunden hattet, war wahrscheinlich Restposten/gebraucht ohne Garantie und ohne ordentliche Hausverkabelung — das Risiko ist da deutlich höher.
+</div>
+
+<div class="info-box">
+  <strong>Variante C — die Schmerzgrenze (~2.710 €):</strong>
+  Growatt SPF 5000ES ist günstig und kann viel — der einzige Nachteil ist der hohe Standby-Verbrauch von ~30–50 W. Bei oft leerstehendem Gartenhaus = ~1 kWh/Tag, das der Akku nur fürs Stehen verliert. Lösung: Hauptschalter bei Abwesenheit umlegen. Das geht bei euch — ihr seid sowieso nicht jeden Tag da. Das wird zur Disziplinfrage.
+  <p>Für ein Setup, das durchläuft (Starlink immer an, Kameras immer scharf), ist Variante B besser. Wenn ihr die Disziplin habt das System bei längerer Abwesenheit auszuschalten, spart Variante C nochmal 520 € — auch eine valide Option.</p>
+</div>
+
+<div class="info-box">
+  <strong>Verworfene Sparhebel</strong> (zur Transparenz):
+  <ul>
+    <li><strong>4 statt 5/6 Module:</strong> Spart 75 €, aber im Winter wirklich knapp. Nicht empfohlen bei einem System mit Dauer-Verbrauchern.</li>
+    <li><strong>Kein FI-Schalter / kleinere Sicherungen:</strong> Sparpotenzial ~30 €. Verstoß gegen VDE, Versicherung weg, fällt in der Abnahme durch. Nicht möglich.</li>
+    <li><strong>Gebrauchte Komponenten von Kleinanzeigen:</strong> Wechselrichter ~−400 €, Akku ~−500 € möglich. Aber: kein Service-Anspruch, oft kein Datenblatt, Akku-SOH unklar. Hohes Ausfallrisiko in den ersten Jahren. Nicht empfohlen für die Hauptkomponenten.</li>
+    <li><strong>Cerbo GX weglassen:</strong> War nicht im Plan A drin — Smartphone-App (VictronConnect) reicht.</li>
+  </ul>
 </div>
 
 <!-- ============================================== -->
