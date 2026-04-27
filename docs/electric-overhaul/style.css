@@ -220,6 +220,13 @@ a:hover { background: var(--accent); }
   color: white;
   border-color: var(--primary);
 }
+.doc-nav a.home-link {
+  background: var(--accent);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+  margin-right: auto;
+}
 .norm {
   display: inline-block;
   background: #1e293b;
