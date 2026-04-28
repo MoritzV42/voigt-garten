@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { HelpCircle, LogIn } from "lucide-react";
+import { HelpCircle, LogIn, Globe } from "lucide-react";
 
 interface User {
   id: number;
@@ -12,6 +12,7 @@ interface User {
 
 export default function MobileHeader() {
   const [user, setUser] = useState<User | null>(null);
+  const [lang, setLang] = useState("de");
 
   useEffect(() => {
     const storedUser = localStorage.getItem("voigt-garten-user");
@@ -21,12 +22,22 @@ export default function MobileHeader() {
       } catch {}
     }
 
+    const storedLang = localStorage.getItem("voigt-garten-lang");
+    if (storedLang) setLang(storedLang);
+
     const handleAuth = (e: CustomEvent) => {
       setUser(e.detail?.user || null);
     };
     window.addEventListener("auth-change", handleAuth as EventListener);
     return () => window.removeEventListener("auth-change", handleAuth as EventListener);
   }, []);
+
+  const toggleLang = () => {
+    const newLang = lang === "de" ? "en" : "de";
+    setLang(newLang);
+    localStorage.setItem("voigt-garten-lang", newLang);
+    window.location.reload();
+  };
 
   const initials = user
     ? (user.name || user.username || user.email)
@@ -58,6 +69,17 @@ export default function MobileHeader() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={toggleLang}
+            aria-label={lang === "de" ? "Switch to English" : "Auf Deutsch wechseln"}
+            title={lang === "de" ? "Switch to English" : "Auf Deutsch wechseln"}
+            className="flex h-9 items-center justify-center gap-1 rounded-full border border-garden-200 px-2 text-gray-500 transition hover:border-garden-400 hover:text-garden-700"
+            data-no-translate
+          >
+            <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="text-xs font-medium uppercase">{lang === "de" ? "EN" : "DE"}</span>
+          </button>
+
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("start-page-help"))}
             aria-label="Hilfe"

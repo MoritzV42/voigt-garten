@@ -39,6 +39,15 @@ const pathname = Astro.url.pathname;
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js" is:inline></script>
     <title>{title} | Refugium Heideland</title>
+    <!-- Early language detection: hide body before paint to avoid flash of German -->
+    <script is:inline>
+      if (localStorage.getItem('voigt-garten-lang') === 'en') {
+        document.documentElement.classList.add('translating');
+      }
+    </script>
+    <style is:inline>
+      html.translating body { opacity: 0; transition: opacity 0.15s ease-out; }
+    </style>
     <script type="application/ld+json" set:html={JSON.stringify({
       "@context": "https://schema.org",
       "@type": "LodgingBusiness",
@@ -67,7 +76,7 @@ const pathname = Astro.url.pathname;
       ]
     })} />
   </head>
-  <body class="min-h-screen bg-garden-50 font-sans text-gray-800">
+  <body class="min-h-screen bg-garden-50 font-sans text-gray-800" data-api-url={import.meta.env.PUBLIC_API_URL || ''}>
     <div class="min-h-screen">
       <!-- Desktop Sidebar -->
       <Sidebar client:load pathname={pathname} />
@@ -144,6 +153,7 @@ const pathname = Astro.url.pathname;
         skipEndpoints: ['/api/health', '/api/bugreport'],
       };
     </script>
+    <script src="/js/auto-translate.js" defer></script>
     <script src="/js/html2canvas.min.js" defer></script>
     <script src="/js/auto-error-reporter.js" defer></script>
   </body>

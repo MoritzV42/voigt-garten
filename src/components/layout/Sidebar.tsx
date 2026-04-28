@@ -174,6 +174,7 @@ export default function Sidebar({ pathname = "/" }: { pathname?: string }) {
         <button
           onClick={toggleLang}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-garden-200/70 transition hover:bg-white/5 hover:text-garden-100"
+          data-no-translate
         >
           <Globe className="h-[18px] w-[18px] text-garden-300/50" aria-hidden="true" />
           <span>{lang === "de" ? "English" : "Deutsch"}</span>
